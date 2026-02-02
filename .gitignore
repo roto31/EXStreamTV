@@ -109,6 +109,9 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# Generated wiki output (run scripts/sync_docs_to_wiki.py)
+wiki_out/
+
 # mypy
 .mypy_cache/
 .dmypy.json
