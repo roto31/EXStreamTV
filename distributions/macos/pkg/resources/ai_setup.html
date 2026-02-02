@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Setup</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            color: #86868b;
+            margin-bottom: 30px;
+        }
+        
+        .option-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .option-card:hover {
+            border-color: #0071e3;
+        }
+        
+        .option-card.selected {
+            border-color: #0071e3;
+            background: #f0f7ff;
+        }
+        
+        .option-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .option-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .cloud .option-icon { background: #e8f4ff; }
+        .local .option-icon { background: #e8fff0; }
+        .skip .option-icon { background: #f5f5f7; }
+        
+        .option-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .badge {
+            background: #34c759;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        
+        .option-desc {
+            font-size: 13px;
+            color: #86868b;
+            line-height: 1.5;
+        }
+        
+        .requirements {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f5f7;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #1d1d1f;
+        }
+        
+        .info-box {
+            background: #fff9e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+        
+        .info-box strong {
+            color: #b25000;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1c1c1e;
+                color: #f5f5f7;
+            }
+            
+            .subtitle {
+                color: #98989d;
+            }
+            
+            .option-card {
+                background: #2c2c2e;
+            }
+            
+            .option-card.selected {
+                background: #1a3a5c;
+            }
+            
+            .option-desc {
+                color: #98989d;
+            }
+            
+            .requirements {
+                background: #3a3a3c;
+            }
+            
+            .info-box {
+                background: #3a3526;
+            }
+            
+            .cloud .option-icon { background: #1a3a5c; }
+            .local .option-icon { background: #1a3c2a; }
+            .skip .option-icon { background: #3a3a3c; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 AI Assistant Setup</h1>
+    <p class="subtitle">EXStreamTV uses AI to help create channels and troubleshoot issues. Choose how you'd like AI to work.</p>
+    
+    <div class="option-card cloud selected" onclick="selectOption(this, 'cloud')">
+        <div class="option-header">
+            <div class="option-icon">☁️</div>
+            <div class="option-title">Cloud AI (Recommended)<span class="badge">FREE</span></div>
+        </div>
+        <div class="option-desc">
+            Uses Groq's ultra-fast cloud servers. Get a free API key in 30 seconds at console.groq.com.
+            <br>✓ No downloads required &nbsp; ✓ Works on any Mac &nbsp; ✓ Always up-to-date
+        </div>
+    </div>
+    
+    <div class="option-card local" onclick="selectOption(this, 'local')">
+        <div class="option-header">
+            <div class="option-icon">💻</div>
+            <div class="option-title">Local AI (Ollama)</div>
+        </div>
+        <div class="option-desc">
+            Runs AI models directly on your Mac. Works completely offline after setup.
+            <br>✓ Full privacy &nbsp; ✓ No internet needed &nbsp; ✓ No usage limits
+        </div>
+        <div class="requirements">
+            <strong>Requirements:</strong> Downloads Ollama + AI model (2-18 GB based on your Mac's RAM)
+        </div>
+    </div>
+    
+    <div class="option-card skip" onclick="selectOption(this, 'skip')">
+        <div class="option-header">
+            <div class="option-icon">⏭️</div>
+            <div class="option-title">Skip for Now</div>
+        </div>
+        <div class="option-desc">
+            Don't set up AI during installation. You can configure AI later from the app Settings.
+        </div>
+    </div>
+    
+    <div class="info-box">
+        <strong>💡 Tip:</strong> Most users choose <strong>Cloud AI</strong> for the easiest setup. 
+        You only need a free Groq API key, which takes 30 seconds to get. 
+        You can always add Local AI later if you want offline capabilities.
+    </div>
+    
+    <script>
+        function selectOption(element, choice) {
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            
+            // Store choice for installer
+            if (window.webkit && window.webkit.messageHandlers) {
+                window.webkit.messageHandlers.installer.postMessage({
+                    action: 'setChoice',
+                    choiceId: 'ai-' + choice
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Test Stream - StreamTV{% endblock %}
+
+{% block extra_styles %}
+        video {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        input {
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 5px;
+            width: 300px;
+            margin-right: 10px;
+        }
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>📺 Test Video Stream</h1>
+    </div>
+
+    <div class="card">
+        <div>
+            <label>Media ID: </label>
+            <input type="number" id="mediaId" value="1" min="1">
+            <button class="btn" id="loadStreamButton">Load Stream</button>
+        </div>
+        
+        <div id="info" class="info" style="display: none;"></div>
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <video id="videoPlayer" controls preload="metadata">
+            Your browser does not support the video tag.
+        </video>
+        
+        <div>
+            <h3>Available Media IDs:</h3>
+            <ul id="mediaList"></ul>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script nonce="{{ request.state.csp_nonce }}">
+        // Load available media on page load
+        async function loadMediaList() {
+            try {
+                const response = await fetch('/api/media?limit=10');
+                const media = await response.json();
+                const list = document.getElementById('mediaList');
+                list.innerHTML = media.items.map(m => 
+                    `<li>ID ${m.id}: ${m.title} <button class="btn" data-action="loadStreamById" data-args='[${m.id}]' style="padding: 5px 10px; margin-left: 10px;">Play</button></li>`
+                ).join('');
+                if (typeof bindActionHandlers === 'function') {
+                    bindActionHandlers(list);
+                }
+            } catch (error) {
+                console.error('Error loading media list:', error);
+            }
+        }
+
+        function loadStreamById(id) {
+            document.getElementById('mediaId').value = id;
+            loadStream();
+        }
+
+        async function loadStream() {
+            const mediaId = document.getElementById('mediaId').value;
+            const videoPlayer = document.getElementById('videoPlayer');
+            const infoDiv = document.getElementById('info');
+            const errorDiv = document.getElementById('error');
+            
+            errorDiv.style.display = 'none';
+            infoDiv.style.display = 'none';
+            
+            const streamUrl = `/iptv/stream/${mediaId}`;
+            infoDiv.textContent = `Loading stream from: ${streamUrl}`;
+            infoDiv.style.display = 'block';
+            
+            // Test if the URL is accessible
+            try {
+                const testResponse = await fetch(streamUrl, { 
+                    method: 'HEAD',
+                    headers: {
+                        'Range': 'bytes=0-'
+                    }
+                });
+                
+                if (!testResponse.ok && testResponse.status !== 206) {
+                    throw new Error(`HTTP ${testResponse.status}: ${testResponse.statusText}`);
+                }
+                
+                const contentType = testResponse.headers.get('Content-Type');
+                const contentLength = testResponse.headers.get('Content-Length');
+                const contentRange = testResponse.headers.get('Content-Range');
+                const acceptRanges = testResponse.headers.get('Accept-Ranges');
+                
+                infoDiv.innerHTML = `
+                    <strong>Stream Info:</strong><br>
+                    Content-Type: ${contentType || 'Not set'}<br>
+                    Content-Length: ${contentLength || 'Not set'}<br>
+                    Content-Range: ${contentRange || 'Not set'}<br>
+                    Accept-Ranges: ${acceptRanges || 'Not set'}<br>
+                    Status: ${testResponse.status} ${testResponse.statusText}
+                `;
+                
+                // Set video source
+                videoPlayer.src = streamUrl;
+                videoPlayer.load();
+                
+            } catch (error) {
+                errorDiv.textContent = `Error: ${error.message}`;
+                errorDiv.style.display = 'block';
+                console.error('Stream error:', error);
+                // Still try to load the video even if HEAD fails
+                videoPlayer.src = streamUrl;
+                videoPlayer.load();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadButton = document.getElementById('loadStreamButton');
+            if (loadButton) {
+                loadButton.addEventListener('click', loadStream);
+            }
+            loadMediaList();
+        });
+        
+        // Auto-load stream on page load
+        window.addEventListener('load', () => {
+            loadStream();
+        });
+    </script>
+{% endblock %}

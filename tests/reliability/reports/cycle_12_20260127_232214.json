@@ -1,0 +1,346 @@
+{
+  "cycle": 12,
+  "timestamp": "2026-01-28T01:01:22.473546",
+  "results": [
+    {
+      "channel_number": "80",
+      "channel_name": "Magnum P.I. Complete Series",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:53:01.910840"
+    },
+    {
+      "channel_number": "102",
+      "channel_name": "Ashley",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:53:16.931912"
+    },
+    {
+      "channel_number": "103",
+      "channel_name": "1980s TV",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:53:31.945123"
+    },
+    {
+      "channel_number": "104",
+      "channel_name": "The X-Files and Califormication",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:53:46.961042"
+    },
+    {
+      "channel_number": "105",
+      "channel_name": "Disney",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:54:01.989546"
+    },
+    {
+      "channel_number": "106",
+      "channel_name": "Westerns",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:54:17.000836"
+    },
+    {
+      "channel_number": "107",
+      "channel_name": "Taylor Swift",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:54:32.027172"
+    },
+    {
+      "channel_number": "108",
+      "channel_name": "ABC Sitcoms",
+      "tune_success": true,
+      "stream_received": true,
+      "bytes_received": 145177736,
+      "time_to_first_byte": 0.0036001205444335938,
+      "error": null,
+      "timestamp": "2026-01-28T00:54:47.048464"
+    },
+    {
+      "channel_number": "109",
+      "channel_name": "PBS Afternoon",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:54:57.055172"
+    },
+    {
+      "channel_number": "110",
+      "channel_name": "PBS Evening",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:55:12.068753"
+    },
+    {
+      "channel_number": "111",
+      "channel_name": "Ken Burns",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:55:27.079555"
+    },
+    {
+      "channel_number": "112",
+      "channel_name": "Kids Movies",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:55:42.091421"
+    },
+    {
+      "channel_number": "113",
+      "channel_name": "Comedy Movies",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:55:57.124003"
+    },
+    {
+      "channel_number": "114",
+      "channel_name": "Big City Greens",
+      "tune_success": true,
+      "stream_received": true,
+      "bytes_received": 74407016,
+      "time_to_first_byte": 0.0036427974700927734,
+      "error": null,
+      "timestamp": "2026-01-28T00:56:12.146106"
+    },
+    {
+      "channel_number": "115",
+      "channel_name": "AppleTV ",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:56:22.153799"
+    },
+    {
+      "channel_number": "116",
+      "channel_name": "Classic TV",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:56:37.166379"
+    },
+    {
+      "channel_number": "117",
+      "channel_name": "CSI",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:56:52.192933"
+    },
+    {
+      "channel_number": "118",
+      "channel_name": "Marvel",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:57:07.218715"
+    },
+    {
+      "channel_number": "119",
+      "channel_name": "Coen Brothers",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:57:22.230968"
+    },
+    {
+      "channel_number": "120",
+      "channel_name": "Superman and Batman",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:57:37.256077"
+    },
+    {
+      "channel_number": "121",
+      "channel_name": "Christmas",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:57:52.267191"
+    },
+    {
+      "channel_number": "122",
+      "channel_name": "All Apple",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:58:07.280274"
+    },
+    {
+      "channel_number": "123",
+      "channel_name": "Sesame Street",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:58:22.290128"
+    },
+    {
+      "channel_number": "143",
+      "channel_name": "IPOY 143",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:58:37.301404"
+    },
+    {
+      "channel_number": "1929",
+      "channel_name": "Disney Classics",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:58:52.312078"
+    },
+    {
+      "channel_number": "1980",
+      "channel_name": "1980 Lake Placid Winter Olympics",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:59:07.324221"
+    },
+    {
+      "channel_number": "1984",
+      "channel_name": "1984 Sarajevo Winter Olympics",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:59:22.351379"
+    },
+    {
+      "channel_number": "1984.1",
+      "channel_name": "Computer Chronicles",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:59:37.382322"
+    },
+    {
+      "channel_number": "1985",
+      "channel_name": "1985 Country Music",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T00:59:52.399505"
+    },
+    {
+      "channel_number": "1988",
+      "channel_name": "1988 Calgary Winter Olympics",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T01:00:07.411053"
+    },
+    {
+      "channel_number": "1991",
+      "channel_name": "1980s-1990s Country",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T01:00:22.422728"
+    },
+    {
+      "channel_number": "1992",
+      "channel_name": "1992 Albertville Winter Olympics",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T01:00:37.434971"
+    },
+    {
+      "channel_number": "1994",
+      "channel_name": "1994 Lillehammer Winter Olympics",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T01:00:52.446133"
+    },
+    {
+      "channel_number": "2000",
+      "channel_name": "2000's Movies",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "error": "Timeout",
+      "timestamp": "2026-01-28T01:01:07.456788"
+    }
+  ]
+}

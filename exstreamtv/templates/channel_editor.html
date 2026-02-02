@@ -1,0 +1,1220 @@
+{% extends "base.html" %}
+
+{% block title %}Channel Editor - EXStreamTV{% endblock %}
+
+{% block extra_styles %}
+    .editor-layout {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 24px;
+        height: calc(100vh - 180px);
+    }
+    
+    @media (max-width: 1200px) {
+        .editor-layout {
+            grid-template-columns: 1fr;
+            height: auto;
+        }
+    }
+    
+    /* Channel Settings Panel */
+    .settings-panel {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .settings-header {
+        padding: 20px 24px;
+        border-bottom: 0.5px solid var(--divider);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .channel-logo-edit {
+        width: 80px;
+        height: 80px;
+        background: var(--apple-fill);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .channel-logo-edit:hover {
+        background: var(--apple-fill-secondary);
+    }
+    
+    .channel-logo-edit img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .channel-logo-edit::after {
+        content: '📷';
+        position: absolute;
+        bottom: 4px;
+        right: 4px;
+        font-size: 16px;
+        background: var(--surface);
+        border-radius: 50%;
+        padding: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .channel-logo-edit:hover::after {
+        opacity: 1;
+    }
+    
+    .channel-title-edit {
+        flex: 1;
+    }
+    
+    .channel-name-input {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-primary);
+        background: none;
+        border: none;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    .channel-name-input:focus {
+        outline: none;
+        border-bottom: 2px solid var(--primary);
+    }
+    
+    .channel-number-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .channel-number-input {
+        width: 60px;
+        padding: 6px 10px;
+        background: var(--apple-fill);
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--primary);
+        text-align: center;
+    }
+    
+    .channel-number-input:focus {
+        outline: 2px solid var(--primary);
+    }
+    
+    .settings-tabs {
+        display: flex;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .settings-tab {
+        flex: 1;
+        padding: 14px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .settings-tab:hover {
+        background: var(--apple-fill);
+    }
+    
+    .settings-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+    
+    .settings-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+    }
+    
+    .settings-section {
+        margin-bottom: 28px;
+    }
+    
+    .settings-section:last-child {
+        margin-bottom: 0;
+    }
+    
+    .section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 16px;
+    }
+    
+    /* Playlist Panel */
+    .playlist-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .playlist-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .playlist-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .playlist-stats {
+        display: flex;
+        gap: 12px;
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+    
+    .playlist-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .playlist-container {
+        flex: 1;
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 400px;
+    }
+    
+    .playlist-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 0.5px solid var(--divider);
+        background: var(--surface-light);
+    }
+    
+    .playlist-search {
+        flex: 1;
+        padding: 8px 12px;
+        background: var(--apple-fill);
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        color: var(--text-primary);
+    }
+    
+    .playlist-search:focus {
+        outline: 2px solid var(--primary);
+    }
+    
+    .playlist-items {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+    }
+    
+    .playlist-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: var(--apple-fill);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        cursor: grab;
+        transition: all 0.2s ease;
+    }
+    
+    .playlist-item:hover {
+        background: var(--apple-fill-secondary);
+    }
+    
+    .playlist-item.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+    
+    .playlist-item.selected {
+        outline: 2px solid var(--primary);
+    }
+    
+    .item-handle {
+        color: var(--text-secondary);
+        cursor: grab;
+        font-size: 12px;
+    }
+    
+    .item-number {
+        width: 28px;
+        height: 28px;
+        background: var(--surface);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        flex-shrink: 0;
+    }
+    
+    .item-thumb {
+        width: 48px;
+        height: 36px;
+        background: var(--surface);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+    
+    .item-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .item-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .item-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .item-meta {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 2px;
+    }
+    
+    .item-duration {
+        font-size: 12px;
+        color: var(--text-secondary);
+        background: var(--surface);
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+    
+    .item-actions {
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .playlist-item:hover .item-actions {
+        opacity: 1;
+    }
+    
+    .item-action-btn {
+        width: 28px;
+        height: 28px;
+        background: var(--surface);
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .item-action-btn:hover {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .item-action-btn.delete:hover {
+        background: var(--error);
+    }
+    
+    /* Empty Playlist */
+    .playlist-empty {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        color: var(--text-secondary);
+        border: 2px dashed var(--divider);
+        border-radius: 12px;
+        margin: 16px;
+    }
+    
+    .playlist-empty.drop-zone {
+        border-color: var(--primary);
+        background: rgba(10, 132, 255, 0.1);
+    }
+    
+    .playlist-empty-icon {
+        font-size: 48px;
+        opacity: 0.5;
+        margin-bottom: 12px;
+    }
+    
+    /* Color Picker */
+    .color-picker-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .color-swatch {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .color-swatch:hover {
+        transform: scale(1.1);
+    }
+    
+    .color-swatch.selected {
+        border-color: var(--text-primary);
+        box-shadow: 0 0 0 2px var(--surface);
+    }
+    
+    /* Profile Select */
+    .profile-card {
+        padding: 16px;
+        background: var(--apple-fill);
+        border-radius: 10px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+        margin-bottom: 8px;
+    }
+    
+    .profile-card:hover {
+        background: var(--apple-fill-secondary);
+    }
+    
+    .profile-card.selected {
+        border-color: var(--primary);
+    }
+    
+    .profile-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .profile-desc {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+    }
+    
+    /* Add Content Modal */
+    .content-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .content-modal.active {
+        display: flex;
+    }
+    
+    .content-modal-content {
+        background: var(--surface);
+        border-radius: 16px;
+        width: 90%;
+        max-width: 700px;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .content-modal-header {
+        padding: 20px 24px;
+        border-bottom: 0.5px solid var(--divider);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .content-modal-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .content-modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+    
+    .content-modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+    }
+    
+    .content-source-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    
+    .source-tab {
+        padding: 10px 20px;
+        background: var(--apple-fill);
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        color: var(--text-primary);
+        cursor: pointer;
+    }
+    
+    .source-tab.active {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .content-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    
+    .content-card {
+        background: var(--apple-fill);
+        border-radius: 10px;
+        padding: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
+    
+    .content-card:hover {
+        background: var(--apple-fill-secondary);
+    }
+    
+    .content-card.selected {
+        border-color: var(--primary);
+    }
+    
+    .content-card-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+    
+    .content-card-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+    
+    .content-card-meta {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+    }
+    
+    .content-modal-footer {
+        padding: 16px 24px;
+        border-top: 0.5px solid var(--divider);
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">Channel Editor</h1>
+            <p class="page-subtitle">Configure channel settings and build playlists.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-secondary" onclick="previewChannel()">
+                Preview
+            </button>
+            <button class="btn btn-primary" onclick="saveChannel()">
+                Save Channel
+            </button>
+        </div>
+    </div>
+    
+    <div class="editor-layout">
+        <!-- Settings Panel -->
+        <div class="settings-panel">
+            <div class="settings-header">
+                <div class="channel-logo-edit" id="channelLogo" onclick="changeLogo()">
+                    📺
+                </div>
+                <div class="channel-title-edit">
+                    <input type="text" class="channel-name-input" id="channelName" 
+                           value="New Channel" placeholder="Channel Name">
+                    <div class="channel-number-row">
+                        <span style="color: var(--text-secondary); font-size: 14px;">Channel</span>
+                        <input type="number" class="channel-number-input" id="channelNumber" 
+                               value="1" min="1" max="999">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-tabs">
+                <div class="settings-tab active" onclick="switchSettingsTab('general')">General</div>
+                <div class="settings-tab" onclick="switchSettingsTab('streaming')">Streaming</div>
+                <div class="settings-tab" onclick="switchSettingsTab('artwork')">Artwork</div>
+            </div>
+            
+            <div class="settings-body" id="settingsBody">
+                <!-- General Settings -->
+                <div class="settings-section" id="generalSettings">
+                    <div class="section-title">Channel Info</div>
+                    
+                    <div class="form-group">
+                        <label>Group</label>
+                        <select id="channelGroup" class="form-select">
+                            <option value="">No Group</option>
+                            <option value="movies">Movies</option>
+                            <option value="shows">TV Shows</option>
+                            <option value="news">News</option>
+                            <option value="sports">Sports</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Categories (comma separated)</label>
+                        <input type="text" id="channelCategories" placeholder="e.g., Entertainment, Drama">
+                    </div>
+                    
+                    <div class="section-title" style="margin-top: 24px;">Playback</div>
+                    
+                    <div class="form-group">
+                        <label>Mode</label>
+                        <select id="playbackMode" class="form-select">
+                            <option value="continuous">Continuous (Loop)</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="shuffle">Shuffle</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="autoStart" checked>
+                            <span>Auto-start on server launch</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Streaming Settings (hidden by default) -->
+                <div class="settings-section" id="streamingSettings" style="display: none;">
+                    <div class="section-title">FFmpeg Profile</div>
+                    
+                    <div class="profile-card selected" onclick="selectProfile(this, 'default')">
+                        <div class="profile-name">Default (1080p)</div>
+                        <div class="profile-desc">H.264, AAC, 8 Mbps</div>
+                    </div>
+                    
+                    <div class="profile-card" onclick="selectProfile(this, 'hd')">
+                        <div class="profile-name">HD (720p)</div>
+                        <div class="profile-desc">H.264, AAC, 4 Mbps</div>
+                    </div>
+                    
+                    <div class="profile-card" onclick="selectProfile(this, '4k')">
+                        <div class="profile-name">4K UHD</div>
+                        <div class="profile-desc">H.265, AAC, 20 Mbps</div>
+                    </div>
+                    
+                    <div class="section-title" style="margin-top: 24px;">Output</div>
+                    
+                    <div class="form-group">
+                        <label>Stream Format</label>
+                        <select id="streamFormat" class="form-select">
+                            <option value="mpegts">MPEG-TS (HLS/HDHomeRun)</option>
+                            <option value="hls">HLS (.m3u8)</option>
+                            <option value="dash">DASH</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Artwork Settings (hidden by default) -->
+                <div class="settings-section" id="artworkSettings" style="display: none;">
+                    <div class="section-title">Guide Color</div>
+                    
+                    <div class="color-picker-row">
+                        <div class="color-swatch selected" style="background: #0A84FF;" 
+                             onclick="selectColor(this, '#0A84FF')"></div>
+                        <div class="color-swatch" style="background: #34C759;" 
+                             onclick="selectColor(this, '#34C759')"></div>
+                        <div class="color-swatch" style="background: #FF9500;" 
+                             onclick="selectColor(this, '#FF9500')"></div>
+                        <div class="color-swatch" style="background: #FF3B30;" 
+                             onclick="selectColor(this, '#FF3B30')"></div>
+                        <div class="color-swatch" style="background: #AF52DE;" 
+                             onclick="selectColor(this, '#AF52DE')"></div>
+                        <div class="color-swatch" style="background: #5AC8FA;" 
+                             onclick="selectColor(this, '#5AC8FA')"></div>
+                    </div>
+                    
+                    <div class="section-title" style="margin-top: 24px;">Watermark</div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enableWatermark">
+                            <span>Enable watermark overlay</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Position</label>
+                        <select id="watermarkPosition" class="form-select">
+                            <option value="top-left">Top Left</option>
+                            <option value="top-right">Top Right</option>
+                            <option value="bottom-left">Bottom Left</option>
+                            <option value="bottom-right">Bottom Right</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Playlist Panel -->
+        <div class="playlist-panel">
+            <div class="playlist-header">
+                <div>
+                    <div class="playlist-title">Channel Playlist</div>
+                    <div class="playlist-stats">
+                        <span id="itemCount">0 items</span>
+                        <span>•</span>
+                        <span id="totalDuration">0h 0m</span>
+                    </div>
+                </div>
+                <div class="playlist-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="openContentModal()">
+                        + Add Content
+                    </button>
+                </div>
+            </div>
+            
+            <div class="playlist-container">
+                <div class="playlist-toolbar">
+                    <input type="text" class="playlist-search" placeholder="Filter items..." 
+                           oninput="filterPlaylist(this.value)">
+                    <button class="btn btn-ghost btn-sm" onclick="shufflePlaylist()">🔀</button>
+                    <button class="btn btn-ghost btn-sm" onclick="clearPlaylist()">🗑️</button>
+                </div>
+                
+                <div class="playlist-items" id="playlistItems">
+                    <!-- Items or empty state -->
+                    <div class="playlist-empty" id="playlistEmpty">
+                        <div class="playlist-empty-icon">📋</div>
+                        <p>Drag content here or click "Add Content"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Content Modal -->
+<div class="content-modal" id="contentModal">
+    <div class="content-modal-content">
+        <div class="content-modal-header">
+            <span class="content-modal-title">Add Content</span>
+            <button class="content-modal-close" onclick="closeContentModal()">×</button>
+        </div>
+        
+        <div class="content-modal-body">
+            <div class="content-source-tabs">
+                <button class="source-tab active" onclick="switchSourceTab('playlists')">Playlists</button>
+                <button class="source-tab" onclick="switchSourceTab('media')">Media</button>
+                <button class="source-tab" onclick="switchSourceTab('collections')">Collections</button>
+            </div>
+            
+            <input type="text" class="playlist-search" placeholder="Search..." 
+                   style="width: 100%; margin-bottom: 16px;" oninput="searchContent(this.value)">
+            
+            <div class="content-grid" id="contentGrid">
+                <!-- Content items loaded via JS -->
+            </div>
+        </div>
+        
+        <div class="content-modal-footer">
+            <button class="btn btn-secondary" onclick="closeContentModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="addSelectedContent()">Add Selected</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let channelData = {
+        id: null,
+        name: 'New Channel',
+        number: 1,
+        logo: null,
+        group: '',
+        categories: '',
+        playbackMode: 'continuous',
+        autoStart: true,
+        profile: 'default',
+        streamFormat: 'mpegts',
+        guideColor: '#0A84FF',
+        watermark: false,
+        watermarkPosition: 'top-right',
+        items: []
+    };
+    
+    let availableContent = [];
+    let selectedContent = [];
+    let currentSourceTab = 'playlists';
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check if editing existing channel
+        const urlParams = new URLSearchParams(window.location.search);
+        const channelId = urlParams.get('id');
+        
+        if (channelId) {
+            loadChannel(channelId);
+        }
+        
+        loadAvailableContent();
+        setupDragDrop();
+    });
+    
+    async function loadChannel(id) {
+        try {
+            const response = await fetch(`/api/channels/${id}`);
+            const channel = await response.json();
+            
+            channelData = { ...channelData, ...channel };
+            
+            document.getElementById('channelName').value = channel.name;
+            document.getElementById('channelNumber').value = channel.number;
+            document.getElementById('channelGroup').value = channel.group || '';
+            document.getElementById('playbackMode').value = channel.playback_mode || 'continuous';
+            
+            if (channel.logo_url) {
+                document.getElementById('channelLogo').innerHTML = 
+                    `<img src="${channel.logo_url}" alt="">`;
+            }
+            
+            // Load playlist items
+            if (channel.playlist_id) {
+                await loadPlaylistItems(channel.playlist_id);
+            }
+        } catch (error) {
+            console.error('Failed to load channel:', error);
+        }
+    }
+    
+    async function loadPlaylistItems(playlistId) {
+        try {
+            const response = await fetch(`/api/playlists/${playlistId}/items`);
+            const items = await response.json();
+            
+            channelData.items = items;
+            renderPlaylist();
+        } catch (error) {
+            console.error('Failed to load playlist items:', error);
+        }
+    }
+    
+    async function loadAvailableContent() {
+        try {
+            const [playlistsRes, mediaRes] = await Promise.all([
+                fetch('/api/playlists'),
+                fetch('/api/media')
+            ]);
+            
+            const playlists = await playlistsRes.json();
+            const media = await mediaRes.json();
+            
+            availableContent = {
+                playlists: playlists.map(p => ({
+                    id: p.id,
+                    type: 'playlist',
+                    name: p.name,
+                    icon: '📋',
+                    itemCount: p.item_count || 0,
+                    duration: p.total_duration || 0
+                })),
+                media: media.map(m => ({
+                    id: m.id,
+                    type: 'media',
+                    name: m.title,
+                    icon: getMediaIcon(m.media_type),
+                    duration: m.duration || 0
+                })),
+                collections: []
+            };
+            
+            renderContentGrid();
+        } catch (error) {
+            console.error('Failed to load content:', error);
+        }
+    }
+    
+    function switchSettingsTab(tab) {
+        document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        document.getElementById('generalSettings').style.display = tab === 'general' ? 'block' : 'none';
+        document.getElementById('streamingSettings').style.display = tab === 'streaming' ? 'block' : 'none';
+        document.getElementById('artworkSettings').style.display = tab === 'artwork' ? 'block' : 'none';
+    }
+    
+    function selectProfile(element, profile) {
+        document.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
+        element.classList.add('selected');
+        channelData.profile = profile;
+    }
+    
+    function selectColor(element, color) {
+        document.querySelectorAll('.color-swatch').forEach(c => c.classList.remove('selected'));
+        element.classList.add('selected');
+        channelData.guideColor = color;
+    }
+    
+    function renderPlaylist() {
+        const container = document.getElementById('playlistItems');
+        const emptyEl = document.getElementById('playlistEmpty');
+        
+        if (channelData.items.length === 0) {
+            emptyEl.style.display = 'flex';
+            container.innerHTML = '';
+            container.appendChild(emptyEl);
+            updateStats();
+            return;
+        }
+        
+        emptyEl.style.display = 'none';
+        
+        container.innerHTML = channelData.items.map((item, index) => `
+            <div class="playlist-item" draggable="true" data-index="${index}">
+                <span class="item-handle">⋮⋮</span>
+                <span class="item-number">${index + 1}</span>
+                <div class="item-thumb">
+                    ${item.thumbnail ? `<img src="${item.thumbnail}" alt="">` : item.icon || '📺'}
+                </div>
+                <div class="item-info">
+                    <div class="item-title">${escapeHtml(item.name || item.title)}</div>
+                    <div class="item-meta">${item.type || ''}</div>
+                </div>
+                <span class="item-duration">${formatDuration(item.duration)}</span>
+                <div class="item-actions">
+                    <button class="item-action-btn" onclick="moveItemUp(${index})">↑</button>
+                    <button class="item-action-btn" onclick="moveItemDown(${index})">↓</button>
+                    <button class="item-action-btn delete" onclick="removeItem(${index})">×</button>
+                </div>
+            </div>
+        `).join('');
+        
+        updateStats();
+        setupDragDrop();
+    }
+    
+    function updateStats() {
+        document.getElementById('itemCount').textContent = `${channelData.items.length} items`;
+        
+        const totalSeconds = channelData.items.reduce((sum, item) => sum + (item.duration || 0), 0);
+        const hours = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        document.getElementById('totalDuration').textContent = `${hours}h ${mins}m`;
+    }
+    
+    function setupDragDrop() {
+        const items = document.querySelectorAll('.playlist-item');
+        const container = document.getElementById('playlistItems');
+        
+        items.forEach(item => {
+            item.addEventListener('dragstart', (e) => {
+                item.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', item.dataset.index);
+            });
+            
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+            });
+            
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const dragging = document.querySelector('.dragging');
+                const siblings = [...container.querySelectorAll('.playlist-item:not(.dragging)')];
+                const nextSibling = siblings.find(sibling => {
+                    const box = sibling.getBoundingClientRect();
+                    return e.clientY < box.top + box.height / 2;
+                });
+                
+                container.insertBefore(dragging, nextSibling);
+            });
+        });
+        
+        container.addEventListener('dragend', () => {
+            // Reorder items array based on new DOM order
+            const newOrder = [...container.querySelectorAll('.playlist-item')].map(el => 
+                parseInt(el.dataset.index)
+            );
+            
+            const reordered = newOrder.map(i => channelData.items[i]);
+            channelData.items = reordered;
+            renderPlaylist();
+        });
+    }
+    
+    function filterPlaylist(query) {
+        const items = document.querySelectorAll('.playlist-item');
+        items.forEach(item => {
+            const title = item.querySelector('.item-title').textContent.toLowerCase();
+            item.style.display = title.includes(query.toLowerCase()) ? 'flex' : 'none';
+        });
+    }
+    
+    function moveItemUp(index) {
+        if (index > 0) {
+            [channelData.items[index], channelData.items[index - 1]] = 
+            [channelData.items[index - 1], channelData.items[index]];
+            renderPlaylist();
+        }
+    }
+    
+    function moveItemDown(index) {
+        if (index < channelData.items.length - 1) {
+            [channelData.items[index], channelData.items[index + 1]] = 
+            [channelData.items[index + 1], channelData.items[index]];
+            renderPlaylist();
+        }
+    }
+    
+    function removeItem(index) {
+        channelData.items.splice(index, 1);
+        renderPlaylist();
+    }
+    
+    function shufflePlaylist() {
+        for (let i = channelData.items.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [channelData.items[i], channelData.items[j]] = [channelData.items[j], channelData.items[i]];
+        }
+        renderPlaylist();
+    }
+    
+    function clearPlaylist() {
+        if (confirm('Clear all items from playlist?')) {
+            channelData.items = [];
+            renderPlaylist();
+        }
+    }
+    
+    // Content Modal
+    function openContentModal() {
+        selectedContent = [];
+        renderContentGrid();
+        document.getElementById('contentModal').classList.add('active');
+    }
+    
+    function closeContentModal() {
+        document.getElementById('contentModal').classList.remove('active');
+    }
+    
+    function switchSourceTab(tab) {
+        currentSourceTab = tab;
+        document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        renderContentGrid();
+    }
+    
+    function renderContentGrid() {
+        const grid = document.getElementById('contentGrid');
+        const items = availableContent[currentSourceTab] || [];
+        
+        if (items.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">
+                    No ${currentSourceTab} found
+                </div>
+            `;
+            return;
+        }
+        
+        grid.innerHTML = items.map(item => `
+            <div class="content-card ${selectedContent.includes(item.id) ? 'selected' : ''}" 
+                 onclick="toggleContentSelection(${item.id}, '${item.type}')">
+                <div class="content-card-icon">${item.icon}</div>
+                <div class="content-card-name">${escapeHtml(item.name)}</div>
+                <div class="content-card-meta">
+                    ${item.itemCount ? `${item.itemCount} items` : formatDuration(item.duration)}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function searchContent(query) {
+        const items = availableContent[currentSourceTab] || [];
+        const filtered = items.filter(i => i.name.toLowerCase().includes(query.toLowerCase()));
+        
+        const grid = document.getElementById('contentGrid');
+        grid.innerHTML = filtered.map(item => `
+            <div class="content-card ${selectedContent.includes(item.id) ? 'selected' : ''}" 
+                 onclick="toggleContentSelection(${item.id}, '${item.type}')">
+                <div class="content-card-icon">${item.icon}</div>
+                <div class="content-card-name">${escapeHtml(item.name)}</div>
+                <div class="content-card-meta">
+                    ${item.itemCount ? `${item.itemCount} items` : formatDuration(item.duration)}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function toggleContentSelection(id, type) {
+        const index = selectedContent.findIndex(s => s.id === id);
+        if (index >= 0) {
+            selectedContent.splice(index, 1);
+        } else {
+            const item = availableContent[currentSourceTab].find(i => i.id === id);
+            selectedContent.push(item);
+        }
+        renderContentGrid();
+    }
+    
+    async function addSelectedContent() {
+        for (const item of selectedContent) {
+            if (item.type === 'playlist') {
+                // Would fetch playlist items and add them
+                channelData.items.push({
+                    ...item,
+                    title: item.name
+                });
+            } else {
+                channelData.items.push({
+                    ...item,
+                    title: item.name
+                });
+            }
+        }
+        
+        closeContentModal();
+        renderPlaylist();
+    }
+    
+    function changeLogo() {
+        // Would open file picker
+        alert('Logo picker coming soon');
+    }
+    
+    function previewChannel() {
+        const name = document.getElementById('channelName').value;
+        const number = document.getElementById('channelNumber').value;
+        alert(`Preview: Channel ${number} - ${name}`);
+    }
+    
+    async function saveChannel() {
+        channelData.name = document.getElementById('channelName').value;
+        channelData.number = parseInt(document.getElementById('channelNumber').value);
+        channelData.group = document.getElementById('channelGroup').value;
+        channelData.playbackMode = document.getElementById('playbackMode').value;
+        channelData.autoStart = document.getElementById('autoStart').checked;
+        channelData.streamFormat = document.getElementById('streamFormat').value;
+        
+        try {
+            const method = channelData.id ? 'PUT' : 'POST';
+            const url = channelData.id ? `/api/channels/${channelData.id}` : '/api/channels';
+            
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(channelData)
+            });
+            
+            if (response.ok) {
+                alert('Channel saved successfully!');
+                window.location.href = '/channels';
+            } else {
+                throw new Error('Failed to save');
+            }
+        } catch (error) {
+            console.error('Failed to save channel:', error);
+            alert('Failed to save channel');
+        }
+    }
+    
+    function getMediaIcon(type) {
+        const icons = {
+            'movie': '🎬',
+            'episode': '📺',
+            'show': '📺',
+            'music': '🎵'
+        };
+        return icons[type] || '📹';
+    }
+    
+    function formatDuration(seconds) {
+        if (!seconds) return '0m';
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        if (hours > 0) return `${hours}h ${mins}m`;
+        return `${mins}m`;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+    
+    // Close modal on outside click
+    document.getElementById('contentModal').addEventListener('click', (e) => {
+        if (e.target.id === 'contentModal') closeContentModal();
+    });
+</script>
+{% endblock %}

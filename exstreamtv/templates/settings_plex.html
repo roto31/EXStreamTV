@@ -1,0 +1,1180 @@
+{% extends "base.html" %}
+{% block title %}Plex API Integration - StreamTV{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Plex API Integration</div>
+            <p class="page-subtitle">Configure Plex Media Server API integration for enhanced EPG and schedule management.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-outlined" type="button" id="refreshPlexUrlsButton" aria-label="Refresh all Plex media URLs" title="Clear cached Plex URLs to fix playback issues">
+                <span class="material-icons" aria-hidden="true">sync</span>
+                Refresh URLs
+            </button>
+            <button class="btn btn-outlined" type="button" id="testPlexConnectionButton" aria-label="Test Plex connection">
+                <span class="material-icons" aria-hidden="true">network_check</span>
+                Test Connection
+            </button>
+            <button class="btn btn-outlined" type="button" id="reloadPlexGuideButton" aria-label="Refresh guide in Plex" title="Tell Plex DVR to reload the program guide">
+                <span class="material-icons" aria-hidden="true">tv</span>
+                Refresh guide in Plex
+            </button>
+            <button class="btn btn-outlined" type="button" id="refreshPlexSettingsButton" aria-label="Reload Plex settings">
+                <span class="material-icons" aria-hidden="true">refresh</span>
+                Reload
+            </button>
+            <button class="btn btn-primary" type="button" id="savePlexSettingsButton" aria-label="Save Plex settings">
+                <span class="material-icons" aria-hidden="true">save</span>
+                Save Changes
+            </button>
+        </div>
+    </div>
+    
+    <div class="card status-card" id="statusCard" style="display: none;">
+        <span id="statusMessage"></span>
+    </div>
+    
+    <div class="settings-grid">
+        <div class="card settings-card">
+            <div class="card-title">General</div>
+            <div class="form-group">
+                <label for="enabled">
+                    <input type="checkbox" id="enabled" style="width: auto; margin-right: 8px;" aria-label="Enable Plex API integration">
+                    Enable Plex API Integration
+                </label>
+                <small>Enable Plex Media Server API integration for enhanced EPG generation, channel mapping, and schedule management.</small>
+            </div>
+        </div>
+        
+        <div class="card settings-card">
+            <div class="card-title">Server Configuration</div>
+            <div class="form-group">
+                <label for="baseUrl">Plex Server URL</label>
+                <input type="text" id="baseUrl" placeholder="http://localhost:32400">
+                <small>Your Plex Media Server URL. Default: http://localhost:32400</small>
+            </div>
+            <div class="form-group">
+                <label for="token">Authentication Token</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="password" id="token" placeholder="Your Plex authentication token" style="flex: 1;">
+                    <button class="btn btn-outlined" type="button" id="togglePlexTokenButton" style="white-space: nowrap;" aria-label="Toggle Plex token visibility">
+                        <span class="material-icons" id="tokenVisibilityIcon" aria-hidden="true">visibility</span>
+                    </button>
+                </div>
+                <small>Your Plex authentication token. See instructions below to obtain it.</small>
+            </div>
+        </div>
+        
+        <div class="card settings-card">
+            <div class="card-title">EPG Integration</div>
+            <div class="form-group">
+                <label for="useForEpg">
+                    <input type="checkbox" id="useForEpg" style="width: auto; margin-right: 8px;" aria-label="Use Plex API for EPG enhancement">
+                    Use Plex API for EPG Enhancement
+                </label>
+                <small>Enable Plex API integration for enhanced Electronic Program Guide (EPG) generation, channel mapping, and metadata enrichment.</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Plex OAuth Sign-In Card -->
+    <div class="card settings-card" style="grid-column: span 2;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="font-size: 20px;" aria-hidden="true">login</span>
+            Sign in with Plex
+        </div>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+            Use Plex OAuth to automatically connect to your Plex account and discover your servers.
+        </p>
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-primary" type="button" id="plexOAuthButton">
+                <span class="material-icons" aria-hidden="true">account_circle</span>
+                Sign in with Plex
+            </button>
+            <div id="oauthStatus" style="color: var(--text-secondary); font-size: 14px;"></div>
+        </div>
+        <div id="oauthInstructions" style="display: none; margin-top: 16px; padding: 16px; background: var(--surface-light); border-radius: 8px;">
+            <p style="font-weight: 600; margin-bottom: 8px;">Enter this code at plex.tv/link:</p>
+            <div id="oauthPinCode" style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: var(--primary); margin-bottom: 12px;"></div>
+            <a id="oauthAuthLink" href="#" target="_blank" class="btn btn-outlined" style="margin-bottom: 8px;">
+                <span class="material-icons" aria-hidden="true">open_in_new</span>
+                Open plex.tv/link
+            </a>
+            <p id="oauthWaiting" style="color: var(--text-secondary); font-size: 13px;"></p>
+        </div>
+        <div id="oauthServers" style="display: none; margin-top: 16px;"></div>
+    </div>
+    
+    <!-- Plex API Status Card -->
+    <div class="card info-card">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="font-size: 20px;" aria-hidden="true">info</span>
+            Connection Status
+        </div>
+        <div id="connectionStatus" style="margin-top: 12px; color: var(--text-secondary); font-size: 15px; line-height: 1.5;">
+            <p>Click "Test Connection" to check Plex server connectivity.</p>
+        </div>
+    </div>
+    
+    <!-- Plex Libraries Card -->
+    <div class="card info-card" style="grid-column: span 2;">
+        <div class="card-title" style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="material-icons" style="font-size: 20px;" aria-hidden="true">video_library</span>
+                Plex Libraries
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-outlined btn-sm" type="button" id="loadLibrariesButton">
+                    <span class="material-icons" aria-hidden="true">refresh</span>
+                    Load Libraries
+                </button>
+                <button class="btn btn-primary btn-sm" type="button" id="scanAllLibrariesButton" style="display: none;">
+                    <span class="material-icons" aria-hidden="true">cloud_download</span>
+                    Scan All Libraries
+                </button>
+            </div>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 14px; margin: 8px 0;">
+            Scan your Plex libraries to import movies and TV shows into the media database.
+        </p>
+        <div id="plexLibraries" style="margin-top: 12px; color: var(--text-secondary); font-size: 15px;">
+            <p>Click "Load Libraries" to see available Plex libraries.</p>
+        </div>
+        <div id="scanStatus" style="margin-top: 12px; display: none;"></div>
+    </div>
+    
+    <!-- Rebuild Tools Card -->
+    <div class="card settings-card" style="grid-column: span 2;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="font-size: 20px;" aria-hidden="true">build</span>
+            Rebuild Tools
+        </div>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+            Use these tools to populate playlists and rebuild channel playouts from your Plex library.
+        </p>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn btn-outlined" type="button" id="autoPopulatePlaylistsButton">
+                <span class="material-icons" aria-hidden="true">playlist_add</span>
+                Auto-Populate Empty Playlists
+            </button>
+            <button class="btn btn-outlined" type="button" id="rebuildAllPlayoutsButton">
+                <span class="material-icons" aria-hidden="true">autorenew</span>
+                Rebuild All Channel Playouts
+            </button>
+            <button class="btn btn-outlined" type="button" id="cleanupDuplicatesButton" style="color: var(--warning);">
+                <span class="material-icons" aria-hidden="true">delete_sweep</span>
+                Remove Duplicate Items
+            </button>
+        </div>
+        <div id="rebuildStatus" style="margin-top: 12px; display: none;"></div>
+    </div>
+    
+    <!-- Documentation Section -->
+    <div class="card info-card" style="margin-top: 16px;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="font-size: 20px;" aria-hidden="true">menu_book</span>
+            How to Get Your Plex Token
+        </div>
+        <div style="margin-top: 12px; color: var(--text-secondary); font-size: 15px; line-height: 1.5;">
+            <h3 style="color: var(--text-primary); margin-top: 16px; margin-bottom: 8px;">Method 1: Browser Developer Tools</h3>
+            <ol style="padding-left: 20px; margin-top: 8px;">
+                <li style="margin-bottom: 8px;">Open Plex Web App in your browser: <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">http://localhost:32400/web</code> or <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">https://app.plex.tv/desktop</code></li>
+                <li style="margin-bottom: 8px;">Open Developer Tools:
+                    <ul style="padding-left: 20px; margin-top: 4px;">
+                        <li>macOS: <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">Cmd + Option + I</code></li>
+                        <li>Windows/Linux: <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">F12</code> or <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">Ctrl + Shift + I</code></li>
+                    </ul>
+                </li>
+                <li style="margin-bottom: 8px;">Go to the <strong>Network</strong> tab in Developer Tools</li>
+                <li style="margin-bottom: 8px;">Refresh the page (<code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">Cmd+R</code> or <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">F5</code>)</li>
+                <li style="margin-bottom: 8px;">Find any request to your Plex server (look for requests to <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">localhost:32400</code> or <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">plex.tv</code>)</li>
+                <li style="margin-bottom: 8px;">Click on the request and check the <strong>Headers</strong> tab</li>
+                <li style="margin-bottom: 8px;">Look for <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">X-Plex-Token</code> in Request Headers</li>
+                <li style="margin-bottom: 8px;">Copy the token value (it's a long alphanumeric string)</li>
+            </ol>
+            
+            <div style="background: var(--surface-light); padding: 16px; border-radius: 8px; margin: 16px 0; border: 0.5px solid var(--divider);">
+                <p style="margin: 0; color: var(--text-primary); font-weight: 500; margin-bottom: 8px;">📸 Screenshot Guide:</p>
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">1. Open Developer Tools → Network tab<br>
+                2. Refresh page → Find request → Headers tab<br>
+                3. Look for X-Plex-Token header → Copy value</p>
+            </div>
+            
+            <h3 style="color: var(--text-primary); margin-top: 24px; margin-bottom: 8px;">Method 2: Browser Console</h3>
+            <ol style="padding-left: 20px; margin-top: 8px;">
+                <li style="margin-bottom: 8px;">Open Plex Web App and log in</li>
+                <li style="margin-bottom: 8px;">Open Developer Tools → <strong>Console</strong> tab</li>
+                <li style="margin-bottom: 8px;">Type and press Enter: <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">window.localStorage.getItem('token')</code></li>
+                <li style="margin-bottom: 8px;">Copy the returned token value</li>
+            </ol>
+        </div>
+    </div>
+    
+    <!-- Available Plex APIs Section -->
+    <div class="card info-card" style="margin-top: 16px;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="font-size: 20px;" aria-hidden="true">api</span>
+            Available Plex API Integrations
+        </div>
+        <div style="margin-top: 12px;">
+            <div style="display: grid; gap: 12px;">
+                <!-- EPG APIs -->
+                <div class="api-section">
+                    <h4 style="color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons" style="font-size: 20px;" aria-hidden="true">tv</span>
+                        EPG (Electronic Program Guide) APIs
+                    </h4>
+                    <div style="background: var(--surface-light); padding: 12px; border-radius: 8px; margin-top: 8px;">
+                        <div style="margin-bottom: 8px;">
+                            <strong style="color: var(--text-primary);">✅ Integrated:</strong>
+                            <ul style="margin: 4px 0 0 20px; color: var(--text-secondary);">
+                                <li><code>/livetv/dvrs/epg/channels</code> - Get channels for a lineup</li>
+                                <li><code>/livetv/dvrs/epg/lineups</code> - Get available lineups</li>
+                                <li><code>/livetv/dvrs/epg/channelMap</code> - Compute best channel map</li>
+                                <li><code>/livetv/dvrs/epg/countries</code> - Get all available countries</li>
+                            </ul>
+                        </div>
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 0.5px solid var(--divider);">
+                            <strong style="color: var(--text-primary);">📋 Available:</strong>
+                            <ul style="margin: 4px 0 0 20px; color: var(--text-secondary);">
+                                <li><code>/livetv/dvrs/epg/regions</code> - Get regions for a country</li>
+                                <li><code>/livetv/dvrs/epg/languages</code> - Get all languages</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- DVR APIs -->
+                <div class="api-section">
+                    <h4 style="color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons" style="font-size: 20px;">dvr</span>
+                        DVR APIs
+                    </h4>
+                    <div style="background: var(--surface-light); padding: 12px; border-radius: 8px; margin-top: 8px;">
+                        <div style="margin-bottom: 8px;">
+                            <strong style="color: var(--text-primary);">✅ Integrated:</strong>
+                            <ul style="margin: 4px 0 0 20px; color: var(--text-secondary);">
+                                <li><code>/livetv/dvrs</code> - Get all DVRs</li>
+                                <li><code>/livetv/dvrs/{dvrId}</code> - Get single DVR</li>
+                            </ul>
+                        </div>
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 0.5px solid var(--divider);">
+                            <strong style="color: var(--text-primary);">📋 Available:</strong>
+                            <ul style="margin: 4px 0 0 20px; color: var(--text-secondary);">
+                                <li><code>POST /livetv/dvrs</code> - Create a DVR</li>
+                                <li><code>PUT /livetv/dvrs/{dvrId}/lineup</code> - Add a DVR Lineup</li>
+                                <li><code>POST /livetv/dvrs/{dvrId}/reload</code> - Reload program guide</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Device APIs -->
+                <div class="api-section">
+                    <h4 style="color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons" style="font-size: 20px;">devices</span>
+                        Device APIs
+                    </h4>
+                    <div style="background: var(--surface-light); padding: 12px; border-radius: 8px; margin-top: 8px;">
+                        <div style="margin-bottom: 8px;">
+                            <strong style="color: var(--text-primary);">📋 Available:</strong>
+                            <ul style="margin: 4px 0 0 20px; color: var(--text-secondary);">
+                                <li><code>/livetv/devices</code> - Get all devices</li>
+                                <li><code>POST /livetv/devices</code> - Add a device</li>
+                                <li><code>POST /livetv/devices/discover</code> - Discover devices</li>
+                                <li><code>/livetv/devices/{deviceId}</code> - Get device details</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Integration Guide -->
+    <div class="card info-card" style="margin-top: 16px;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="font-size: 20px;">help_outline</span>
+            Integration Guide
+        </div>
+        <div style="margin-top: 12px; color: var(--text-secondary); font-size: 15px; line-height: 1.5;">
+            <h3 style="color: var(--text-primary); margin-top: 16px; margin-bottom: 8px;">Step 1: Enable Integration</h3>
+            <p>Check the "Enable Plex API Integration" checkbox above and save your settings.</p>
+            
+            <h3 style="color: var(--text-primary); margin-top: 24px; margin-bottom: 8px;">Step 2: Configure Server</h3>
+            <p>Enter your Plex server URL (usually <code style="background: var(--surface-light); padding: 2px 6px; border-radius: 4px;">http://localhost:32400</code> or your server's IP address).</p>
+            
+            <h3 style="color: var(--text-primary); margin-top: 24px; margin-bottom: 8px;">Step 3: Add Token</h3>
+            <p>Follow the instructions above to obtain your Plex authentication token and paste it in the "Authentication Token" field.</p>
+            
+            <h3 style="color: var(--text-primary); margin-top: 24px; margin-bottom: 8px;">Step 4: Enable EPG Enhancement</h3>
+            <p>Check "Use Plex API for EPG Enhancement" to enable enhanced EPG generation with channel mapping and metadata enrichment.</p>
+            
+            <h3 style="color: var(--text-primary); margin-top: 24px; margin-bottom: 8px;">Step 5: Test Connection</h3>
+            <p>Click the "Test Connection" button to verify your Plex server is accessible and your token is valid.</p>
+            
+            <h3 style="color: var(--text-primary); margin-top: 24px; margin-bottom: 8px;">Step 6: Restart Server</h3>
+            <p>After saving your settings, restart the StreamTV server for changes to take effect.</p>
+            
+            <div style="background: var(--surface-light); padding: 16px; border-radius: 8px; margin: 16px 0; border: 0.5px solid var(--divider);">
+                <p style="margin: 0; color: var(--text-primary); font-weight: 500; margin-bottom: 8px;">📚 Reference:</p>
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+                    Full Plex API documentation: <a href="https://developer.plex.tv/pms/" target="_blank" style="color: var(--primary);">https://developer.plex.tv/pms/</a><br>
+                    EPG API endpoints: <a href="https://developer.plex.tv/pms/#tag/EPG" target="_blank" style="color: var(--primary);">https://developer.plex.tv/pms/#tag/EPG</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.36px;
+    }
+    
+    .page-subtitle {
+        color: var(--text-secondary);
+        margin-top: 4px;
+        font-size: 17px;
+    }
+    
+    .page-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .status-card {
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 12px 16px;
+        font-size: 15px;
+    }
+    
+    .status-card.success {
+        color: var(--success);
+        border-color: rgba(52, 199, 89, 0.4);
+        background: rgba(52, 199, 89, 0.15);
+    }
+    
+    .status-card.error {
+        color: var(--error);
+        border-color: rgba(255, 59, 48, 0.4);
+        background: rgba(255, 59, 48, 0.15);
+    }
+    
+    .status-card.info {
+        color: var(--info);
+        border-color: rgba(10, 132, 255, 0.4);
+        background: rgba(10, 132, 255, 0.15);
+    }
+    
+    .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+    }
+    
+    .settings-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .info-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 16px;
+    }
+    
+    .card-title {
+        font-size: 17px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .form-group label {
+        font-size: 15px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+    }
+    
+    .form-group input[type="checkbox"] {
+        width: auto;
+        min-height: auto;
+        margin-right: 8px;
+    }
+    
+    .form-group input[type="text"],
+    .form-group input[type="password"],
+    .form-group input[type="number"],
+    .form-group select,
+    .form-group textarea {
+        background: var(--surface-light);
+        border-radius: 10px;
+        border: 0.5px solid var(--divider);
+        color: var(--text-primary);
+        font-size: 17px;
+        padding: 10px 12px;
+        font-family: inherit;
+        min-height: 44px;
+        resize: vertical;
+    }
+    
+    .form-group small {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+    
+    .api-section {
+        background: var(--surface);
+        border-radius: 8px;
+        padding: 12px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    code {
+        font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+    }
+    
+    ol, ul {
+        color: var(--text-secondary);
+    }
+    
+    .rotating {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 13px;
+        min-height: 32px;
+    }
+    
+    .btn-sm .material-icons {
+        font-size: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', () => {
+        const refreshUrlsButton = document.getElementById('refreshPlexUrlsButton');
+        if (refreshUrlsButton) {
+            refreshUrlsButton.addEventListener('click', refreshPlexUrls);
+        }
+
+        const testButton = document.getElementById('testPlexConnectionButton');
+        if (testButton) {
+            testButton.addEventListener('click', testConnection);
+        }
+
+        const reloadGuideButton = document.getElementById('reloadPlexGuideButton');
+        if (reloadGuideButton) {
+            reloadGuideButton.addEventListener('click', reloadPlexGuide);
+        }
+
+        const refreshButton = document.getElementById('refreshPlexSettingsButton');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', () => loadSettings(true));
+        }
+
+        const saveButton = document.getElementById('savePlexSettingsButton');
+        if (saveButton) {
+            saveButton.addEventListener('click', saveSettings);
+        }
+
+        const toggleTokenButton = document.getElementById('togglePlexTokenButton');
+        if (toggleTokenButton) {
+            toggleTokenButton.addEventListener('click', toggleTokenVisibility);
+        }
+        
+        const oauthButton = document.getElementById('plexOAuthButton');
+        if (oauthButton) {
+            oauthButton.addEventListener('click', startPlexOAuth);
+        }
+        
+        const loadLibrariesButton = document.getElementById('loadLibrariesButton');
+        if (loadLibrariesButton) {
+            loadLibrariesButton.addEventListener('click', loadPlexLibraries);
+        }
+        
+        const scanAllButton = document.getElementById('scanAllLibrariesButton');
+        if (scanAllButton) {
+            scanAllButton.addEventListener('click', scanAllLibraries);
+        }
+        
+        const autoPopulateButton = document.getElementById('autoPopulatePlaylistsButton');
+        if (autoPopulateButton) {
+            autoPopulateButton.addEventListener('click', autoPopulatePlaylists);
+        }
+        
+        const rebuildAllButton = document.getElementById('rebuildAllPlayoutsButton');
+        if (rebuildAllButton) {
+            rebuildAllButton.addEventListener('click', rebuildAllPlayouts);
+        }
+        
+        const cleanupButton = document.getElementById('cleanupDuplicatesButton');
+        if (cleanupButton) {
+            cleanupButton.addEventListener('click', cleanupDuplicates);
+        }
+
+        loadSettings();
+    });
+    
+    let tokenVisible = false;
+    
+    function toggleTokenVisibility() {
+        tokenVisible = !tokenVisible;
+        const tokenInput = document.getElementById('token');
+        const icon = document.getElementById('tokenVisibilityIcon');
+        if (tokenVisible) {
+            tokenInput.type = 'text';
+            icon.textContent = 'visibility_off';
+        } else {
+            tokenInput.type = 'password';
+            icon.textContent = 'visibility';
+        }
+    }
+    
+    async function loadSettings(showStatus = false) {
+        try {
+            const response = await fetch('/api/settings/plex');
+            if (!response.ok) {
+                throw new Error('Failed to load settings');
+            }
+            const data = await response.json();
+            document.getElementById('enabled').checked = data.enabled || false;
+            document.getElementById('baseUrl').value = data.base_url || '';
+            document.getElementById('token').value = data.token || '';
+            document.getElementById('useForEpg').checked = data.use_for_epg || false;
+            if (showStatus) {
+                showStatusMessage('Settings refreshed from disk.', 'success');
+            }
+        } catch (error) {
+            console.error(error);
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    async function saveSettings() {
+        try {
+            const payload = {
+                enabled: document.getElementById('enabled').checked,
+                base_url: document.getElementById('baseUrl').value.trim() || null,
+                token: document.getElementById('token').value.trim() || null,
+                use_for_epg: document.getElementById('useForEpg').checked,
+            };
+            
+            // Validate URL format if provided
+            if (payload.base_url && !payload.base_url.match(/^https?:\/\/.+/)) {
+                throw new Error('Plex server URL must start with http:// or https://');
+            }
+            
+            const response = await fetch('/api/settings/plex', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errorPayload = await response.json();
+                throw new Error(errorPayload.detail || 'Failed to save settings');
+            }
+            
+            showStatusMessage('Plex API settings saved successfully. Please restart the server for changes to take effect.', 'success');
+        } catch (error) {
+            console.error(error);
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    async function reloadPlexGuide() {
+        const btn = document.getElementById('reloadPlexGuideButton');
+        if (btn) btn.disabled = true;
+        try {
+            const response = await fetch('/api/settings/plex/reload-guide', { method: 'POST' });
+            const data = await response.json();
+            if (data.success) {
+                showStatusMessage(data.message || 'Plex guide reload requested.', 'success');
+            } else {
+                showStatusMessage(data.error || 'Reload failed.', 'error');
+            }
+        } catch (e) {
+            showStatusMessage('Request failed: ' + (e.message || e), 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function testConnection() {
+        const statusDiv = document.getElementById('connectionStatus');
+        statusDiv.innerHTML = '<p>Testing connection...</p>';
+        
+        try {
+            const response = await fetch('/api/settings/plex/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                statusDiv.innerHTML = `
+                    <div style="color: var(--success);">
+                        <strong>✅ Connection Successful!</strong>
+                        <ul style="margin-top: 8px; padding-left: 20px;">
+                            <li>Server: ${data.server_info?.friendlyName || 'Unknown'}</li>
+                            <li>Version: ${data.server_info?.version || 'Unknown'}</li>
+                            <li>DVRs Found: ${data.dvrs_count || 0}</li>
+                        </ul>
+                    </div>
+                `;
+                showStatusMessage('Plex server connection test successful!', 'success');
+            } else {
+                statusDiv.innerHTML = `
+                    <div style="color: var(--error);">
+                        <strong>❌ Connection Failed</strong>
+                        <p style="margin-top: 8px;">${data.error || 'Unknown error'}</p>
+                    </div>
+                `;
+                showStatusMessage('Plex server connection test failed. Check your settings.', 'error');
+            }
+        } catch (error) {
+            statusDiv.innerHTML = `
+                <div style="color: var(--error);">
+                    <strong>❌ Connection Error</strong>
+                    <p style="margin-top: 8px;">${error.message}</p>
+                </div>
+            `;
+            showStatusMessage('Connection test failed: ' + error.message, 'error');
+        }
+    }
+    
+    function showStatusMessage(message, status) {
+        const card = document.getElementById('statusCard');
+        const text = document.getElementById('statusMessage');
+        card.classList.remove('success', 'error', 'info');
+        card.classList.add(status);
+        text.textContent = message;
+        card.style.display = 'block';
+        setTimeout(() => {
+            card.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Plex OAuth Sign-In
+    let oauthPollInterval = null;
+    
+    async function startPlexOAuth() {
+        const button = document.getElementById('plexOAuthButton');
+        const instructions = document.getElementById('oauthInstructions');
+        const statusDiv = document.getElementById('oauthStatus');
+        
+        button.disabled = true;
+        statusDiv.textContent = 'Getting PIN...';
+        
+        try {
+            const response = await fetch('/api/settings/plex/oauth/pin');
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to get PIN');
+            }
+            
+            // Show PIN and instructions
+            document.getElementById('oauthPinCode').textContent = data.pin_code;
+            document.getElementById('oauthAuthLink').href = data.auth_url;
+            instructions.style.display = 'block';
+            document.getElementById('oauthWaiting').textContent = 'Waiting for authentication...';
+            statusDiv.textContent = '';
+            
+            // Start polling
+            oauthPollInterval = setInterval(() => pollOAuth(data.pin_id), 2000);
+            
+        } catch (error) {
+            statusDiv.textContent = 'Error: ' + error.message;
+            button.disabled = false;
+        }
+    }
+    
+    async function pollOAuth(pinId) {
+        try {
+            const response = await fetch(`/api/settings/plex/oauth/poll/${pinId}`);
+            const data = await response.json();
+            
+            if (data.completed) {
+                clearInterval(oauthPollInterval);
+                document.getElementById('oauthWaiting').innerHTML = '<span style="color: var(--success);">✅ Authentication successful!</span>';
+                document.getElementById('token').value = data.auth_token;
+                document.getElementById('plexOAuthButton').disabled = false;
+                
+                // Discover servers
+                await discoverPlexServers(data.auth_token);
+            }
+        } catch (error) {
+            console.error('Poll error:', error);
+        }
+    }
+    
+    async function discoverPlexServers(token) {
+        const serversDiv = document.getElementById('oauthServers');
+        serversDiv.innerHTML = '<p>Discovering Plex servers...</p>';
+        serversDiv.style.display = 'block';
+        
+        try {
+            const response = await fetch('/api/settings/plex/oauth/discover', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ auth_token: token })
+            });
+            const data = await response.json();
+            
+            if (data.success && data.servers.length > 0) {
+                let html = '<p style="font-weight: 600; margin-bottom: 8px;">Found Plex Servers:</p>';
+                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                
+                for (const server of data.servers) {
+                    const uri = server.connection?.uri || 'No connection';
+                    html += `
+                        <div style="padding: 12px; background: var(--surface-light); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${server.name}</strong>
+                                <div style="font-size: 13px; color: var(--text-secondary);">${uri}</div>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="useServer('${uri}', '${server.accessToken}')">
+                                Use This Server
+                            </button>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+                serversDiv.innerHTML = html;
+            } else {
+                serversDiv.innerHTML = '<p style="color: var(--warning);">No Plex servers found.</p>';
+            }
+        } catch (error) {
+            serversDiv.innerHTML = '<p style="color: var(--error);">Error discovering servers: ' + error.message + '</p>';
+        }
+    }
+    
+    function useServer(uri, token) {
+        document.getElementById('baseUrl').value = uri;
+        document.getElementById('token').value = token;
+        showStatusMessage('Server selected! Click "Save Changes" to apply.', 'success');
+    }
+    
+    // Load Plex Libraries
+    let loadedLibraries = [];
+    
+    async function loadPlexLibraries() {
+        const librariesDiv = document.getElementById('plexLibraries');
+        const scanAllButton = document.getElementById('scanAllLibrariesButton');
+        librariesDiv.innerHTML = '<p>Loading libraries...</p>';
+        
+        try {
+            const response = await fetch('/api/settings/plex/libraries');
+            const data = await response.json();
+            
+            if (data.success && data.libraries.length > 0) {
+                loadedLibraries = data.libraries;
+                scanAllButton.style.display = 'inline-flex';
+                
+                let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                
+                for (const lib of data.libraries) {
+                    const icon = lib.type === 'movie' ? 'movie' : lib.type === 'show' ? 'tv' : lib.type === 'artist' ? 'music_note' : 'folder';
+                    const typeLabel = lib.type === 'show' ? 'TV Shows' : lib.type === 'movie' ? 'Movies' : lib.type === 'artist' ? 'Music' : lib.type;
+                    const importedCount = lib.imported_count || 0;
+                    const importedBadge = importedCount > 0 
+                        ? `<span style="background: var(--success); color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">${importedCount} imported</span>` 
+                        : `<span style="color: var(--text-secondary); font-size: 12px;">Not imported</span>`;
+                    html += `
+                        <div style="padding: 12px; background: var(--surface-light); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;" id="library-${lib.key}">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span class="material-icons" style="color: var(--primary);">${icon}</span>
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <strong>${lib.title}</strong>
+                                        ${importedBadge}
+                                    </div>
+                                    <div style="font-size: 13px; color: var(--text-secondary);">${typeLabel} | Library Key: ${lib.key}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="library-status-${lib.key}" style="font-size: 13px; color: var(--text-secondary);"></span>
+                                <button class="btn btn-outlined btn-sm" onclick="scanLibrary('${lib.key}', '${lib.title}', '${lib.type}')">
+                                    <span class="material-icons" aria-hidden="true">cloud_download</span>
+                                    Scan
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+                librariesDiv.innerHTML = html;
+            } else if (data.success) {
+                librariesDiv.innerHTML = '<p>No libraries found. Make sure Plex is configured and connected.</p>';
+                scanAllButton.style.display = 'none';
+            } else {
+                librariesDiv.innerHTML = '<p style="color: var(--error);">' + (data.error || 'Failed to load libraries') + '</p>';
+                scanAllButton.style.display = 'none';
+            }
+        } catch (error) {
+            librariesDiv.innerHTML = '<p style="color: var(--error);">Error: ' + error.message + '</p>';
+        }
+    }
+    
+    async function scanLibrary(libraryKey, libraryTitle, libraryType) {
+        const statusSpan = document.getElementById(`library-status-${libraryKey}`);
+        const scanStatusDiv = document.getElementById('scanStatus');
+        
+        statusSpan.innerHTML = '<span class="material-icons rotating" style="font-size: 16px;">sync</span> Scanning...';
+        scanStatusDiv.style.display = 'block';
+        scanStatusDiv.innerHTML = `<p>Scanning "${libraryTitle}" (${libraryType})... This may take a while for large libraries.</p>`;
+        
+        try {
+            const response = await fetch(`/api/settings/plex/scan-library/${libraryKey}`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMsg = `HTTP ${response.status}`;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMsg = errorJson.detail || errorJson.error || errorJson.message || errorMsg;
+                } catch {
+                    errorMsg = errorText || errorMsg;
+                }
+                throw new Error(errorMsg);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                const imported = data.items_imported || 0;
+                const skipped = data.items_skipped || 0;
+                const statusText = imported > 0 ? `✓ ${imported} new` : (skipped > 0 ? `✓ ${skipped} exist` : '✓ 0');
+                statusSpan.innerHTML = `<span style="color: var(--success);">${statusText}</span>`;
+                scanStatusDiv.innerHTML = `
+                    <div style="color: var(--success);">
+                        <strong>✅ Scan Complete: ${libraryTitle}</strong>
+                        <p style="margin-top: 4px;">Imported ${imported} new items (${skipped} already existed)</p>
+                    </div>
+                `;
+                showStatusMessage(`Scanned "${libraryTitle}": ${imported} new, ${skipped} existing`, 'success');
+            } else {
+                statusSpan.innerHTML = '<span style="color: var(--error);">✗ Failed</span>';
+                scanStatusDiv.innerHTML = `<div style="color: var(--error);">❌ Error: ${data.error || 'Unknown error'}</div>`;
+                showStatusMessage('Scan failed: ' + (data.error || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            statusSpan.innerHTML = '<span style="color: var(--error);">✗ Error</span>';
+            scanStatusDiv.innerHTML = `<div style="color: var(--error);">❌ Error: ${error.message || 'Unknown error'}</div>`;
+            showStatusMessage('Scan error: ' + (error.message || 'Unknown error'), 'error');
+        }
+    }
+    
+    async function scanAllLibraries() {
+        const scanStatusDiv = document.getElementById('scanStatus');
+        const button = document.getElementById('scanAllLibrariesButton');
+        const originalContent = button.innerHTML;
+        
+        button.disabled = true;
+        button.innerHTML = '<span class="material-icons rotating">sync</span> Scanning...';
+        scanStatusDiv.style.display = 'block';
+        scanStatusDiv.innerHTML = '<p>Scanning all libraries... This may take a while.</p>';
+        
+        let totalImported = 0;
+        let totalSkipped = 0;
+        let results = [];
+        
+        for (const lib of loadedLibraries) {
+            const statusSpan = document.getElementById(`library-status-${lib.key}`);
+            statusSpan.innerHTML = '<span class="material-icons rotating" style="font-size: 16px;">sync</span>';
+            
+            try {
+                const response = await fetch(`/api/settings/plex/scan-library/${lib.key}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMsg = `HTTP ${response.status}`;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMsg = errorJson.detail || errorJson.error || errorJson.message || errorMsg;
+                    } catch {
+                        errorMsg = errorText || errorMsg;
+                    }
+                    throw new Error(errorMsg);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const imported = data.items_imported || 0;
+                    const skipped = data.items_skipped || 0;
+                    const statusText = imported > 0 ? `✓ ${imported}` : (skipped > 0 ? `✓ exists` : '✓');
+                    statusSpan.innerHTML = `<span style="color: var(--success);">${statusText}</span>`;
+                    totalImported += imported;
+                    totalSkipped += skipped;
+                    results.push({ name: lib.title, imported: imported, skipped: skipped });
+                } else {
+                    statusSpan.innerHTML = '<span style="color: var(--error);">✗</span>';
+                    results.push({ name: lib.title, error: data.error || 'Unknown error' });
+                }
+            } catch (error) {
+                statusSpan.innerHTML = '<span style="color: var(--error);">✗</span>';
+                results.push({ name: lib.title, error: error.message || 'Unknown error' });
+            }
+        }
+        
+        let resultHtml = `
+            <div style="color: var(--success);">
+                <strong>✅ Scan Complete</strong>
+                <p style="margin-top: 4px;">Total imported: ${totalImported} items (${totalSkipped} already existed)</p>
+                <ul style="margin-top: 8px; padding-left: 20px;">
+        `;
+        for (const r of results) {
+            if (r.error) {
+                resultHtml += `<li style="color: var(--error);">${r.name}: Error - ${r.error}</li>`;
+            } else if (r.imported > 0) {
+                resultHtml += `<li>${r.name}: ${r.imported} new items</li>`;
+            } else if (r.skipped > 0) {
+                resultHtml += `<li style="color: var(--text-secondary);">${r.name}: ${r.skipped} already exist</li>`;
+            } else {
+                resultHtml += `<li style="color: var(--text-secondary);">${r.name}: No items found</li>`;
+            }
+        }
+        resultHtml += '</ul></div>';
+        
+        scanStatusDiv.innerHTML = resultHtml;
+        button.disabled = false;
+        button.innerHTML = originalContent;
+        showStatusMessage(`Scan complete: ${totalImported} items imported`, 'success');
+    }
+    
+    // Rebuild Tools
+    async function autoPopulatePlaylists() {
+        const button = document.getElementById('autoPopulatePlaylistsButton');
+        const statusDiv = document.getElementById('rebuildStatus');
+        const originalContent = button.innerHTML;
+        
+        button.disabled = true;
+        button.innerHTML = '<span class="material-icons rotating">sync</span> Populating...';
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = '<p>Auto-populating empty playlists from Plex library...</p>';
+        
+        try {
+            const response = await fetch('/api/settings/plex/auto-populate-playlists', { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                let detailsHtml = '';
+                if (data.details && data.details.length > 0) {
+                    detailsHtml = '<ul style="margin-top: 8px; padding-left: 20px;">';
+                    for (const d of data.details) {
+                        detailsHtml += `<li>${d.playlist}: ${d.items_added} items added</li>`;
+                    }
+                    detailsHtml += '</ul>';
+                }
+                
+                statusDiv.innerHTML = `
+                    <div style="color: var(--success);">
+                        <strong>✅ ${data.message}</strong>
+                        <p style="margin-top: 8px;">Playlists processed: ${data.playlists_processed}, Populated: ${data.playlists_populated}, Items added: ${data.total_items_added}</p>
+                        ${detailsHtml}
+                    </div>
+                `;
+                showStatusMessage(data.message, 'success');
+            } else {
+                statusDiv.innerHTML = `<div style="color: var(--error);">❌ ${data.error}</div>`;
+                showStatusMessage('Failed: ' + data.error, 'error');
+            }
+        } catch (error) {
+            statusDiv.innerHTML = `<div style="color: var(--error);">❌ Error: ${error.message}</div>`;
+            showStatusMessage('Error: ' + error.message, 'error');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+        }
+    }
+    
+    async function rebuildAllPlayouts() {
+        const button = document.getElementById('rebuildAllPlayoutsButton');
+        const statusDiv = document.getElementById('rebuildStatus');
+        const originalContent = button.innerHTML;
+        
+        button.disabled = true;
+        button.innerHTML = '<span class="material-icons rotating">sync</span> Rebuilding...';
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = '<p>Rebuilding all channel playouts...</p>';
+        
+        try {
+            const response = await fetch('/api/settings/plex/rebuild-all-playouts', { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                let detailsHtml = '';
+                if (data.details && data.details.length > 0) {
+                    detailsHtml = '<ul style="margin-top: 8px; padding-left: 20px;">';
+                    for (const d of data.details) {
+                        detailsHtml += `<li>${d.channel}: ${d.items_added} items</li>`;
+                    }
+                    detailsHtml += '</ul>';
+                }
+                
+                statusDiv.innerHTML = `
+                    <div style="color: var(--success);">
+                        <strong>✅ ${data.message}</strong>
+                        <p style="margin-top: 8px;">Channels processed: ${data.channels_processed}, Rebuilt: ${data.channels_rebuilt}, Total items: ${data.total_items_added}</p>
+                        ${detailsHtml}
+                    </div>
+                `;
+                showStatusMessage(data.message, 'success');
+            } else {
+                statusDiv.innerHTML = `<div style="color: var(--error);">❌ ${data.error}</div>`;
+                showStatusMessage('Failed: ' + data.error, 'error');
+            }
+        } catch (error) {
+            statusDiv.innerHTML = `<div style="color: var(--error);">❌ Error: ${error.message}</div>`;
+            showStatusMessage('Error: ' + error.message, 'error');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+        }
+    }
+    
+    async function cleanupDuplicates() {
+        if (!confirm('This will remove duplicate media items and keep only the best version (with artwork and metadata). Continue?')) {
+            return;
+        }
+        
+        const button = document.getElementById('cleanupDuplicatesButton');
+        const statusDiv = document.getElementById('rebuildStatus');
+        const originalContent = button.innerHTML;
+        
+        button.disabled = true;
+        button.innerHTML = '<span class="material-icons rotating">sync</span> Cleaning...';
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = '<p>Removing duplicate media items...</p>';
+        
+        try {
+            const response = await fetch('/api/settings/plex/cleanup-duplicates', { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                statusDiv.innerHTML = `
+                    <div style="color: var(--success);">
+                        <strong>✅ ${data.message}</strong>
+                        <ul style="margin-top: 8px; padding-left: 20px;">
+                            <li>Duplicates found: ${data.stats.duplicates_found}</li>
+                            <li>Items deleted: ${data.stats.items_deleted}</li>
+                            <li>Playlist items updated: ${data.stats.playlist_items_updated}</li>
+                            <li>Playout items updated: ${data.stats.playout_items_updated}</li>
+                        </ul>
+                    </div>
+                `;
+                showStatusMessage(data.message, 'success');
+            } else {
+                statusDiv.innerHTML = `<div style="color: var(--error);">❌ ${data.error}</div>`;
+                showStatusMessage('Cleanup failed: ' + data.error, 'error');
+            }
+        } catch (error) {
+            statusDiv.innerHTML = `<div style="color: var(--error);">❌ Error: ${error.message}</div>`;
+            showStatusMessage('Error: ' + error.message, 'error');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+        }
+    }
+    
+    async function refreshPlexUrls() {
+        const button = document.getElementById('refreshPlexUrlsButton');
+        const originalContent = button.innerHTML;
+        
+        try {
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<span class="material-icons rotating" aria-hidden="true">sync</span> Refreshing...';
+            
+            const response = await fetch('/api/settings/plex/refresh-urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showStatusMessage(data.message || 'Plex URLs refreshed successfully!', 'success');
+                
+                // Update connection status with refresh info
+                const statusDiv = document.getElementById('connectionStatus');
+                statusDiv.innerHTML = `
+                    <div style="color: var(--success);">
+                        <strong>✅ URLs Refreshed!</strong>
+                        <p style="margin-top: 8px;">Cleared ${data.stats?.urls_cleared || 0} cached URLs. URLs will be re-resolved on next playback.</p>
+                    </div>
+                `;
+            } else {
+                showStatusMessage(data.error || 'Failed to refresh Plex URLs', 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showStatusMessage('Error refreshing URLs: ' + error.message, 'error');
+        } finally {
+            // Restore button state
+            button.disabled = false;
+            button.innerHTML = originalContent;
+        }
+    }
+</script>
+{% endblock %}
+

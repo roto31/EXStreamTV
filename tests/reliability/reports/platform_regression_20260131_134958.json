@@ -1,0 +1,155 @@
+{
+  "timestamp": "2026-01-31T13:49:58.457374",
+  "total_tests": 15,
+  "passed": 0,
+  "failed": 15,
+  "results": [
+    {
+      "test_id": "CORE-001",
+      "test_name": "Server Health",
+      "subsystem": "core",
+      "passed": false,
+      "duration_seconds": 0.011321,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "CORE-002",
+      "test_name": "Database Connection",
+      "subsystem": "core",
+      "passed": false,
+      "duration_seconds": 0.001595,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "CORE-003",
+      "test_name": "FFmpeg Available",
+      "subsystem": "core",
+      "passed": false,
+      "duration_seconds": 0.001507,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "CORE-004",
+      "test_name": "FFprobe Available",
+      "subsystem": "core",
+      "passed": false,
+      "duration_seconds": 0.001461,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "CORE-005",
+      "test_name": "Config Loaded",
+      "subsystem": "core",
+      "passed": false,
+      "duration_seconds": 0.001189,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "API-CH-001",
+      "test_name": "List Channels",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.001719,
+      "error": null,
+      "details": {
+        "endpoint": "/api/channels",
+        "error": "All connection attempts failed"
+      }
+    },
+    {
+      "test_id": "API-IP-001",
+      "test_name": "M3U Playlist",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.002376,
+      "error": null,
+      "details": {
+        "endpoint": "/iptv/channels.m3u",
+        "error": "All connection attempts failed"
+      }
+    },
+    {
+      "test_id": "API-IP-002",
+      "test_name": "XMLTV EPG",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.00162,
+      "error": null,
+      "details": {
+        "endpoint": "/iptv/xmltv.xml",
+        "error": "All connection attempts failed"
+      }
+    },
+    {
+      "test_id": "API-IP-003",
+      "test_name": "Channel Stream",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.001262,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "API-HE-001",
+      "test_name": "Health Check",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.00364,
+      "error": null,
+      "details": {
+        "endpoint": "/api/health",
+        "error": "All connection attempts failed"
+      }
+    },
+    {
+      "test_id": "DB-001",
+      "test_name": "Channel Table",
+      "subsystem": "database",
+      "passed": false,
+      "duration_seconds": 0.002387,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "DB-002",
+      "test_name": "Media Table",
+      "subsystem": "database",
+      "passed": false,
+      "duration_seconds": 0.001662,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "STR-001",
+      "test_name": "Channel Manager Active",
+      "subsystem": "streaming",
+      "passed": false,
+      "duration_seconds": 0.001583,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "FFM-001",
+      "test_name": "FFmpeg Version",
+      "subsystem": "ffmpeg",
+      "passed": false,
+      "duration_seconds": 0.00178,
+      "error": "All connection attempts failed",
+      "details": {}
+    },
+    {
+      "test_id": "WEB-001",
+      "test_name": "Dashboard Page",
+      "subsystem": "webui",
+      "passed": false,
+      "duration_seconds": 0.004497,
+      "error": "All connection attempts failed",
+      "details": {}
+    }
+  ]
+}

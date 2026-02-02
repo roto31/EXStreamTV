@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}YouTube OAuth Setup - StreamTV{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>YouTube OAuth Setup</h1>
+        <p class="subtitle">Configure Google OAuth for YouTube authentication</p>
+    </div>
+
+    <div class="card">
+        <h2>OAuth Client Setup Required</h2>
+        <p>To use YouTube OAuth authentication, you need to create a Google OAuth client.</p>
+        
+        <h3>Step 1: Create Google OAuth Client</h3>
+        <ol>
+            <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+            <li>Create a new project or select an existing one</li>
+            <li>Enable the YouTube Data API v3</li>
+            <li>Go to "Credentials" → "Create Credentials" → "OAuth client ID"</li>
+            <li>Choose "Web application"</li>
+            <li>Add authorized redirect URI: <code>{{ request.base_url }}api/auth/youtube/oauth/callback</code></li>
+            <li>Copy the Client ID and Client Secret</li>
+        </ol>
+        
+        <h3>Step 2: Configure in StreamTV</h3>
+        <p>Add the following to your <code>config.yaml</code>:</p>
+        <pre><code>youtube:
+  oauth_client_id: "YOUR_CLIENT_ID"
+  oauth_client_secret: "YOUR_CLIENT_SECRET"</code></pre>
+        
+        <h3>Step 3: Restart Server</h3>
+        <p>Restart StreamTV for the changes to take effect.</p>
+        
+        <div class="form-actions">
+            <a href="/api/auth/youtube" class="btn btn-secondary" aria-label="Back to YouTube Authentication">
+                <span class="material-icons" aria-hidden="true">arrow_back</span>
+                Back to YouTube Auth
+            </a>
+            <a href="/api/auth/youtube/oauth" class="btn btn-primary" aria-label="Try OAuth Again">
+                <span class="material-icons" aria-hidden="true">refresh</span>
+                Try OAuth Again
+            </a>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="card" style="border-left: 4px solid var(--error);">
+        <h3 style="color: var(--error);">Error</h3>
+        <p>{{ error }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+pre {
+    background: var(--surface);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    border: 1px solid var(--divider);
+}
+
+code {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 14px;
+}
+
+.card ol {
+    margin: 16px 0;
+    padding-left: 24px;
+}
+
+.card li {
+    margin: 8px 0;
+    color: var(--text-secondary);
+}
+
+.card a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.card a:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}
+

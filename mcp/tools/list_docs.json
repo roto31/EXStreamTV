@@ -1,0 +1,9 @@
+{
+  "name": "list_docs",
+  "description": "List available documentation files (path and title) under docs/ and root README.",
+  "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

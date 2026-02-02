@@ -1,0 +1,615 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - StreamTV{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .log-detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .log-detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .log-detail-header h1 {
+        margin-bottom: 8px;
+    }
+    
+    .log-level-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        margin-left: 12px;
+    }
+    
+    .log-level-badge.ERROR {
+        background: rgba(255, 59, 48, 0.2);
+        color: var(--error);
+    }
+    
+    .log-level-badge.WARNING {
+        background: rgba(255, 149, 0, 0.2);
+        color: var(--warning);
+    }
+    
+    .log-level-badge.INFO {
+        background: rgba(10, 132, 255, 0.2);
+        color: var(--info);
+    }
+    
+    .self-heal-section {
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    
+    .self-heal-section h2 {
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .self-heal-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 17px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 12px;
+    }
+    
+    .self-heal-button:hover {
+        background: var(--primary-dark);
+        transform: scale(0.98);
+    }
+    
+    .self-heal-button:disabled {
+        background: var(--text-disabled);
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .log-entry-detail {
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    
+    .log-entry-detail .entry-field {
+        margin-bottom: 16px;
+    }
+    
+    .log-entry-detail .entry-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.08px;
+        margin-bottom: 4px;
+    }
+    
+    .log-entry-detail .entry-value {
+        font-size: 17px;
+        color: var(--text-primary);
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        background: var(--background);
+        padding: 12px;
+        border-radius: 8px;
+        border: 0.5px solid var(--divider);
+        word-wrap: break-word;
+        white-space: pre-wrap;
+    }
+    
+    .context-section {
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 12px;
+        padding: 20px;
+    }
+    
+    .context-section h2 {
+        margin-bottom: 16px;
+    }
+    
+    .context-lines {
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    
+    .context-line {
+        padding: 4px 8px;
+        border-left: 3px solid transparent;
+        margin-bottom: 2px;
+    }
+    
+    .context-line.target {
+        background: rgba(255, 59, 48, 0.1);
+        border-left-color: var(--error);
+        font-weight: 600;
+    }
+    
+    .context-line.error {
+        color: var(--error);
+    }
+    
+    .context-line.warning {
+        color: var(--warning);
+    }
+    
+    .context-line-number {
+        display: inline-block;
+        width: 60px;
+        color: var(--text-disabled);
+        text-align: right;
+        margin-right: 12px;
+        user-select: none;
+    }
+    
+    .script-results {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 0.5px solid var(--divider);
+    }
+    
+    .script-result {
+        background: var(--background);
+        border: 0.5px solid var(--divider);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+    
+    .script-result.success {
+        border-color: var(--success);
+        background: rgba(52, 199, 89, 0.1);
+    }
+    
+    .script-result.error {
+        border-color: var(--error);
+        background: rgba(255, 59, 48, 0.1);
+    }
+    
+    .script-result-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+    
+    .script-result-output {
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background: var(--surface);
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="log-detail-container">
+    <div class="log-detail-header">
+        <div>
+            <h1>Log Entry Detail</h1>
+            <div style="display: flex; align-items: center; margin-top: 8px;">
+                <span class="log-level-badge {{ entry.level }}">{{ entry.level }}</span>
+                {% if entry.timestamp %}
+                <span style="color: var(--text-secondary); margin-left: 12px; font-size: 15px;">
+                    {{ entry.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <a href="/logs" class="btn btn-outlined" aria-label="Back to Logs">
+            <span class="material-icons" aria-hidden="true">arrow_back</span>
+            Back to Logs
+        </a>
+    </div>
+    
+    {% if entry.is_error or entry.level == 'WARNING' %}
+    <div class="self-heal-section">
+        <h2>
+            <span class="material-icons" aria-hidden="true">healing</span>
+            Self-Heal
+        </h2>
+        <p style="color: var(--text-secondary); margin-bottom: 12px;">
+            {% if entry.matched_scripts and entry.matched_scripts|length > 0 %}
+            Detected {{ entry.matched_scripts|length }} troubleshooting script(s) that may help resolve this issue.
+            {% else %}
+            Click the button below to attempt automatic error resolution.
+            {% endif %}
+        </p>
+        {% if entry.matched_scripts and entry.matched_scripts|length > 0 %}
+        <div style="margin-bottom: 12px;">
+            <strong>Recommended scripts:</strong>
+            <ul style="margin-top: 8px; padding-left: 24px;">
+                {% for script_id in entry.matched_scripts %}
+                <li style="margin-bottom: 4px;">
+                    <code>{{ script_id }}</code>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <button class="self-heal-button" data-action="runSelfHeal" id="selfHealBtn" aria-label="Run Self-Heal Scripts">
+            <span class="material-icons" aria-hidden="true">healing</span>
+            Run Self-Heal
+        </button>
+        <div id="scriptResults" class="script-results" style="display: none;"></div>
+    </div>
+    {% endif %}
+    
+    <div class="log-entry-detail">
+        <h2 style="margin-bottom: 16px;">Entry Details</h2>
+        
+        <div class="entry-field">
+            <div class="entry-label">Message</div>
+            <div class="entry-value">{{ entry.message }}</div>
+        </div>
+        
+        {% if entry.logger %}
+        <div class="entry-field">
+            <div class="entry-label">Logger</div>
+            <div class="entry-value">{{ entry.logger }}</div>
+        </div>
+        {% endif %}
+        
+        {% if entry.timestamp %}
+        <div class="entry-field">
+            <div class="entry-label">Timestamp</div>
+            <div class="entry-value">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] }}</div>
+        </div>
+        {% endif %}
+        
+        <div class="entry-field">
+            <div class="entry-label">Raw Line</div>
+            <div class="entry-value">{{ raw_line }}</div>
+        </div>
+    </div>
+    
+    {% if context_lines and context_lines|length > 0 %}
+    <div class="context-section">
+        <h2>Context ({{ context_lines|length }} lines)</h2>
+        <div class="context-lines">
+            {% for line in context_lines %}
+            <div class="context-line {% if line.is_target %}target{% endif %} {% if line.parsed.is_error %}error{% elif line.parsed.level == 'WARNING' %}warning{% endif %}">
+                <span class="context-line-number">{{ line.line_number }}</span>
+                <span>{{ line.content }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script nonce="{{ request.state.csp_nonce }}">
+    const matchedScripts = {{ entry.matched_scripts|tojson }};
+    const entryLevel = '{{ entry.level }}';
+    const isError = {{ entry.is_error|tojson }};
+    
+    async function runSelfHeal() {
+        const btn = document.getElementById('selfHealBtn');
+        const resultsDiv = document.getElementById('scriptResults');
+        
+        // Disable button and show loading
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-icons">hourglass_empty</span> Running Self-Heal...';
+        resultsDiv.style.display = 'block';
+        resultsDiv.innerHTML = '<div class="script-result"><div class="script-result-header"><span class="material-icons">hourglass_empty</span>Running self-heal scripts...</div></div>';
+        if (window.convertMaterialIcons) setTimeout(window.convertMaterialIcons, 50);
+        
+        // If we have matched scripts, run them
+        let scriptsToRun = matchedScripts;
+        
+        // If no matched scripts but it's an error/warning, try to match
+        if (scriptsToRun.length === 0 && (isError || entryLevel === 'WARNING')) {
+            scriptsToRun = await findMatchingScripts();
+        }
+        
+        if (scriptsToRun.length === 0) {
+            resultsDiv.innerHTML = `
+                <div class="script-result">
+                    <div class="script-result-header">
+                        <span class="material-icons">info</span>
+                        No matching scripts found
+                    </div>
+                    <p style="color: var(--text-secondary); margin-top: 8px;">
+                        No troubleshooting scripts were found that match this error. 
+                        Please check the documentation or contact support.
+                    </p>
+                </div>
+            `;
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-icons">healing</span> Run Self-Heal';
+            if (window.convertMaterialIcons) setTimeout(window.convertMaterialIcons, 50);
+            return;
+        }
+        
+        // Run all scripts
+        const results = [];
+        for (const scriptId of scriptsToRun) {
+            try {
+                const response = await fetch(`/api/scripts/${scriptId}/run`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                results.push({ scriptId, result });
+            } catch (error) {
+                results.push({ 
+                    scriptId, 
+                    result: { 
+                        success: false, 
+                        script_name: scriptId,
+                        stdout: '',
+                        stderr: `Error: ${error.message}`
+                    } 
+                });
+            }
+        }
+        
+        // Display results
+        let resultsHTML = '<h3 style="margin-bottom: 12px;">Self-Heal Results</h3>';
+        
+        // Check for auto-fixes
+        let hasAutoFixes = false;
+        let autoFixesData = null;
+        
+        for (const { scriptId, result } of results) {
+            const resultClass = result.success ? 'success' : 'error';
+            const icon = result.success ? 'check_circle' : 'error';
+            const statusText = result.success ? 'Success' : 'Failed';
+            
+            // Check if this result has auto-fixes
+            if (result.auto_fixes && result.auto_fixes.length > 0) {
+                hasAutoFixes = true;
+                autoFixesData = {
+                    scriptId: scriptId,
+                    fixes: result.auto_fixes
+                };
+            }
+            
+            resultsHTML += `
+                <div class="script-result ${resultClass}">
+                    <div class="script-result-header">
+                        <span class="material-icons">${icon}</span>
+                        <span>${result.script_name || scriptId} - ${statusText}</span>
+                    </div>
+                    ${result.stdout ? `<div class="script-result-output">${escapeHtml(result.stdout)}</div>` : ''}
+                    ${result.stderr ? `<div class="script-result-output" style="color: var(--error);">${escapeHtml(result.stderr)}</div>` : ''}
+                </div>
+            `;
+        }
+        
+        resultsDiv.innerHTML = resultsHTML;
+        
+        // Show auto-fix prompt if available
+        if (hasAutoFixes && autoFixesData) {
+            showAutoFixPrompt(autoFixesData, resultsDiv);
+        }
+        
+        // Re-enable button
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons">healing</span> Run Self-Heal Again';
+        if (window.convertMaterialIcons) setTimeout(window.convertMaterialIcons, 50);
+        
+        // Scroll to results
+        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
+    function showAutoFixPrompt(autoFixesData, resultsDiv) {
+        const fixes = autoFixesData.fixes;
+        const fixesList = fixes.map(f => `• ${f.description}${f.requires_sudo ? ' (requires admin password)' : ''}`).join('<br>');
+        const fixActionsJson = JSON.stringify(fixes.map(f => f.action));
+        const scriptIdJson = JSON.stringify(autoFixesData.scriptId);
+        
+        const promptHTML = `
+            <div class="script-result" style="margin-top: 20px; border-color: var(--primary); background: rgba(10, 132, 255, 0.1);">
+                <div class="script-result-header">
+                    <span class="material-icons">auto_fix_high</span>
+                    <span>Automatic Fixes Available</span>
+                </div>
+                <p style="margin-top: 12px; color: var(--text-primary);">
+                    The diagnostic found issues that can be automatically fixed:
+                </p>
+                <div style="margin: 12px 0; padding: 12px; background: var(--surface); border-radius: 8px; border: 0.5px solid var(--divider);">
+                    ${fixesList}
+                </div>
+                <p style="margin-top: 12px; color: var(--text-secondary); font-size: 14px;">
+                    Would you like to apply these fixes automatically?
+                </p>
+                <div style="margin-top: 16px; display: flex; gap: 12px;">
+                    <button data-action="applyAutoFixes" data-args='[${scriptIdJson}, ${fixActionsJson}]' data-pass-event="true"
+                            class="self-heal-button" style="margin: 0;">
+                        <span class="material-icons">check</span>
+                        Yes, Apply Fixes
+                    </button>
+                    <button data-action="removeAncestor" data-args='[2]' data-pass-event="true"
+                            style="padding: 12px 20px; background: var(--surface); color: var(--text-primary); border: 0.5px solid var(--divider); border-radius: 10px; font-size: 17px; font-weight: 600; cursor: pointer;">
+                        <span class="material-icons">close</span>
+                        No, Thanks
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        resultsDiv.insertAdjacentHTML('beforeend', promptHTML);
+    }
+    
+    async function applyAutoFixes(scriptId, fixActions, event) {
+        const resultsDiv = document.getElementById('scriptResults');
+        let promptDiv = event?.currentTarget?.closest('.script-result') || event?.target?.closest('.script-result');
+        if (!promptDiv) {
+            promptDiv = resultsDiv?.querySelector('.script-result:last-of-type') || resultsDiv;
+        }
+        if (!promptDiv) {
+            console.warn('Unable to locate script result container for auto-fix output.');
+            return;
+        }
+        
+        // Show loading state
+        promptDiv.innerHTML = `
+            <div class="script-result-header">
+                <span class="material-icons">hourglass_empty</span>
+                <span>Applying Fixes...</span>
+            </div>
+            <p style="margin-top: 12px; color: var(--text-secondary);">
+                Please wait while fixes are being applied...
+            </p>
+        `;
+        
+        try {
+            const response = await fetch(`/api/scripts/${scriptId}/apply-fixes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    fixes: fixActions
+                })
+            });
+            
+            const result = await response.json();
+            
+            // Display results
+            let resultHTML = `
+                <div class="script-result-header">
+                    <span class="material-icons">${result.success ? 'check_circle' : 'error'}</span>
+                    <span>Fix Application ${result.success ? 'Completed' : 'Failed'}</span>
+                </div>
+            `;
+            
+            if (result.applied_fixes && result.applied_fixes.length > 0) {
+                resultHTML += '<div style="margin-top: 12px;"><strong style="color: var(--success);">Applied Fixes:</strong><ul style="margin-top: 8px; padding-left: 24px;">';
+                result.applied_fixes.forEach(fix => {
+                    resultHTML += `<li style="margin-bottom: 4px;">${escapeHtml(fix.description)}</li>`;
+                });
+                resultHTML += '</ul></div>';
+            }
+            
+            if (result.failed_fixes && result.failed_fixes.length > 0) {
+                resultHTML += '<div style="margin-top: 12px;"><strong style="color: var(--error);">Failed Fixes:</strong><ul style="margin-top: 8px; padding-left: 24px;">';
+                result.failed_fixes.forEach(fix => {
+                    resultHTML += `<li style="margin-bottom: 4px;">${escapeHtml(fix.description || fix.action)}: ${escapeHtml(fix.error)}</li>`;
+                });
+                resultHTML += '</ul></div>';
+            }
+            
+            if (result.success && result.applied_fixes && result.applied_fixes.length > 0) {
+                resultHTML += '<p style="margin-top: 12px; color: var(--success); font-weight: 600;">✓ Fixes applied successfully! You may need to restart the server for changes to take effect.</p>';
+            }
+            
+            promptDiv.innerHTML = resultHTML;
+            promptDiv.style.borderColor = result.success ? 'var(--success)' : 'var(--error)';
+            promptDiv.style.background = result.success ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)';
+            
+        } catch (error) {
+            promptDiv.innerHTML = `
+                <div class="script-result-header">
+                    <span class="material-icons">error</span>
+                    <span>Error Applying Fixes</span>
+                </div>
+                <p style="margin-top: 12px; color: var(--error);">
+                    Failed to apply fixes: ${escapeHtml(error.message)}
+                </p>
+            `;
+            promptDiv.style.borderColor = 'var(--error)';
+            promptDiv.style.background = 'rgba(255, 59, 48, 0.1)';
+        }
+    }
+    
+    async function findMatchingScripts() {
+        // Try to get script list and match based on error message
+        try {
+            const response = await fetch('/api/scripts/list');
+            const data = await response.json();
+            const scripts = data.scripts || {};
+            
+            // Simple matching based on error message keywords
+            const errorMessage = '{{ entry.message|lower }}';
+            const matched = [];
+            
+            if (errorMessage.includes('python') || errorMessage.includes('module')) {
+                matched.push('check_python');
+            }
+            if (errorMessage.includes('ffmpeg') || errorMessage.includes('codec')) {
+                matched.push('check_ffmpeg');
+            }
+            if (errorMessage.includes('database') || errorMessage.includes('sql')) {
+                matched.push('check_database');
+            }
+            if (errorMessage.includes('port') || errorMessage.includes('bind')) {
+                matched.push('check_ports');
+            }
+            if (errorMessage.includes('connection') || errorMessage.includes('network')) {
+                matched.push('test_connectivity');
+            }
+            
+            return [...new Set(matched)]; // Remove duplicates
+        } catch (error) {
+            console.error('Error finding matching scripts:', error);
+            return [];
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function removeAncestor(levels = 1, origin) {
+        let node = null;
+        
+        if (origin instanceof Event) {
+            node = origin.currentTarget || origin.target || null;
+        } else if (origin instanceof HTMLElement) {
+            node = origin;
+        }
+        
+        if (!node) {
+            console.warn('removeAncestor could not determine a starting element.');
+            return;
+        }
+        
+        for (let i = 0; i < levels && node; i++) {
+            node = node.parentElement;
+        }
+        
+        if (node && typeof node.remove === 'function') {
+            node.remove();
+        }
+    }
+</script>
+{% endblock %}
+

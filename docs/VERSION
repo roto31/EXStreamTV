@@ -1,0 +1,6 @@
+COMPONENT_NAME=docs
+VERSION=2.6.0
+FIRST_INTRODUCED=1.0.1
+LAST_MODIFIED=2026-01-31
+PLATFORM_COMPATIBILITY=2.6.0
+DESCRIPTION=User guides, API docs, architecture documentation, and Mermaid diagrams

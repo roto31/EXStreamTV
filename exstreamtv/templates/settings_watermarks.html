@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% block title %}Watermarks - StreamTV{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Watermarks</div>
+            <p class="page-subtitle">Manage watermark overlays for channels.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-primary" type="button" id="addWatermarkButton" aria-label="Add watermark">
+                <span class="material-icons" aria-hidden="true">add</span>
+                Add Watermark
+            </button>
+        </div>
+    </div>
+    
+    <div class="card status-card" id="statusCard" style="display: none;">
+        <span id="statusMessage"></span>
+    </div>
+    
+    <div class="card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Mode</th>
+                    <th>Location</th>
+                    <th>Size</th>
+                    <th>Opacity</th>
+                    <th>Image</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="watermarksTableBody">
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <div class="empty-state-icon">🖼️</div>
+                        <div>Loading watermarks...</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Watermark Modal -->
+<div class="modal" id="watermarkModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Add Watermark</h2>
+            <button class="modal-close" id="closeModal">&times;</button>
+        </div>
+        <form id="watermarkForm">
+            <input type="hidden" id="watermarkId">
+            <div class="form-group">
+                <label for="watermarkName">Name *</label>
+                <input type="text" id="watermarkName" required placeholder="e.g., Channel Logo">
+            </div>
+            <div class="form-group">
+                <label for="watermarkMode">Mode *</label>
+                <select id="watermarkMode" required>
+                    <option value="permanent">Permanent</option>
+                    <option value="intermittent">Intermittent</option>
+                    <option value="opacity_expression">Opacity Expression</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="watermarkLocation">Location *</label>
+                <select id="watermarkLocation" required>
+                    <option value="top_left">Top Left</option>
+                    <option value="top_right">Top Right</option>
+                    <option value="bottom_left">Bottom Left</option>
+                    <option value="bottom_right" selected>Bottom Right</option>
+                    <option value="center">Center</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="watermarkSize">Size *</label>
+                <select id="watermarkSize" required>
+                    <option value="small">Small</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="large">Large</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div class="form-group" id="widthPercentGroup" style="display: none;">
+                <label for="watermarkWidthPercent">Width Percent</label>
+                <input type="number" id="watermarkWidthPercent" min="1" max="100" value="10" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="watermarkOpacity">Opacity (%)</label>
+                <input type="number" id="watermarkOpacity" min="0" max="100" value="100">
+            </div>
+            <div class="form-group">
+                <label for="watermarkHorizontalMargin">Horizontal Margin (%)</label>
+                <input type="number" id="watermarkHorizontalMargin" min="0" max="50" value="2" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="watermarkVerticalMargin">Vertical Margin (%)</label>
+                <input type="number" id="watermarkVerticalMargin" min="0" max="50" value="2" step="0.1">
+            </div>
+            <div class="form-group" id="frequencyGroup" style="display: none;">
+                <label for="watermarkFrequency">Frequency (minutes, 0 = always)</label>
+                <input type="number" id="watermarkFrequency" min="0" value="0">
+            </div>
+            <div class="form-group" id="durationGroup" style="display: none;">
+                <label for="watermarkDuration">Duration (seconds, 0 = until next frequency)</label>
+                <input type="number" id="watermarkDuration" min="0" value="0">
+            </div>
+            <div class="form-group" id="opacityExprGroup" style="display: none;">
+                <label for="watermarkOpacityExpression">Opacity Expression</label>
+                <input type="text" id="watermarkOpacityExpression" placeholder="e.g., if(between(t,0,10),0.5,1)">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="watermarkPlaceWithinContent" checked>
+                    Place within source content
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="watermarkZIndex">Z-Index</label>
+                <input type="number" id="watermarkZIndex" value="0">
+            </div>
+            <div class="form-group">
+                <label for="watermarkImage">Image</label>
+                <input type="file" id="watermarkImage" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                <small id="currentImage" style="display: none;"></small>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outlined" id="cancelButton">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const API_BASE = '/api';
+let watermarks = [];
+
+async function loadWatermarks() {
+    try {
+        const response = await fetch(`${API_BASE}/watermarks`);
+        if (!response.ok) throw new Error('Failed to load watermarks');
+        watermarks = await response.json();
+        renderWatermarks();
+    } catch (error) {
+        showStatus('error', `Failed to load watermarks: ${error.message}`);
+    }
+}
+
+function renderWatermarks() {
+    const tbody = document.getElementById('watermarksTableBody');
+    if (watermarks.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <div class="empty-state-icon">🖼️</div>
+                    <div>No watermarks found. Add one to get started.</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = watermarks.map(w => `
+        <tr>
+            <td class="channel-name">${escapeHtml(w.name)}</td>
+            <td>${w.mode.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</td>
+            <td>${w.location.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</td>
+            <td>${w.size.replace(/\b\w/g, l => l.toUpperCase())}</td>
+            <td>${w.opacity}%</td>
+            <td>${w.image ? '✓' : '✗'}</td>
+            <td class="action-buttons">
+                <button class="btn btn-sm btn-outlined" onclick="editWatermark(${w.id})">
+                    <span class="material-icons" aria-hidden="true">edit</span>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteWatermark(${w.id})">
+                    <span class="material-icons" aria-hidden="true">delete</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function showStatus(type, message) {
+    const card = document.getElementById('statusCard');
+    const msg = document.getElementById('statusMessage');
+    card.className = `card status-card ${type}`;
+    msg.textContent = message;
+    card.style.display = 'block';
+    setTimeout(() => {
+        card.style.display = 'none';
+    }, 5000);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function updateModalFields() {
+    const mode = document.getElementById('watermarkMode').value;
+    const size = document.getElementById('watermarkSize').value;
+    
+    // Show/hide frequency and duration for intermittent mode
+    const frequencyGroup = document.getElementById('frequencyGroup');
+    const durationGroup = document.getElementById('durationGroup');
+    if (mode === 'intermittent') {
+        frequencyGroup.style.display = 'block';
+        durationGroup.style.display = 'block';
+    } else {
+        frequencyGroup.style.display = 'none';
+        durationGroup.style.display = 'none';
+    }
+    
+    // Show/hide opacity expression for opacity_expression mode
+    const opacityExprGroup = document.getElementById('opacityExprGroup');
+    if (mode === 'opacity_expression') {
+        opacityExprGroup.style.display = 'block';
+    } else {
+        opacityExprGroup.style.display = 'none';
+    }
+    
+    // Show/hide width percent for custom size
+    const widthPercentGroup = document.getElementById('widthPercentGroup');
+    if (size === 'custom') {
+        widthPercentGroup.style.display = 'block';
+    } else {
+        widthPercentGroup.style.display = 'none';
+    }
+}
+
+function openModal(watermark = null) {
+    const modal = document.getElementById('watermarkModal');
+    const form = document.getElementById('watermarkForm');
+    const title = document.getElementById('modalTitle');
+    
+    if (watermark) {
+        title.textContent = 'Edit Watermark';
+        document.getElementById('watermarkId').value = watermark.id;
+        document.getElementById('watermarkName').value = watermark.name;
+        document.getElementById('watermarkMode').value = watermark.mode;
+        document.getElementById('watermarkLocation').value = watermark.location;
+        document.getElementById('watermarkSize').value = watermark.size;
+        document.getElementById('watermarkWidthPercent').value = watermark.width_percent || 10;
+        document.getElementById('watermarkOpacity').value = watermark.opacity || 100;
+        document.getElementById('watermarkHorizontalMargin').value = watermark.horizontal_margin_percent || 2;
+        document.getElementById('watermarkVerticalMargin').value = watermark.vertical_margin_percent || 2;
+        document.getElementById('watermarkFrequency').value = watermark.frequency_minutes || 0;
+        document.getElementById('watermarkDuration').value = watermark.duration_seconds || 0;
+        document.getElementById('watermarkOpacityExpression').value = watermark.opacity_expression || '';
+        document.getElementById('watermarkPlaceWithinContent').checked = watermark.place_within_source_content !== false;
+        document.getElementById('watermarkZIndex').value = watermark.z_index || 0;
+        
+        if (watermark.image) {
+            document.getElementById('currentImage').textContent = `Current: ${watermark.image}`;
+            document.getElementById('currentImage').style.display = 'block';
+        } else {
+            document.getElementById('currentImage').style.display = 'none';
+        }
+    } else {
+        title.textContent = 'Add Watermark';
+        form.reset();
+        document.getElementById('watermarkId').value = '';
+        document.getElementById('currentImage').style.display = 'none';
+    }
+    
+    updateModalFields();
+    modal.style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('watermarkModal').style.display = 'none';
+    document.getElementById('watermarkImage').value = '';
+}
+
+async function saveWatermark(e) {
+    e.preventDefault();
+    const form = document.getElementById('watermarkForm');
+    const id = document.getElementById('watermarkId').value;
+    const data = {
+        name: document.getElementById('watermarkName').value,
+        mode: document.getElementById('watermarkMode').value,
+        image_source: 'custom',
+        location: document.getElementById('watermarkLocation').value,
+        size: document.getElementById('watermarkSize').value,
+        width_percent: parseFloat(document.getElementById('watermarkWidthPercent').value) || 10,
+        opacity: parseInt(document.getElementById('watermarkOpacity').value) || 100,
+        horizontal_margin_percent: parseFloat(document.getElementById('watermarkHorizontalMargin').value) || 2,
+        vertical_margin_percent: parseFloat(document.getElementById('watermarkVerticalMargin').value) || 2,
+        frequency_minutes: parseInt(document.getElementById('watermarkFrequency').value) || 0,
+        duration_seconds: parseInt(document.getElementById('watermarkDuration').value) || 0,
+        opacity_expression: document.getElementById('watermarkOpacityExpression').value || null,
+        place_within_source_content: document.getElementById('watermarkPlaceWithinContent').checked,
+        z_index: parseInt(document.getElementById('watermarkZIndex').value) || 0
+    };
+    
+    try {
+        // Create or update watermark
+        const url = id ? `${API_BASE}/watermarks/${id}` : `${API_BASE}/watermarks`;
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to save watermark');
+        }
+        
+        const savedWatermark = await response.json();
+        
+        // Upload image if provided
+        const imageFile = document.getElementById('watermarkImage').files[0];
+        if (imageFile) {
+            const formData = new FormData();
+            formData.append('file', imageFile);
+            
+            const uploadResponse = await fetch(`${API_BASE}/watermarks/${savedWatermark.id}/image`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!uploadResponse.ok) {
+                const error = await uploadResponse.json();
+                throw new Error(error.detail || 'Failed to upload image');
+            }
+        }
+        
+        showStatus('success', `Watermark ${id ? 'updated' : 'created'} successfully`);
+        closeModal();
+        loadWatermarks();
+    } catch (error) {
+        showStatus('error', error.message);
+    }
+}
+
+function editWatermark(id) {
+    const watermark = watermarks.find(w => w.id === id);
+    if (watermark) {
+        openModal(watermark);
+    }
+}
+
+async function deleteWatermark(id) {
+    if (!confirm('Are you sure you want to delete this watermark? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/watermarks/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to delete watermark');
+        }
+        
+        showStatus('success', 'Watermark deleted successfully');
+        loadWatermarks();
+    } catch (error) {
+        showStatus('error', error.message);
+    }
+}
+
+// Event listeners
+document.getElementById('addWatermarkButton').addEventListener('click', () => openModal());
+document.getElementById('closeModal').addEventListener('click', closeModal);
+document.getElementById('cancelButton').addEventListener('click', closeModal);
+document.getElementById('watermarkForm').addEventListener('submit', saveWatermark);
+document.getElementById('watermarkMode').addEventListener('change', updateModalFields);
+document.getElementById('watermarkSize').addEventListener('change', updateModalFields);
+
+// Close modal on outside click
+document.getElementById('watermarkModal').addEventListener('click', (e) => {
+    if (e.target.id === 'watermarkModal') {
+        closeModal();
+    }
+});
+
+// Load on page load
+loadWatermarks();
+</script>
+{% endblock %}
+

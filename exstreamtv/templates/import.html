@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block title %}Import Channels - StreamTV{% endblock %}
+
+{% block extra_styles %}
+    .import-card {
+        background: var(--surface);
+        border-radius: 12px; /* Apple HIG standard */
+        padding: 20px; /* Apple HIG standard */
+        margin-bottom: 16px; /* Apple 8pt grid */
+        border: 0.5px solid var(--divider);
+    }
+    
+    .upload-area {
+        border: 0.5px dashed var(--divider);
+        border-radius: 12px; /* Apple HIG standard */
+        padding: 60px 20px; /* Apple HIG standard */
+        text-align: center;
+        background: var(--background);
+        transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1); /* Apple HIG standard */
+        cursor: pointer;
+        margin-bottom: 16px; /* Apple 8pt grid */
+    }
+    
+    .upload-area:hover {
+        border-color: var(--primary);
+        background: var(--hover);
+    }
+    
+    .upload-area.dragover {
+        border-color: var(--primary);
+        background: var(--hover);
+        transform: scale(1.02);
+    }
+    
+    .upload-area-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.7;
+    }
+    
+    .upload-area h2 {
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        font-size: 20px;
+    }
+    
+    .upload-area p {
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+    }
+    
+    .file-input-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .file-input {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+    
+    .selected-file {
+        background: var(--hover);
+        padding: 16px; /* Apple HIG standard */
+        border-radius: 12px; /* Apple HIG standard */
+        margin: 16px 0; /* Apple 8pt grid */
+        display: none;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .selected-file.show {
+        display: block;
+    }
+    
+    .selected-file-name {
+        font-weight: 500;
+        color: var(--primary);
+        margin-bottom: 4px;
+    }
+    
+    .selected-file-size {
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+    
+    .progress {
+        display: none;
+        margin: 20px 0;
+    }
+    
+    .progress.show {
+        display: block;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: var(--background);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.3s;
+    }
+    
+    .progress-text {
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+    
+    .result {
+        display: none;
+        margin: 16px 0; /* Apple 8pt grid */
+        padding: 16px; /* Apple HIG standard */
+        border-radius: 12px; /* Apple HIG standard */
+    }
+    
+    .result.show {
+        display: block;
+    }
+    
+    .result-success {
+        background: rgba(76, 175, 80, 0.1);
+        border: 1px solid var(--success);
+        color: var(--success);
+    }
+    
+    .result-error {
+        background: rgba(244, 67, 54, 0.1);
+        border: 1px solid var(--error);
+        color: var(--error);
+    }
+    
+    .info-box {
+        background: rgba(0, 192, 192, 0.1);
+        border: 0.5px solid var(--info);
+        padding: 16px; /* Apple HIG standard */
+        border-radius: 12px; /* Apple HIG standard */
+        margin-bottom: 16px; /* Apple 8pt grid */
+    }
+    
+    .info-box h3 {
+        color: var(--info);
+        margin-bottom: 8px;
+        font-size: 16px;
+    }
+    
+    .info-box p {
+        color: var(--text-secondary);
+        margin: 4px 0;
+        font-size: 14px;
+    }
+    
+    .info-box code {
+        background: var(--background);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+        color: var(--primary);
+        font-size: 12px;
+    }
+    
+    .info-box ul {
+        margin-left: 20px;
+        margin-top: 8px;
+    }
+    
+    .info-box li {
+        margin: 4px 0;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Import Channels</h1>
+        <p>Import channels and all requirements from YAML configuration files</p>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="info-box">
+        <h3>📋 YAML Format</h3>
+        <p>Your YAML file should contain a <code>channels</code> list with channel definitions.</p>
+        <p>Each channel should include:</p>
+        <ul>
+            <li><code>number</code> - Channel number (e.g., "1980")</li>
+            <li><code>name</code> - Channel name</li>
+            <li><code>group</code> - Channel group (optional)</li>
+            <li><code>enabled</code> - Enable channel (default: true)</li>
+            <li><code>streams</code> - List of media items with collection names</li>
+        </ul>
+        <p style="margin-top: 8px;">See <code>data/channels_example.yaml</code> for a complete example.</p>
+    </div>
+    
+    <div class="import-card">
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-area-icon">📁</div>
+            <h2>Drag & Drop YAML File</h2>
+            <p>or</p>
+            <div class="file-input-wrapper">
+                <button class="btn btn-primary" data-action="triggerImportFilePicker" aria-label="Select YAML file to import">
+                    <span class="material-icons" style="font-size: 18px;">upload</span>
+                    Choose File
+                </button>
+                <label for="fileInput" class="sr-only">YAML file input</label>
+                <input 
+                    type="file" 
+                    id="fileInput" 
+                    class="file-input" 
+                    accept=".yaml,.yml"
+                    data-action="handleFileSelect"
+                    data-action-event="change"
+                    data-pass-event="true"
+                >
+            </div>
+            <p style="margin-top: 16px; font-size: 12px; color: var(--text-secondary);">
+                Supported formats: .yaml, .yml
+            </p>
+        </div>
+        
+        <div class="selected-file" id="selectedFile">
+            <div class="selected-file-name" id="fileName"></div>
+            <div class="selected-file-size" id="fileSize"></div>
+            <button class="btn btn-outlined" data-action="clearSelection" style="margin-top: 12px;" aria-label="Clear selected file">
+                Clear Selection
+            </button>
+        </div>
+        
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Preparing import...</div>
+        </div>
+        
+        <div class="result" id="result"></div>
+        
+        <div style="text-align: center; margin-top: 24px;">
+            <button class="btn btn-primary" id="importBtn" data-action="importChannels" disabled aria-label="Import channels from YAML file">
+                <span class="material-icons" style="font-size: 18px;" aria-hidden="true">import_export</span>
+                Import Channels
+            </button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script nonce="{{ request.state.csp_nonce }}">
+        let selectedFile = null;
+        
+        // Drag and drop handlers
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+        
+        function handleFile(file) {
+            // Validate file type
+            if (!file.name.endsWith('.yaml') && !file.name.endsWith('.yml')) {
+                showResult('error', 'Invalid file type. Please select a YAML file (.yaml or .yml).');
+                return;
+            }
+            
+            selectedFile = file;
+            showSelectedFile(file);
+            document.getElementById('importBtn').disabled = false;
+        }
+        
+        function showSelectedFile(file) {
+            const selectedFileDiv = document.getElementById('selectedFile');
+            const fileNameDiv = document.getElementById('fileName');
+            const fileSizeDiv = document.getElementById('fileSize');
+            
+            fileNameDiv.textContent = file.name;
+            fileSizeDiv.textContent = formatFileSize(file.size);
+            selectedFileDiv.classList.add('show');
+        }
+        
+        function clearSelection() {
+            selectedFile = null;
+            fileInput.value = '';
+            document.getElementById('selectedFile').classList.remove('show');
+            document.getElementById('importBtn').disabled = true;
+            hideResult();
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        async function importChannels() {
+            if (!selectedFile) {
+                showResult('error', 'Please select a YAML file first.');
+                return;
+            }
+            
+            // Show progress
+            const progressDiv = document.getElementById('progress');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressDiv.classList.add('show');
+            progressFill.style.width = '10%';
+            progressText.textContent = 'Uploading file...';
+            
+            // Hide previous results
+            hideResult();
+            
+            // Disable import button
+            document.getElementById('importBtn').disabled = true;
+            
+            try {
+                // Create FormData
+                const formData = new FormData();
+                formData.append('yaml_file', selectedFile);
+                
+                progressFill.style.width = '30%';
+                progressText.textContent = 'Sending to server...';
+                
+                // Upload file
+                const response = await authenticatedFetch('/api/import/channels/yaml', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                progressFill.style.width = '70%';
+                progressText.textContent = 'Processing import...';
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const channels = await response.json();
+                
+                progressFill.style.width = '100%';
+                progressText.textContent = 'Import complete!';
+                
+                // Show success result
+                let resultHtml = '<h3 style="margin-bottom: 8px;">✅ Import Successful!</h3>';
+                resultHtml += `<p>Successfully imported <strong>${channels.length}</strong> channel(s):</p>`;
+                resultHtml += '<ul style="margin-left: 20px; margin-top: 8px;">';
+                channels.forEach(channel => {
+                    resultHtml += `<li><strong>${channel.number}</strong>: ${channel.name} ${channel.enabled ? '✅' : '❌'}</li>`;
+                });
+                resultHtml += '</ul>';
+                resultHtml += '<p style="margin-top: 12px;">Channels, collections, playlists, and media items have been created.</p>';
+                
+                showResult('success', resultHtml);
+                
+                // Hide progress after a moment
+                setTimeout(() => {
+                    progressDiv.classList.remove('show');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Import error:', error);
+                showResult('error', `<h3 style="margin-bottom: 8px;">❌ Import Failed</h3><p>${error.message}</p>`);
+                progressDiv.classList.remove('show');
+            } finally {
+                document.getElementById('importBtn').disabled = false;
+            }
+        }
+        
+        function showResult(type, content) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result result-${type} show`;
+            resultDiv.innerHTML = content;
+        }
+        
+        function hideResult() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.classList.remove('show');
+        }
+
+        function triggerImportFilePicker() {
+            const input = document.getElementById('fileInput');
+            if (input) {
+                input.click();
+            }
+        }
+    </script>
+{% endblock %}

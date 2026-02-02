@@ -1,0 +1,1149 @@
+{% extends "base.html" %}
+
+{% block title %}Migration - Import from ErsatzTV & StreamTV{% endblock %}
+
+{% block extra_styles %}
+    .migration-header {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+    
+    .migration-header h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+    }
+    
+    .migration-header p {
+        color: var(--text-secondary);
+        font-size: 16px;
+    }
+    
+    .source-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+    
+    .source-card {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid var(--divider);
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+    
+    .source-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+    
+    .source-card.selected {
+        border-color: var(--primary);
+        background: rgba(0, 122, 255, 0.05);
+    }
+    
+    .source-card-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+    
+    .source-card h3 {
+        font-size: 20px;
+        margin-bottom: 8px;
+    }
+    
+    .source-card p {
+        color: var(--text-secondary);
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
+    
+    .source-card .formats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .format-badge {
+        background: var(--hover);
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .import-panel {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid var(--divider);
+        display: none;
+    }
+    
+    .import-panel.show {
+        display: block;
+    }
+    
+    .import-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--divider);
+    }
+    
+    .import-panel-header h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 20px;
+    }
+    
+    .import-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+    
+    .import-tab {
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 1px solid var(--divider);
+        background: var(--background);
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+    
+    .import-tab:hover {
+        border-color: var(--primary);
+    }
+    
+    .import-tab.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .upload-zone {
+        border: 2px dashed var(--divider);
+        border-radius: 12px;
+        padding: 48px 24px;
+        text-align: center;
+        background: var(--background);
+        transition: all 0.2s;
+        cursor: pointer;
+        margin-bottom: 24px;
+    }
+    
+    .upload-zone:hover, .upload-zone.dragover {
+        border-color: var(--primary);
+        background: var(--hover);
+    }
+    
+    .upload-zone-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.7;
+    }
+    
+    .upload-zone h4 {
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+    
+    .upload-zone p {
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+    
+    .path-input-group {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    
+    .path-input-group input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid var(--divider);
+        border-radius: 8px;
+        background: var(--background);
+        font-size: 14px;
+    }
+    
+    .detected-sources {
+        margin-top: 16px;
+    }
+    
+    .detected-source {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--hover);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .detected-source:hover {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .detected-source-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .detected-source-path {
+        font-family: monospace;
+        font-size: 13px;
+    }
+    
+    .detected-source-meta {
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .detected-source:hover .detected-source-meta {
+        color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .validation-result {
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        display: none;
+    }
+    
+    .validation-result.show {
+        display: block;
+    }
+    
+    .validation-result.success {
+        background: rgba(52, 199, 89, 0.1);
+        border: 1px solid var(--success);
+    }
+    
+    .validation-result.error {
+        background: rgba(255, 59, 48, 0.1);
+        border: 1px solid var(--error);
+    }
+    
+    .validation-counts {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+    }
+    
+    .count-item {
+        background: var(--surface);
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .count-item .count {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+    
+    .count-item .label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        text-transform: capitalize;
+    }
+    
+    .import-options {
+        background: var(--background);
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+    }
+    
+    .import-options h4 {
+        margin-bottom: 16px;
+        font-size: 14px;
+    }
+    
+    .option-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    
+    .option-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .option-row label {
+        flex: 1;
+        font-size: 14px;
+    }
+    
+    .toggle-switch {
+        position: relative;
+        width: 48px;
+        height: 28px;
+    }
+    
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--divider);
+        border-radius: 14px;
+        transition: 0.2s;
+    }
+    
+    .toggle-slider:before {
+        content: "";
+        position: absolute;
+        height: 22px;
+        width: 22px;
+        left: 3px;
+        bottom: 3px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.2s;
+    }
+    
+    input:checked + .toggle-slider {
+        background: var(--primary);
+    }
+    
+    input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+    }
+    
+    .import-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding-top: 24px;
+        border-top: 1px solid var(--divider);
+    }
+    
+    .progress-section {
+        display: none;
+        margin: 24px 0;
+    }
+    
+    .progress-section.show {
+        display: block;
+    }
+    
+    .progress-bar-container {
+        background: var(--background);
+        border-radius: 8px;
+        height: 8px;
+        overflow: hidden;
+        margin-bottom: 12px;
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.3s;
+    }
+    
+    .progress-status {
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+    
+    .result-section {
+        display: none;
+        margin: 24px 0;
+        padding: 24px;
+        border-radius: 12px;
+    }
+    
+    .result-section.show {
+        display: block;
+    }
+    
+    .result-section.success {
+        background: rgba(52, 199, 89, 0.1);
+        border: 1px solid var(--success);
+    }
+    
+    .result-section.error {
+        background: rgba(255, 59, 48, 0.1);
+        border: 1px solid var(--error);
+    }
+    
+    .result-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .result-header h3 {
+        margin: 0;
+    }
+    
+    .result-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+    }
+    
+    .stat-item {
+        background: var(--surface);
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .stat-item .value {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--success);
+    }
+    
+    .stat-item .label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-transform: capitalize;
+    }
+    
+    .next-steps {
+        margin-top: 24px;
+        padding: 16px;
+        background: var(--hover);
+        border-radius: 12px;
+    }
+    
+    .next-steps h4 {
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+    
+    .next-steps ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    
+    .next-steps li {
+        margin: 8px 0;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+    
+    .next-steps a {
+        color: var(--primary);
+    }
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="migration-header">
+        <h1>Migration Center</h1>
+        <p>Import your channels, schedules, and settings from ErsatzTV or StreamTV</p>
+    </div>
+    
+    <!-- Source Selection -->
+    <div class="source-cards" id="sourceCards">
+        <div class="source-card" data-source="ersatztv" onclick="selectSource('ersatztv')">
+            <div class="source-card-icon">📺</div>
+            <h3>ErsatzTV</h3>
+            <p>Import channels, schedules, filler presets, decos, FFmpeg profiles, and more from ErsatzTV</p>
+            <div class="formats">
+                <span class="format-badge">SQLite Database</span>
+                <span class="format-badge">JSON Config</span>
+            </div>
+        </div>
+        
+        <div class="source-card" data-source="streamtv" onclick="selectSource('streamtv')">
+            <div class="source-card-icon">📡</div>
+            <h3>StreamTV</h3>
+            <p>Import channels, playlists, collections, and media items from StreamTV</p>
+            <div class="formats">
+                <span class="format-badge">SQLite Database</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ErsatzTV Import Panel -->
+    <div class="import-panel" id="ersatztv-panel">
+        <div class="import-panel-header">
+            <h2><span>📺</span> Import from ErsatzTV</h2>
+            <button class="btn btn-secondary" onclick="closePanel()">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        
+        <div class="import-tabs">
+            <button class="import-tab active" data-tab="ersatztv-upload" onclick="switchTab('ersatztv', 'upload')">
+                Upload Database
+            </button>
+            <button class="import-tab" data-tab="ersatztv-path" onclick="switchTab('ersatztv', 'path')">
+                Database Path
+            </button>
+            <button class="import-tab" data-tab="ersatztv-json" onclick="switchTab('ersatztv', 'json')">
+                JSON Config
+            </button>
+        </div>
+        
+        <!-- Upload Tab -->
+        <div class="tab-content active" id="ersatztv-upload-tab">
+            <div class="upload-zone" id="ersatztv-upload-zone" 
+                 ondragover="handleDragOver(event)" 
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleDrop(event, 'ersatztv', 'db')"
+                 onclick="document.getElementById('ersatztv-db-input').click()">
+                <div class="upload-zone-icon">📁</div>
+                <h4>Drag & Drop ErsatzTV Database</h4>
+                <p>or click to browse for ersatztv.db</p>
+                <input type="file" id="ersatztv-db-input" accept=".db,.sqlite3,.sqlite" style="display: none"
+                       onchange="handleFileSelect(event, 'ersatztv', 'db')">
+            </div>
+        </div>
+        
+        <!-- Path Tab -->
+        <div class="tab-content" id="ersatztv-path-tab">
+            <div class="path-input-group">
+                <input type="text" id="ersatztv-path-input" placeholder="/path/to/ersatztv.db">
+                <button class="btn btn-primary" onclick="validatePath('ersatztv')">
+                    <span class="material-icons">search</span>
+                    Validate
+                </button>
+            </div>
+            
+            <div class="detected-sources" id="ersatztv-detected">
+                <h4>Detected Sources</h4>
+                <div id="ersatztv-detected-list">
+                    <p style="color: var(--text-secondary); font-size: 14px;">Scanning for ErsatzTV installations...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- JSON Config Tab -->
+        <div class="tab-content" id="ersatztv-json-tab">
+            <div class="upload-zone" id="ersatztv-json-zone"
+                 ondragover="handleDragOver(event)"
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleDrop(event, 'ersatztv', 'json')"
+                 onclick="document.getElementById('ersatztv-json-input').click()">
+                <div class="upload-zone-icon">📄</div>
+                <h4>Drag & Drop JSON Config Files</h4>
+                <p>channels.json, program-schedules.json, media-sources.json</p>
+                <input type="file" id="ersatztv-json-input" accept=".json" multiple style="display: none"
+                       onchange="handleFileSelect(event, 'ersatztv', 'json')">
+            </div>
+            <div id="ersatztv-json-files" style="display: none; margin-bottom: 24px;">
+                <h4>Selected Files:</h4>
+                <div id="ersatztv-json-list"></div>
+            </div>
+        </div>
+        
+        <!-- Validation Result -->
+        <div class="validation-result" id="ersatztv-validation"></div>
+        
+        <!-- Import Options -->
+        <div class="import-options" id="ersatztv-options" style="display: none;">
+            <h4>Import Options</h4>
+            <div class="option-row">
+                <label>Dry Run (preview only, no changes)</label>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="ersatztv-dry-run">
+                    <span class="toggle-slider"></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Progress -->
+        <div class="progress-section" id="ersatztv-progress">
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="ersatztv-progress-bar"></div>
+            </div>
+            <div class="progress-status" id="ersatztv-progress-status">Preparing import...</div>
+        </div>
+        
+        <!-- Result -->
+        <div class="result-section" id="ersatztv-result"></div>
+        
+        <!-- Actions -->
+        <div class="import-actions">
+            <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+            <button class="btn btn-primary" id="ersatztv-import-btn" onclick="startImport('ersatztv')" disabled>
+                <span class="material-icons">import_export</span>
+                Import from ErsatzTV
+            </button>
+        </div>
+    </div>
+    
+    <!-- StreamTV Import Panel -->
+    <div class="import-panel" id="streamtv-panel">
+        <div class="import-panel-header">
+            <h2><span>📡</span> Import from StreamTV</h2>
+            <button class="btn btn-secondary" onclick="closePanel()">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        
+        <div class="import-tabs">
+            <button class="import-tab active" data-tab="streamtv-upload" onclick="switchTab('streamtv', 'upload')">
+                Upload Database
+            </button>
+            <button class="import-tab" data-tab="streamtv-path" onclick="switchTab('streamtv', 'path')">
+                Database Path
+            </button>
+        </div>
+        
+        <!-- Upload Tab -->
+        <div class="tab-content active" id="streamtv-upload-tab">
+            <div class="upload-zone" id="streamtv-upload-zone"
+                 ondragover="handleDragOver(event)"
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleDrop(event, 'streamtv', 'db')"
+                 onclick="document.getElementById('streamtv-db-input').click()">
+                <div class="upload-zone-icon">📁</div>
+                <h4>Drag & Drop StreamTV Database</h4>
+                <p>or click to browse for streamtv.db</p>
+                <input type="file" id="streamtv-db-input" accept=".db,.sqlite3,.sqlite" style="display: none"
+                       onchange="handleFileSelect(event, 'streamtv', 'db')">
+            </div>
+        </div>
+        
+        <!-- Path Tab -->
+        <div class="tab-content" id="streamtv-path-tab">
+            <div class="path-input-group">
+                <input type="text" id="streamtv-path-input" placeholder="/path/to/streamtv.db">
+                <button class="btn btn-primary" onclick="validatePath('streamtv')">
+                    <span class="material-icons">search</span>
+                    Validate
+                </button>
+            </div>
+            
+            <div class="detected-sources" id="streamtv-detected">
+                <h4>Detected Sources</h4>
+                <div id="streamtv-detected-list">
+                    <p style="color: var(--text-secondary); font-size: 14px;">Scanning for StreamTV installations...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Validation Result -->
+        <div class="validation-result" id="streamtv-validation"></div>
+        
+        <!-- Import Options -->
+        <div class="import-options" id="streamtv-options" style="display: none;">
+            <h4>Import Options</h4>
+            <div class="option-row">
+                <label>Dry Run (preview only, no changes)</label>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="streamtv-dry-run">
+                    <span class="toggle-slider"></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Progress -->
+        <div class="progress-section" id="streamtv-progress">
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="streamtv-progress-bar"></div>
+            </div>
+            <div class="progress-status" id="streamtv-progress-status">Preparing import...</div>
+        </div>
+        
+        <!-- Result -->
+        <div class="result-section" id="streamtv-result"></div>
+        
+        <!-- Actions -->
+        <div class="import-actions">
+            <button class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+            <button class="btn btn-primary" id="streamtv-import-btn" onclick="startImport('streamtv')" disabled>
+                <span class="material-icons">import_export</span>
+                Import from StreamTV
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+    // State management
+    const state = {
+        ersatztv: {
+            file: null,
+            jsonFiles: [],
+            path: null,
+            mode: 'upload',  // upload, path, json
+            validated: false
+        },
+        streamtv: {
+            file: null,
+            path: null,
+            mode: 'upload',
+            validated: false
+        }
+    };
+    
+    // Initialize - detect available sources
+    document.addEventListener('DOMContentLoaded', async () => {
+        await detectSources();
+    });
+    
+    async function detectSources() {
+        try {
+            const response = await authenticatedFetch('/api/migration/detect');
+            const data = await response.json();
+            
+            // Update ErsatzTV detected sources
+            const ersatzList = document.getElementById('ersatztv-detected-list');
+            if (data.ersatztv && data.ersatztv.length > 0) {
+                ersatzList.innerHTML = data.ersatztv.map(source => `
+                    <div class="detected-source" onclick="selectDetectedSource('ersatztv', '${source.path}')">
+                        <div class="detected-source-info">
+                            <span class="detected-source-path">${source.path}</span>
+                            <span class="detected-source-meta">
+                                ${source.type === 'database' ? `Database (${source.size_mb} MB)` : `JSON Config (${source.files?.join(', ')})`}
+                            </span>
+                        </div>
+                        <span class="material-icons">chevron_right</span>
+                    </div>
+                `).join('');
+            } else {
+                ersatzList.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No ErsatzTV installations detected</p>';
+            }
+            
+            // Update StreamTV detected sources
+            const streamList = document.getElementById('streamtv-detected-list');
+            if (data.streamtv && data.streamtv.length > 0) {
+                streamList.innerHTML = data.streamtv.map(source => `
+                    <div class="detected-source" onclick="selectDetectedSource('streamtv', '${source.path}')">
+                        <div class="detected-source-info">
+                            <span class="detected-source-path">${source.path}</span>
+                            <span class="detected-source-meta">Database (${source.size_mb} MB)</span>
+                        </div>
+                        <span class="material-icons">chevron_right</span>
+                    </div>
+                `).join('');
+            } else {
+                streamList.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">No StreamTV installations detected</p>';
+            }
+        } catch (error) {
+            console.error('Failed to detect sources:', error);
+        }
+    }
+    
+    function selectSource(source) {
+        // Update card selection
+        document.querySelectorAll('.source-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        document.querySelector(`.source-card[data-source="${source}"]`).classList.add('selected');
+        
+        // Show appropriate panel
+        document.querySelectorAll('.import-panel').forEach(panel => {
+            panel.classList.remove('show');
+        });
+        document.getElementById(`${source}-panel`).classList.add('show');
+    }
+    
+    function closePanel() {
+        document.querySelectorAll('.import-panel').forEach(panel => {
+            panel.classList.remove('show');
+        });
+        document.querySelectorAll('.source-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+    }
+    
+    function switchTab(source, tab) {
+        // Update tab buttons
+        document.querySelectorAll(`#${source}-panel .import-tab`).forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${source}-${tab}"]`).classList.add('active');
+        
+        // Update tab content
+        document.querySelectorAll(`#${source}-panel .tab-content`).forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(`${source}-${tab}-tab`).classList.add('active');
+        
+        // Update state
+        state[source].mode = tab;
+        
+        // Reset validation
+        resetValidation(source);
+    }
+    
+    function handleDragOver(event) {
+        event.preventDefault();
+        event.currentTarget.classList.add('dragover');
+    }
+    
+    function handleDragLeave(event) {
+        event.currentTarget.classList.remove('dragover');
+    }
+    
+    function handleDrop(event, source, type) {
+        event.preventDefault();
+        event.currentTarget.classList.remove('dragover');
+        
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+            if (type === 'json') {
+                handleJsonFiles(source, Array.from(files));
+            } else {
+                handleDbFile(source, files[0]);
+            }
+        }
+    }
+    
+    function handleFileSelect(event, source, type) {
+        const files = event.target.files;
+        if (files.length > 0) {
+            if (type === 'json') {
+                handleJsonFiles(source, Array.from(files));
+            } else {
+                handleDbFile(source, files[0]);
+            }
+        }
+    }
+    
+    function handleDbFile(source, file) {
+        state[source].file = file;
+        state[source].mode = 'upload';
+        
+        // Update UI
+        const zone = document.getElementById(`${source}-upload-zone`);
+        zone.innerHTML = `
+            <div class="upload-zone-icon">✅</div>
+            <h4>${file.name}</h4>
+            <p>${formatFileSize(file.size)}</p>
+            <button class="btn btn-secondary" onclick="clearFile('${source}', event)" style="margin-top: 16px;">
+                Clear
+            </button>
+        `;
+        
+        // Auto-validate
+        validateUploadedFile(source);
+    }
+    
+    function handleJsonFiles(source, files) {
+        state[source].jsonFiles = files;
+        state[source].mode = 'json';
+        
+        // Show file list
+        const listDiv = document.getElementById(`${source}-json-list`);
+        const containerDiv = document.getElementById(`${source}-json-files`);
+        
+        listDiv.innerHTML = files.map(f => `
+            <div style="padding: 8px; background: var(--hover); border-radius: 8px; margin-bottom: 8px;">
+                📄 ${f.name} (${formatFileSize(f.size)})
+            </div>
+        `).join('');
+        
+        containerDiv.style.display = 'block';
+        
+        // Auto-validate
+        validateUploadedJson(source);
+    }
+    
+    function clearFile(source, event) {
+        event.stopPropagation();
+        state[source].file = null;
+        state[source].validated = false;
+        
+        // Reset upload zone
+        const zone = document.getElementById(`${source}-upload-zone`);
+        zone.innerHTML = `
+            <div class="upload-zone-icon">📁</div>
+            <h4>Drag & Drop ${source === 'ersatztv' ? 'ErsatzTV' : 'StreamTV'} Database</h4>
+            <p>or click to browse for ${source}.db</p>
+        `;
+        
+        resetValidation(source);
+    }
+    
+    function selectDetectedSource(source, path) {
+        state[source].path = path;
+        state[source].mode = 'path';
+        
+        document.getElementById(`${source}-path-input`).value = path;
+        validatePath(source);
+    }
+    
+    async function validatePath(source) {
+        const path = document.getElementById(`${source}-path-input`).value;
+        if (!path) return;
+        
+        state[source].path = path;
+        state[source].mode = 'path';
+        
+        try {
+            const formData = new FormData();
+            formData.append('db_path', path);
+            
+            const response = await authenticatedFetch(`/api/migration/validate/${source}`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            showValidationResult(source, result);
+        } catch (error) {
+            showValidationResult(source, {
+                is_valid: false,
+                errors: [error.message]
+            });
+        }
+    }
+    
+    async function validateUploadedFile(source) {
+        const file = state[source].file;
+        if (!file) return;
+        
+        try {
+            const formData = new FormData();
+            formData.append('db_file', file);
+            
+            const response = await authenticatedFetch(`/api/migration/validate/${source}`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            showValidationResult(source, result);
+        } catch (error) {
+            showValidationResult(source, {
+                is_valid: false,
+                errors: [error.message]
+            });
+        }
+    }
+    
+    async function validateUploadedJson(source) {
+        const files = state[source].jsonFiles;
+        if (!files.length) return;
+        
+        try {
+            const formData = new FormData();
+            files.forEach(f => formData.append('json_files', f));
+            
+            const response = await authenticatedFetch(`/api/migration/validate/${source}`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            showValidationResult(source, result);
+        } catch (error) {
+            showValidationResult(source, {
+                is_valid: false,
+                errors: [error.message]
+            });
+        }
+    }
+    
+    function showValidationResult(source, result) {
+        const validationDiv = document.getElementById(`${source}-validation`);
+        const optionsDiv = document.getElementById(`${source}-options`);
+        const importBtn = document.getElementById(`${source}-import-btn`);
+        
+        state[source].validated = result.is_valid;
+        
+        if (result.is_valid) {
+            validationDiv.className = 'validation-result success show';
+            validationDiv.innerHTML = `
+                <h4 style="color: var(--success); margin-bottom: 12px;">✅ Validation Successful</h4>
+                <p>Ready to import from ${result.source_type}</p>
+                ${result.counts ? `
+                    <div class="validation-counts">
+                        ${Object.entries(result.counts).filter(([k, v]) => v > 0).map(([key, value]) => `
+                            <div class="count-item">
+                                <div class="count">${value}</div>
+                                <div class="label">${key.replace(/_/g, ' ')}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                ${result.warnings && result.warnings.length > 0 ? `
+                    <div style="margin-top: 16px; color: var(--warning);">
+                        <strong>Warnings:</strong>
+                        <ul style="margin: 8px 0 0 20px;">
+                            ${result.warnings.map(w => `<li>${w}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            `;
+            
+            optionsDiv.style.display = 'block';
+            importBtn.disabled = false;
+        } else {
+            validationDiv.className = 'validation-result error show';
+            validationDiv.innerHTML = `
+                <h4 style="color: var(--error); margin-bottom: 12px;">❌ Validation Failed</h4>
+                <ul style="margin: 0; padding-left: 20px;">
+                    ${result.errors.map(e => `<li>${e}</li>`).join('')}
+                </ul>
+            `;
+            
+            optionsDiv.style.display = 'none';
+            importBtn.disabled = true;
+        }
+    }
+    
+    function resetValidation(source) {
+        document.getElementById(`${source}-validation`).className = 'validation-result';
+        document.getElementById(`${source}-options`).style.display = 'none';
+        document.getElementById(`${source}-import-btn`).disabled = true;
+        document.getElementById(`${source}-result`).className = 'result-section';
+        state[source].validated = false;
+    }
+    
+    async function startImport(source) {
+        if (!state[source].validated) return;
+        
+        const dryRun = document.getElementById(`${source}-dry-run`).checked;
+        const progressDiv = document.getElementById(`${source}-progress`);
+        const progressBar = document.getElementById(`${source}-progress-bar`);
+        const progressStatus = document.getElementById(`${source}-progress-status`);
+        const resultDiv = document.getElementById(`${source}-result`);
+        const importBtn = document.getElementById(`${source}-import-btn`);
+        
+        // Show progress
+        progressDiv.classList.add('show');
+        resultDiv.className = 'result-section';
+        importBtn.disabled = true;
+        
+        progressBar.style.width = '10%';
+        progressStatus.textContent = 'Starting import...';
+        
+        try {
+            const formData = new FormData();
+            formData.append('dry_run', dryRun);
+            
+            if (state[source].mode === 'upload' && state[source].file) {
+                formData.append('db_file', state[source].file);
+            } else if (state[source].mode === 'path' && state[source].path) {
+                formData.append('db_path', state[source].path);
+            } else if (state[source].mode === 'json' && state[source].jsonFiles.length > 0) {
+                state[source].jsonFiles.forEach(f => formData.append('json_files', f));
+            }
+            
+            progressBar.style.width = '30%';
+            progressStatus.textContent = 'Processing...';
+            
+            const response = await authenticatedFetch(`/api/migration/import/${source}`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            progressBar.style.width = '90%';
+            progressStatus.textContent = 'Finalizing...';
+            
+            const result = await response.json();
+            
+            progressBar.style.width = '100%';
+            
+            // Hide progress after a moment
+            setTimeout(() => {
+                progressDiv.classList.remove('show');
+            }, 1000);
+            
+            // Show result
+            if (result.success) {
+                resultDiv.className = 'result-section success show';
+                resultDiv.innerHTML = `
+                    <div class="result-header">
+                        <span style="font-size: 32px;">🎉</span>
+                        <h3>${dryRun ? 'Dry Run Complete' : 'Import Successful!'}</h3>
+                    </div>
+                    <p>Completed in ${result.duration_seconds.toFixed(2)} seconds</p>
+                    
+                    <div class="result-stats">
+                        ${Object.entries(result.stats).filter(([k, v]) => v > 0 && k !== 'errors' && k !== 'warnings').map(([key, value]) => `
+                            <div class="stat-item">
+                                <div class="value">${value}</div>
+                                <div class="label">${key.replace(/_/g, ' ')}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    ${!dryRun ? `
+                        <div class="next-steps">
+                            <h4>Next Steps</h4>
+                            <ul>
+                                <li>Review imported <a href="/channels">channels</a></li>
+                                <li>Check your <a href="/schedules">schedules</a></li>
+                                <li>Test streaming on a few channels</li>
+                                <li>Configure <a href="/settings/media-sources">media sources</a> if needed</li>
+                            </ul>
+                        </div>
+                    ` : '<p style="margin-top: 16px; color: var(--text-secondary);">This was a dry run. No changes were made. Uncheck "Dry Run" and import again to make actual changes.</p>'}
+                `;
+            } else {
+                resultDiv.className = 'result-section error show';
+                resultDiv.innerHTML = `
+                    <div class="result-header">
+                        <span style="font-size: 32px;">❌</span>
+                        <h3>Import Failed</h3>
+                    </div>
+                    <ul style="margin: 16px 0 0 20px;">
+                        ${result.errors.map(e => `<li>${e}</li>`).join('')}
+                    </ul>
+                `;
+            }
+            
+        } catch (error) {
+            progressDiv.classList.remove('show');
+            resultDiv.className = 'result-section error show';
+            resultDiv.innerHTML = `
+                <div class="result-header">
+                    <span style="font-size: 32px;">❌</span>
+                    <h3>Import Failed</h3>
+                </div>
+                <p>${error.message}</p>
+            `;
+        }
+        
+        importBtn.disabled = false;
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+</script>
+{% endblock %}

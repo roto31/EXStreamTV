@@ -1,0 +1,769 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - EXStreamTV{% endblock %}
+
+{% block extra_styles %}
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+    
+    .stat-card {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 24px;
+        border: 0.5px solid var(--divider);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+    
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+    }
+    
+    .stat-icon.blue { background: linear-gradient(135deg, #0A84FF, #0051D5); }
+    .stat-icon.purple { background: linear-gradient(135deg, #AF52DE, #8944AB); }
+    .stat-icon.green { background: linear-gradient(135deg, #34C759, #248A3D); }
+    .stat-icon.orange { background: linear-gradient(135deg, #FF9500, #CC7700); }
+    .stat-icon.teal { background: linear-gradient(135deg, #5AC8FA, #32ADE6); }
+    .stat-icon.red { background: linear-gradient(135deg, #FF3B30, #D70015); }
+    .stat-icon.gray { background: var(--apple-fill-secondary); }
+    
+    .stat-content {
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.1;
+    }
+    
+    .stat-label {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+    }
+    
+    .dashboard-section {
+        margin-bottom: 32px;
+    }
+    
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+    
+    .section-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .section-action {
+        font-size: 14px;
+        color: var(--primary);
+        text-decoration: none;
+    }
+    
+    .section-action:hover {
+        text-decoration: underline;
+    }
+    
+    .panel-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+    }
+    
+    @media (max-width: 1200px) {
+        .panel-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .panel {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+        overflow: hidden;
+    }
+    
+    .panel-header {
+        padding: 20px 24px;
+        border-bottom: 0.5px solid var(--divider);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .panel-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .panel-body {
+        padding: 16px 24px;
+    }
+    
+    .panel-body.no-padding {
+        padding: 0;
+    }
+    
+    /* System Monitor */
+    .resource-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .resource-item {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .resource-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+    }
+    
+    .resource-label {
+        color: var(--text-secondary);
+    }
+    
+    .resource-value {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+    
+    .resource-bar {
+        height: 8px;
+        background: var(--apple-fill);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .resource-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+    
+    .resource-fill.cpu { background: linear-gradient(90deg, #0A84FF, #5AC8FA); }
+    .resource-fill.memory { background: linear-gradient(90deg, #AF52DE, #BF5AF2); }
+    .resource-fill.disk { background: linear-gradient(90deg, #34C759, #30D158); }
+    
+    .resource-fill.warning { background: linear-gradient(90deg, #FF9500, #FFCC00); }
+    .resource-fill.critical { background: linear-gradient(90deg, #FF3B30, #FF6961); }
+    
+    /* Active Streams */
+    .stream-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .stream-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 24px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .stream-item:last-child {
+        border-bottom: none;
+    }
+    
+    .stream-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #34C759;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.4); }
+        50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(52, 199, 89, 0); }
+    }
+    
+    .stream-info {
+        flex: 1;
+    }
+    
+    .stream-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .stream-details {
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+    
+    .stream-viewers {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+    
+    /* Activity Feed */
+    .activity-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .activity-item {
+        display: flex;
+        gap: 12px;
+        padding: 14px 24px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        background: var(--apple-fill);
+        flex-shrink: 0;
+    }
+    
+    .activity-icon.green { background: rgba(52, 199, 89, 0.2); }
+    .activity-icon.red { background: rgba(255, 59, 48, 0.2); }
+    .activity-icon.blue { background: rgba(10, 132, 255, 0.2); }
+    .activity-icon.orange { background: rgba(255, 149, 0, 0.2); }
+    
+    .activity-content {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .activity-message {
+        font-size: 14px;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .activity-time {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 2px;
+    }
+    
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 16px;
+    }
+    
+    .quick-action {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 20px 16px;
+        background: var(--apple-fill);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    
+    .quick-action:hover {
+        background: var(--apple-fill-secondary);
+        transform: translateY(-2px);
+    }
+    
+    .quick-action-icon {
+        font-size: 28px;
+    }
+    
+    .quick-action-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-primary);
+        text-align: center;
+    }
+    
+    /* System Info */
+    .system-info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .system-info-item {
+        padding: 12px;
+        background: var(--apple-fill);
+        border-radius: 8px;
+    }
+    
+    .system-info-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+    
+    .system-info-value {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+    
+    /* Storage Chart */
+    .storage-chart {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .storage-bar-container {
+        height: 24px;
+        background: var(--apple-fill);
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+    }
+    
+    .storage-segment {
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+    
+    .storage-segment.local { background: #34C759; }
+    .storage-segment.plex { background: #E5A00D; }
+    .storage-segment.jellyfin { background: #00A4DC; }
+    .storage-segment.emby { background: #52B54B; }
+    
+    .storage-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+    
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    
+    .legend-dot.local { background: #34C759; }
+    .legend-dot.plex { background: #E5A00D; }
+    .legend-dot.jellyfin { background: #00A4DC; }
+    .legend-dot.emby { background: #52B54B; }
+    
+    /* Empty States */
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state-icon {
+        font-size: 48px;
+        opacity: 0.5;
+        margin-bottom: 12px;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-subtitle">Welcome to EXStreamTV. Monitor your channels and streams.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-secondary" onclick="refreshDashboard()">
+                <span class="btn-icon">↻</span>
+                Refresh
+            </button>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="dashboard-grid" id="quickStats">
+        <!-- Stats loaded via JS -->
+    </div>
+    
+    <!-- Main Panels -->
+    <div class="panel-grid">
+        <!-- Left Column -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Active Streams -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">Active Streams</span>
+                    <span id="streamCount" class="text-secondary">0 active</span>
+                </div>
+                <div class="panel-body no-padding">
+                    <div class="stream-list" id="streamList">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📺</div>
+                            <p>No active streams</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Activity Feed -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">Recent Activity</span>
+                    <a href="/logs" class="section-action">View All</a>
+                </div>
+                <div class="panel-body no-padding">
+                    <div class="activity-list" id="activityList">
+                        <!-- Activity items loaded via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- System Resources -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">System Resources</span>
+                </div>
+                <div class="panel-body">
+                    <div class="resource-bars" id="resourceBars">
+                        <!-- Resource bars loaded via JS -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">Quick Actions</span>
+                </div>
+                <div class="quick-actions">
+                    <a href="/channels" class="quick-action">
+                        <span class="quick-action-icon">📺</span>
+                        <span class="quick-action-label">Channels</span>
+                    </a>
+                    <a href="/api/ai/channel" class="quick-action">
+                        <span class="quick-action-icon">🤖</span>
+                        <span class="quick-action-label">AI Create</span>
+                    </a>
+                    <a href="/playlists" class="quick-action">
+                        <span class="quick-action-icon">📋</span>
+                        <span class="quick-action-label">Playlists</span>
+                    </a>
+                    <a href="/libraries" class="quick-action">
+                        <span class="quick-action-icon">📚</span>
+                        <span class="quick-action-label">Libraries</span>
+                    </a>
+                    <a href="/schedules" class="quick-action">
+                        <span class="quick-action-icon">📅</span>
+                        <span class="quick-action-label">Schedules</span>
+                    </a>
+                    <a href="/guide" class="quick-action">
+                        <span class="quick-action-icon">📖</span>
+                        <span class="quick-action-label">Guide</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Library Breakdown -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">Library Breakdown</span>
+                </div>
+                <div class="panel-body">
+                    <div class="storage-chart" id="storageChart">
+                        <!-- Chart loaded via JS -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Info -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">System Info</span>
+                </div>
+                <div class="panel-body">
+                    <div class="system-info-grid" id="systemInfo">
+                        <!-- System info loaded via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let refreshInterval;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboard();
+        // Auto-refresh every 10 seconds
+        refreshInterval = setInterval(loadDashboard, 10000);
+    });
+    
+    async function loadDashboard() {
+        try {
+            const response = await fetch('/api/dashboard/stats');
+            const data = await response.json();
+            
+            renderQuickStats(data.quick_stats);
+            renderResourceUsage(data.resource_usage);
+            renderActiveStreams(data.active_streams);
+            renderActivity(data.recent_activity);
+            renderStorageChart(data.storage_breakdown);
+            renderSystemInfo(data.system_info);
+        } catch (error) {
+            console.error('Failed to load dashboard:', error);
+        }
+    }
+    
+    function refreshDashboard() {
+        loadDashboard();
+    }
+    
+    function renderQuickStats(stats) {
+        const container = document.getElementById('quickStats');
+        container.innerHTML = stats.map(stat => `
+            <div class="stat-card">
+                <div class="stat-icon ${stat.color}">${stat.icon}</div>
+                <div class="stat-content">
+                    <div class="stat-value">${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function renderResourceUsage(usage) {
+        const container = document.getElementById('resourceBars');
+        
+        const getBarClass = (percent) => {
+            if (percent >= 90) return 'critical';
+            if (percent >= 75) return 'warning';
+            return '';
+        };
+        
+        container.innerHTML = `
+            <div class="resource-item">
+                <div class="resource-header">
+                    <span class="resource-label">CPU</span>
+                    <span class="resource-value">${usage.cpu_percent}%</span>
+                </div>
+                <div class="resource-bar">
+                    <div class="resource-fill cpu ${getBarClass(usage.cpu_percent)}" 
+                         style="width: ${usage.cpu_percent}%"></div>
+                </div>
+            </div>
+            <div class="resource-item">
+                <div class="resource-header">
+                    <span class="resource-label">Memory</span>
+                    <span class="resource-value">${usage.memory_used_gb} GB (${usage.memory_percent}%)</span>
+                </div>
+                <div class="resource-bar">
+                    <div class="resource-fill memory ${getBarClass(usage.memory_percent)}" 
+                         style="width: ${usage.memory_percent}%"></div>
+                </div>
+            </div>
+            <div class="resource-item">
+                <div class="resource-header">
+                    <span class="resource-label">Disk</span>
+                    <span class="resource-value">${usage.disk_used_gb} GB (${usage.disk_percent}%)</span>
+                </div>
+                <div class="resource-bar">
+                    <div class="resource-fill disk ${getBarClass(usage.disk_percent)}" 
+                         style="width: ${usage.disk_percent}%"></div>
+                </div>
+            </div>
+            <div class="resource-item">
+                <div class="resource-header">
+                    <span class="resource-label">Network</span>
+                    <span class="resource-value">↑ ${usage.network_sent_mb} MB  ↓ ${usage.network_recv_mb} MB</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    function renderActiveStreams(streams) {
+        const container = document.getElementById('streamList');
+        const countEl = document.getElementById('streamCount');
+        
+        countEl.textContent = `${streams.length} active`;
+        
+        if (streams.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📺</div>
+                    <p>No active streams</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = streams.map(stream => `
+            <div class="stream-item">
+                <div class="stream-indicator"></div>
+                <div class="stream-info">
+                    <div class="stream-name">${stream.channel_number}. ${escapeHtml(stream.channel_name)}</div>
+                    <div class="stream-details">
+                        ${stream.current_item ? escapeHtml(stream.current_item) : 'Streaming...'} 
+                        • ${Math.round(stream.uptime_minutes)} min
+                    </div>
+                </div>
+                <div class="stream-viewers">
+                    👁 ${stream.viewers}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function renderActivity(activities) {
+        const container = document.getElementById('activityList');
+        
+        if (activities.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📝</div>
+                    <p>No recent activity</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = activities.map(activity => `
+            <div class="activity-item">
+                <div class="activity-icon ${activity.color}">${activity.icon}</div>
+                <div class="activity-content">
+                    <div class="activity-message">${escapeHtml(activity.message)}</div>
+                    <div class="activity-time">${formatTime(activity.timestamp)}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function renderStorageChart(breakdown) {
+        const container = document.getElementById('storageChart');
+        const entries = Object.entries(breakdown).filter(([k, v]) => v > 0);
+        
+        if (entries.length === 0 || breakdown['No Data']) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>No library data</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const segments = entries.map(([key, value]) => 
+            `<div class="storage-segment ${key.toLowerCase()}" style="width: ${value}%" title="${key}: ${value}%"></div>`
+        ).join('');
+        
+        const legend = entries.map(([key, value]) =>
+            `<div class="legend-item">
+                <span class="legend-dot ${key.toLowerCase()}"></span>
+                ${key} (${value}%)
+            </div>`
+        ).join('');
+        
+        container.innerHTML = `
+            <div class="storage-bar-container">${segments}</div>
+            <div class="storage-legend">${legend}</div>
+        `;
+    }
+    
+    function renderSystemInfo(info) {
+        const container = document.getElementById('systemInfo');
+        container.innerHTML = `
+            <div class="system-info-item">
+                <div class="system-info-label">Hostname</div>
+                <div class="system-info-value">${escapeHtml(info.hostname)}</div>
+            </div>
+            <div class="system-info-item">
+                <div class="system-info-label">Platform</div>
+                <div class="system-info-value">${escapeHtml(info.platform)}</div>
+            </div>
+            <div class="system-info-item">
+                <div class="system-info-label">Python</div>
+                <div class="system-info-value">${info.python_version}</div>
+            </div>
+            <div class="system-info-item">
+                <div class="system-info-label">CPUs</div>
+                <div class="system-info-value">${info.cpu_count} cores</div>
+            </div>
+            <div class="system-info-item">
+                <div class="system-info-label">Memory</div>
+                <div class="system-info-value">${info.memory_total_gb} GB</div>
+            </div>
+            <div class="system-info-item">
+                <div class="system-info-label">Uptime</div>
+                <div class="system-info-value">${Math.round(info.uptime_hours)} hours</div>
+            </div>
+        `;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+    
+    function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = (now - date) / 1000;
+        
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return `${Math.round(diff / 60)} min ago`;
+        if (diff < 86400) return `${Math.round(diff / 3600)} hours ago`;
+        return date.toLocaleDateString();
+    }
+</script>
+{% endblock %}

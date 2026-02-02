@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Archive.org Login - StreamTV{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Archive.org Authentication</h1>
+        <p class="subtitle">Login to access restricted Archive.org content</p>
+    </div>
+
+    <div class="card">
+        {% if authenticated %}
+        <div class="auth-status success">
+            <span class="material-icons" aria-hidden="true">check_circle</span>
+            <div>
+                <strong>Authenticated</strong>
+                <p>Logged in as: {{ username }}</p>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button class="btn btn-secondary" id="archiveOrgLogoutButton" aria-label="Logout from Archive.org">
+                <span class="material-icons" aria-hidden="true">logout</span>
+                Logout
+            </button>
+        </div>
+        {% else %}
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter Archive.org username">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter Archive.org password">
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" aria-label="Login to Archive.org">
+                    <span class="material-icons" aria-hidden="true">login</span>
+                    Login
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>About Archive.org Authentication</h2>
+        <p>Some Archive.org media requires authentication to view. By logging in, you can access restricted content that requires an Archive.org account.</p>
+        <ul>
+            <li>Credentials are stored securely in macOS Keychain (on macOS)</li>
+            <li>Authentication is used automatically when accessing restricted content</li>
+            <li>You can logout at any time to remove stored credentials</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.auth-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.auth-status.success {
+    background: var(--success);
+    color: white;
+}
+
+.auth-status .material-icons,
+.auth-status .icon-emoji {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.auth-status > div {
+    flex: 1;
+    min-width: 0;
+}
+
+.auth-status strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.auth-status p {
+    margin: 0;
+    font-size: 15px;
+    opacity: 0.9;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--divider);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 16px;
+    font-family: inherit;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.btn .material-icons,
+.btn .icon-emoji {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.btn > span:not(.material-icons):not(.icon-emoji) {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: var(--surface-light);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background: var(--hover);
+}
+</style>
+
+<script nonce="{{ request.state.csp_nonce }}">
+async function login(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    
+    try {
+        const response = await fetch('/api/auth/archive-org', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Successfully logged in to Archive.org!');
+            window.location.reload();
+        } else {
+            alert('Login failed: ' + (data.detail || 'Invalid credentials'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function logout() {
+    if (!confirm('Are you sure you want to logout from Archive.org?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/auth/archive-org', {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Logged out from Archive.org');
+            window.location.reload();
+        } else {
+            alert('Logout failed: ' + (data.detail || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('loginForm');
+    if (form) {
+        form.addEventListener('submit', login);
+    }
+
+    const logoutButton = document.getElementById('archiveOrgLogoutButton');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', logout);
+    }
+});
+</script>
+{% endblock %}
+

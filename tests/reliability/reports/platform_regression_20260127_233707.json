@@ -1,0 +1,922 @@
+{
+  "timestamp": "2026-01-27T23:37:07.704006",
+  "total_tests": 69,
+  "passed": 52,
+  "failed": 17,
+  "results": [
+    {
+      "test_id": "CORE-001",
+      "test_name": "Server Health",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.008465,
+      "error": null,
+      "details": {
+        "status": "healthy",
+        "version": "2.0.1",
+        "timestamp": "2026-01-28T05:36:29.376141"
+      }
+    },
+    {
+      "test_id": "CORE-002",
+      "test_name": "Database Connection",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.109334,
+      "error": null,
+      "details": {
+        "database": {
+          "status": "ok"
+        }
+      }
+    },
+    {
+      "test_id": "CORE-003",
+      "test_name": "FFmpeg Available",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.111374,
+      "error": null,
+      "details": {
+        "status": "ok",
+        "version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+        "path": "/opt/homebrew/bin/ffmpeg"
+      }
+    },
+    {
+      "test_id": "CORE-004",
+      "test_name": "FFprobe Available",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.111582,
+      "error": null,
+      "details": {
+        "status": "ok",
+        "version": "ffprobe version 8.0.1 Copyright (c) 2007-2025 the FFmpeg developers",
+        "path": "/opt/homebrew/bin/ffprobe"
+      }
+    },
+    {
+      "test_id": "CORE-005",
+      "test_name": "Config Loaded",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.126204,
+      "error": null,
+      "details": {
+        "server_port": 8411,
+        "debug_mode": false,
+        "hdhomerun_enabled": true
+      }
+    },
+    {
+      "test_id": "CORE-006",
+      "test_name": "Static Files",
+      "subsystem": "core",
+      "passed": false,
+      "duration_seconds": 0.005685,
+      "error": null,
+      "details": {
+        "status_code": 404
+      }
+    },
+    {
+      "test_id": "API-CH-001",
+      "test_name": "List Channels",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.014055,
+      "error": null,
+      "details": {
+        "endpoint": "/api/channels",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-CH-002",
+      "test_name": "Get Channel by ID",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.015934,
+      "error": null,
+      "details": {
+        "channel_id": 1
+      }
+    },
+    {
+      "test_id": "API-CH-003",
+      "test_name": "Channel Playout",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.011157,
+      "error": null,
+      "details": {
+        "channel_id": 1
+      }
+    },
+    {
+      "test_id": "API-MD-001",
+      "test_name": "List Media Items",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.029391,
+      "error": null,
+      "details": {
+        "endpoint": "/api/media",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-MD-002",
+      "test_name": "Search Media",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.018327,
+      "error": null,
+      "details": {
+        "endpoint": "/api/media/search?q=test",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-PL-001",
+      "test_name": "List Playlists",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.320631,
+      "error": null,
+      "details": {
+        "endpoint": "/api/playlists",
+        "status": 500
+      }
+    },
+    {
+      "test_id": "API-SC-001",
+      "test_name": "List Schedules",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.027735,
+      "error": null,
+      "details": {
+        "endpoint": "/api/schedules",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-SC-002",
+      "test_name": "List Templates",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.003718,
+      "error": null,
+      "details": {
+        "endpoint": "/api/schedule-templates",
+        "status": 404
+      }
+    },
+    {
+      "test_id": "API-IP-001",
+      "test_name": "M3U Playlist",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.013918,
+      "error": null,
+      "details": {
+        "endpoint": "/iptv/channels.m3u",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-IP-002",
+      "test_name": "XMLTV EPG",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.22737,
+      "error": null,
+      "details": {
+        "endpoint": "/iptv/xmltv.xml",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-IP-003",
+      "test_name": "Channel Stream",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 5.013192,
+      "error": "",
+      "details": {}
+    },
+    {
+      "test_id": "API-LB-001",
+      "test_name": "List Libraries",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.010668,
+      "error": null,
+      "details": {
+        "endpoint": "/api/libraries",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-ST-001",
+      "test_name": "Get Settings",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.001834,
+      "error": null,
+      "details": {
+        "endpoint": "/api/settings",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-ST-002",
+      "test_name": "FFmpeg Profiles",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.005058,
+      "error": null,
+      "details": {
+        "endpoint": "/api/ffmpeg-profiles",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-ST-003",
+      "test_name": "Resolutions",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.004409,
+      "error": null,
+      "details": {
+        "endpoint": "/api/resolutions",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-HE-001",
+      "test_name": "Health Check",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.001299,
+      "error": null,
+      "details": {
+        "endpoint": "/api/health",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-HE-002",
+      "test_name": "Detailed Health",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.110805,
+      "error": null,
+      "details": {
+        "endpoint": "/api/health/detailed",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-HE-003",
+      "test_name": "Channel Health",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.002528,
+      "error": null,
+      "details": {
+        "endpoint": "/api/health/channels",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-DB-001",
+      "test_name": "Dashboard Stats",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.002383,
+      "error": null,
+      "details": {
+        "endpoint": "/api/dashboard",
+        "status": 404
+      }
+    },
+    {
+      "test_id": "API-AI-001",
+      "test_name": "AI Settings",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 30.00204,
+      "error": null,
+      "details": {
+        "endpoint": "/api/ai/settings",
+        "error": ""
+      }
+    },
+    {
+      "test_id": "API-AI-002",
+      "test_name": "AI Providers",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 1.260546,
+      "error": null,
+      "details": {
+        "endpoint": "/api/ai/providers",
+        "status": 404
+      }
+    },
+    {
+      "test_id": "API-CO-001",
+      "test_name": "List Collections",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.007801,
+      "error": null,
+      "details": {
+        "endpoint": "/api/collections",
+        "status": 500
+      }
+    },
+    {
+      "test_id": "API-HD-001",
+      "test_name": "Discover",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.007184,
+      "error": null,
+      "details": {
+        "endpoint": "/discover.json",
+        "status": 307
+      }
+    },
+    {
+      "test_id": "API-HD-002",
+      "test_name": "Lineup",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.001882,
+      "error": null,
+      "details": {
+        "endpoint": "/lineup.json",
+        "status": 307
+      }
+    },
+    {
+      "test_id": "API-HD-003",
+      "test_name": "Lineup Status",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.001623,
+      "error": null,
+      "details": {
+        "endpoint": "/lineup_status.json",
+        "status": 307
+      }
+    },
+    {
+      "test_id": "API-LG-001",
+      "test_name": "List Logs",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.001638,
+      "error": null,
+      "details": {
+        "endpoint": "/api/logs",
+        "status": 404
+      }
+    },
+    {
+      "test_id": "API-IE-001",
+      "test_name": "Export Data",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 0.001508,
+      "error": null,
+      "details": {
+        "endpoint": "/api/export",
+        "status": 404
+      }
+    },
+    {
+      "test_id": "DB-001",
+      "test_name": "Channel Table",
+      "subsystem": "database",
+      "passed": true,
+      "duration_seconds": 0.006058,
+      "error": null,
+      "details": {
+        "endpoint": "/api/channels",
+        "accessible": true
+      }
+    },
+    {
+      "test_id": "DB-002",
+      "test_name": "Media Table",
+      "subsystem": "database",
+      "passed": true,
+      "duration_seconds": 0.02498,
+      "error": null,
+      "details": {
+        "endpoint": "/api/media",
+        "accessible": true
+      }
+    },
+    {
+      "test_id": "DB-003",
+      "test_name": "Playlist Table",
+      "subsystem": "database",
+      "passed": false,
+      "duration_seconds": 0.262509,
+      "error": null,
+      "details": {
+        "endpoint": "/api/playlists",
+        "accessible": true
+      }
+    },
+    {
+      "test_id": "DB-004",
+      "test_name": "Playout Table",
+      "subsystem": "database",
+      "passed": false,
+      "duration_seconds": 0.01067,
+      "error": null,
+      "details": {
+        "has_playout_table": true
+      }
+    },
+    {
+      "test_id": "DB-005",
+      "test_name": "Schedule Table",
+      "subsystem": "database",
+      "passed": true,
+      "duration_seconds": 0.004679,
+      "error": null,
+      "details": {
+        "endpoint": "/api/schedules",
+        "accessible": true
+      }
+    },
+    {
+      "test_id": "DB-006",
+      "test_name": "Library Table",
+      "subsystem": "database",
+      "passed": true,
+      "duration_seconds": 0.00457,
+      "error": null,
+      "details": {
+        "endpoint": "/api/libraries",
+        "accessible": true
+      }
+    },
+    {
+      "test_id": "DB-007",
+      "test_name": "FFmpeg Profile Table",
+      "subsystem": "database",
+      "passed": true,
+      "duration_seconds": 0.003039,
+      "error": null,
+      "details": {
+        "endpoint": "/api/ffmpeg-profiles",
+        "accessible": true
+      }
+    },
+    {
+      "test_id": "STR-001",
+      "test_name": "Channel Manager Active",
+      "subsystem": "streaming",
+      "passed": true,
+      "duration_seconds": 0.001246,
+      "error": null,
+      "details": {
+        "status": "degraded",
+        "total_channels": 20,
+        "unhealthy_channels": 17,
+        "channels": {
+          "3": {
+            "last_output_seconds_ago": 1037.673264,
+            "restart_count": 32,
+            "error_count_5min": 0
+          },
+          "5": {
+            "last_output_seconds_ago": 1622.941809,
+            "restart_count": 52,
+            "error_count_5min": 0
+          },
+          "4": {
+            "last_output_seconds_ago": 125.116365,
+            "restart_count": 2,
+            "error_count_5min": 0
+          },
+          "6": {
+            "last_output_seconds_ago": 351.430897,
+            "restart_count": 9,
+            "error_count_5min": 0
+          },
+          "7": {
+            "last_output_seconds_ago": 351.55332,
+            "restart_count": 9,
+            "error_count_5min": 0
+          },
+          "8": {
+            "last_output_seconds_ago": 356.002405,
+            "restart_count": 9,
+            "error_count_5min": 0
+          },
+          "9": {
+            "last_output_seconds_ago": 8.4e-05,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "10": {
+            "last_output_seconds_ago": 0.002072,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "11": {
+            "last_output_seconds_ago": 370.527175,
+            "restart_count": 10,
+            "error_count_5min": 0
+          },
+          "12": {
+            "last_output_seconds_ago": 383.068633,
+            "restart_count": 10,
+            "error_count_5min": 0
+          },
+          "13": {
+            "last_output_seconds_ago": 446.218288,
+            "restart_count": 12,
+            "error_count_5min": 0
+          },
+          "14": {
+            "last_output_seconds_ago": 439.440431,
+            "restart_count": 12,
+            "error_count_5min": 0
+          },
+          "15": {
+            "last_output_seconds_ago": 0.000706,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "17": {
+            "last_output_seconds_ago": 393.870257,
+            "restart_count": 11,
+            "error_count_5min": 0
+          },
+          "16": {
+            "last_output_seconds_ago": 382.791236,
+            "restart_count": 10,
+            "error_count_5min": 0
+          },
+          "20": {
+            "last_output_seconds_ago": 387.940301,
+            "restart_count": 11,
+            "error_count_5min": 0
+          },
+          "21": {
+            "last_output_seconds_ago": 364.485651,
+            "restart_count": 10,
+            "error_count_5min": 0
+          },
+          "18": {
+            "last_output_seconds_ago": 113.147834,
+            "restart_count": 1,
+            "error_count_5min": 0
+          },
+          "19": {
+            "last_output_seconds_ago": 279.125331,
+            "restart_count": 7,
+            "error_count_5min": 0
+          },
+          "22": {
+            "last_output_seconds_ago": 344.806763,
+            "restart_count": 9,
+            "error_count_5min": 0
+          }
+        },
+        "timestamp": "2026-01-28T05:37:07.280999"
+      }
+    },
+    {
+      "test_id": "STR-002",
+      "test_name": "Active Streams",
+      "subsystem": "streaming",
+      "passed": true,
+      "duration_seconds": 0.003916,
+      "error": null,
+      "details": {
+        "active_streams": 0
+      }
+    },
+    {
+      "test_id": "STR-003",
+      "test_name": "URL Resolution",
+      "subsystem": "streaming",
+      "passed": true,
+      "duration_seconds": 0.005703,
+      "error": null,
+      "details": {
+        "resolver_available": true,
+        "channels_available": 34
+      }
+    },
+    {
+      "test_id": "MED-001",
+      "test_name": "Plex Connection",
+      "subsystem": "media",
+      "passed": true,
+      "duration_seconds": 0.004107,
+      "error": null,
+      "details": {
+        "plex_libraries": 0
+      }
+    },
+    {
+      "test_id": "MED-002",
+      "test_name": "Library Scan",
+      "subsystem": "media",
+      "passed": true,
+      "duration_seconds": 0.004201,
+      "error": null,
+      "details": {
+        "libraries_accessible": true
+      }
+    },
+    {
+      "test_id": "MED-003",
+      "test_name": "Media Metadata",
+      "subsystem": "media",
+      "passed": true,
+      "duration_seconds": 0.013056,
+      "error": null,
+      "details": {
+        "has_metadata": true
+      }
+    },
+    {
+      "test_id": "AI-001",
+      "test_name": "AI Provider Available",
+      "subsystem": "ai_agent",
+      "passed": true,
+      "duration_seconds": 0.00159,
+      "error": null,
+      "details": {
+        "ai_endpoint_exists": true
+      }
+    },
+    {
+      "test_id": "AI-002",
+      "test_name": "Persona Manager",
+      "subsystem": "ai_agent",
+      "passed": false,
+      "duration_seconds": 0.00125,
+      "error": null,
+      "details": {
+        "persona_page_exists": true
+      }
+    },
+    {
+      "test_id": "AI-003",
+      "test_name": "Channel Creator",
+      "subsystem": "ai_agent",
+      "passed": false,
+      "duration_seconds": 0.001306,
+      "error": null,
+      "details": {
+        "channel_creator_exists": true
+      }
+    },
+    {
+      "test_id": "TSK-001",
+      "test_name": "Task Queue Active",
+      "subsystem": "tasks",
+      "passed": true,
+      "duration_seconds": 0.000937,
+      "error": null,
+      "details": {
+        "tasks_assumed_running": true
+      }
+    },
+    {
+      "test_id": "TSK-002",
+      "test_name": "Scheduler Active",
+      "subsystem": "tasks",
+      "passed": true,
+      "duration_seconds": 0.000847,
+      "error": null,
+      "details": {
+        "tasks_assumed_running": true
+      }
+    },
+    {
+      "test_id": "TSK-003",
+      "test_name": "Playout Rebuild Task",
+      "subsystem": "tasks",
+      "passed": true,
+      "duration_seconds": 0.001106,
+      "error": null,
+      "details": {
+        "tasks_assumed_running": true
+      }
+    },
+    {
+      "test_id": "FFM-001",
+      "test_name": "FFmpeg Version",
+      "subsystem": "ffmpeg",
+      "passed": true,
+      "duration_seconds": 0.110072,
+      "error": null,
+      "details": {
+        "version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the F"
+      }
+    },
+    {
+      "test_id": "FFM-002",
+      "test_name": "Hardware Accel",
+      "subsystem": "ffmpeg",
+      "passed": true,
+      "duration_seconds": 0.099205,
+      "error": null,
+      "details": {
+        "platform": "Darwin",
+        "hwaccel_check": "assumed_available"
+      }
+    },
+    {
+      "test_id": "FFM-003",
+      "test_name": "Codec Support",
+      "subsystem": "ffmpeg",
+      "passed": true,
+      "duration_seconds": 0.103485,
+      "error": null,
+      "details": {
+        "codecs_assumed_available": true
+      }
+    },
+    {
+      "test_id": "FFM-004",
+      "test_name": "Process Pool",
+      "subsystem": "ffmpeg",
+      "passed": true,
+      "duration_seconds": 0.0024,
+      "error": null,
+      "details": {
+        "process_pool_assumed_active": true
+      }
+    },
+    {
+      "test_id": "INT-001",
+      "test_name": "HDHomeRun Emulation",
+      "subsystem": "integration",
+      "passed": false,
+      "duration_seconds": 0.004075,
+      "error": null,
+      "details": {
+        "error": "HDHomeRun endpoints not responding"
+      }
+    },
+    {
+      "test_id": "INT-002",
+      "test_name": "IPTV Source Manager",
+      "subsystem": "integration",
+      "passed": true,
+      "duration_seconds": 3e-06,
+      "error": null,
+      "details": {
+        "iptv_sources_assumed_available": true
+      }
+    },
+    {
+      "test_id": "INT-003",
+      "test_name": "Notification System",
+      "subsystem": "integration",
+      "passed": true,
+      "duration_seconds": 2e-06,
+      "error": null,
+      "details": {
+        "notifications_assumed_available": true
+      }
+    },
+    {
+      "test_id": "WEB-001",
+      "test_name": "Dashboard Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.00184,
+      "error": null,
+      "details": {
+        "page": "/",
+        "status": 307
+      }
+    },
+    {
+      "test_id": "WEB-002",
+      "test_name": "Channels Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.026955,
+      "error": null,
+      "details": {
+        "page": "/channels",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "WEB-003",
+      "test_name": "Playlists Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.006671,
+      "error": null,
+      "details": {
+        "page": "/playlists",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "WEB-004",
+      "test_name": "Libraries Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.005845,
+      "error": null,
+      "details": {
+        "page": "/libraries",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "WEB-005",
+      "test_name": "Schedules Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.004922,
+      "error": null,
+      "details": {
+        "page": "/schedules",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "WEB-006",
+      "test_name": "Settings Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.001569,
+      "error": null,
+      "details": {
+        "page": "/settings",
+        "status": 307
+      }
+    },
+    {
+      "test_id": "WEB-007",
+      "test_name": "Logs Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.004438,
+      "error": null,
+      "details": {
+        "page": "/logs",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "WEB-008",
+      "test_name": "AI Channel Page",
+      "subsystem": "webui",
+      "passed": false,
+      "duration_seconds": 0.002005,
+      "error": null,
+      "details": {
+        "page": "/ai/channel",
+        "status": 404
+      }
+    },
+    {
+      "test_id": "WEB-009",
+      "test_name": "Import Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.004215,
+      "error": null,
+      "details": {
+        "page": "/import",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "WEB-010",
+      "test_name": "Guide Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.004315,
+      "error": null,
+      "details": {
+        "page": "/guide",
+        "status": 200
+      }
+    }
+  ]
+}

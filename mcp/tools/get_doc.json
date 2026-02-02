@@ -1,0 +1,14 @@
+{
+  "name": "get_doc",
+  "description": "Get the full content of a documentation file by path or short name (e.g. INSTALLATION, QUICK_START, README, docs/guides/AI_SETUP.md).",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "path_or_name": {
+        "type": "string",
+        "description": "Relative path (e.g. docs/guides/INSTALLATION.md) or short name (e.g. INSTALLATION, QUICK_START)"
+      }
+    },
+    "required": ["path_or_name"]
+  }
+}

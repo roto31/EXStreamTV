@@ -1,0 +1,1249 @@
+{% extends "base.html" %}
+
+{% block title %}Import M3U Channels - StreamTV{% endblock %}
+
+{% block extra_styles %}
+    .m3u-service-card {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .service-status {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .service-status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--error);
+    }
+    
+    .service-status-indicator.enabled {
+        background: var(--success);
+    }
+    
+    .service-warning {
+        background: rgba(255, 149, 0, 0.1);
+        border: 0.5px solid var(--warning);
+        padding: 16px;
+        border-radius: 8px;
+        margin: 16px 0;
+        color: var(--text-primary);
+    }
+    
+    .m3u-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--divider);
+    }
+    
+    .m3u-tab {
+        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .m3u-tab:hover {
+        color: var(--text-primary);
+    }
+    
+    .m3u-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+    
+    .m3u-tab-content {
+        display: none;
+    }
+    
+    .m3u-tab-content.active {
+        display: block;
+    }
+    
+    .url-input-section {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .url-input-group {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .url-input-group input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 0.5px solid var(--divider);
+        border-radius: 8px;
+        background: var(--background);
+        color: var(--text-primary);
+        font-size: 14px;
+    }
+    
+    .url-input-group input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .channel-preview-section {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        border: 0.5px solid var(--divider);
+        display: none;
+    }
+    
+    .channel-preview-section.show {
+        display: block;
+    }
+    
+    .preview-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .preview-filters {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .preview-filters input,
+    .preview-filters select {
+        padding: 8px 12px;
+        border: 0.5px solid var(--divider);
+        border-radius: 6px;
+        background: var(--background);
+        color: var(--text-primary);
+        font-size: 13px;
+    }
+    
+    .channel-preview-list {
+        display: grid;
+        gap: 12px;
+    }
+    
+    .channel-preview-card {
+        background: var(--background);
+        border: 0.5px solid var(--divider);
+        border-radius: 8px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.2s;
+    }
+    
+    .channel-preview-card:hover {
+        background: var(--hover);
+        border-color: var(--primary);
+    }
+    
+    .channel-preview-card.selected {
+        border-color: var(--primary);
+        background: rgba(var(--primary-rgb, 10, 132, 255), 0.1);
+    }
+    
+    .channel-preview-checkbox {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+    
+    .channel-preview-logo {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+        border-radius: 6px;
+        background: var(--surface);
+    }
+    
+    .channel-preview-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .channel-preview-name {
+        font-weight: 500;
+        font-size: 16px;
+        margin-bottom: 4px;
+        color: var(--text-primary);
+    }
+    
+    .channel-preview-meta {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 8px;
+    }
+    
+    .channel-preview-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .channel-preview-url {
+        font-size: 11px;
+        color: var(--text-disabled);
+        margin-top: 4px;
+        word-break: break-all;
+    }
+    
+    .library-filters {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        border: 0.5px solid var(--divider);
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .library-filters select,
+    .library-filters input {
+        padding: 10px 14px;
+        border: 0.5px solid var(--divider);
+        border-radius: 8px;
+        background: var(--background);
+        color: var(--text-primary);
+        font-size: 14px;
+    }
+    
+    .stream-card {
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    
+    .stream-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stream-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 12px;
+    }
+    
+    .stream-card-name {
+        font-weight: 600;
+        font-size: 18px;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+    
+    .stream-card-description {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+    }
+    
+    .stream-card-meta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+    
+    .stream-meta-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+        background: var(--hover);
+        color: var(--text-secondary);
+    }
+    
+    .reliability-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .reliability-badge.excellent {
+        background: rgba(52, 199, 89, 0.2);
+        color: var(--success);
+    }
+    
+    .reliability-badge.good {
+        background: rgba(255, 204, 0, 0.2);
+        color: var(--warning);
+    }
+    
+    .reliability-badge.fair {
+        background: rgba(255, 149, 0, 0.2);
+        color: var(--warning);
+    }
+    
+    .reliability-badge.poor {
+        background: rgba(255, 59, 48, 0.2);
+        color: var(--error);
+    }
+    
+    .stream-card-stats {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 12px;
+    }
+    
+    .stream-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+    }
+    
+    .empty-library {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid var(--divider);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .confirm-dialog {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .confirm-dialog.show {
+        display: flex;
+    }
+    
+    .confirm-dialog-content {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .confirm-dialog-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+    }
+    
+    .confirm-dialog-message {
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+        line-height: 1.5;
+    }
+    
+    .confirm-dialog-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Import M3U Channels</h1>
+        <p>Import channels from M3U playlist files or browse curated stream library</p>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <!-- Service Activation Card -->
+    <div class="m3u-service-card" id="serviceCard">
+        <div class="service-status">
+            <div class="service-status-indicator" id="serviceIndicator"></div>
+            <div>
+                <div style="font-weight: 500; color: var(--text-primary);" id="serviceStatusText">M3U Module: Checking...</div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;" id="serviceStatusSubtext"></div>
+            </div>
+        </div>
+        
+        <div id="serviceDisabledUI" style="display: none;">
+            <div class="service-warning">
+                <strong>⚠️ M3U Module Disabled</strong>
+                <p style="margin-top: 8px; margin-bottom: 0;">M3U import features require the M3U module to be enabled. Enabling will restart StreamTV and interrupt all active connections.</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 16px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="enableM3UCheckbox" style="width: 18px; height: 18px; cursor: pointer;" aria-label="Enable M3U module">
+                    <span>Enable M3U Module</span>
+                </label>
+                <button class="btn btn-primary" id="startM3UButton" disabled style="gap: 8px;" aria-label="Start M3U module">
+                    <span class="material-icons" style="font-size: 18px; flex-shrink: 0;" aria-hidden="true">play_arrow</span>
+                    <span>Start M3U Module</span>
+                </button>
+            </div>
+        </div>
+        
+        <div id="serviceEnabledUI" style="display: none;">
+            <div style="color: var(--success); font-size: 14px;">
+                ✓ M3U Module is active and ready to use
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content (only shown when enabled) -->
+    <div id="mainContent" style="display: none;">
+        <!-- Tabs -->
+        <div class="m3u-tabs" role="tablist" aria-label="M3U import tabs">
+            <button class="m3u-tab active" data-tab="url" role="tab" aria-selected="true" aria-controls="urlTab">Import from URL</button>
+            <button class="m3u-tab" data-tab="library" role="tab" aria-selected="false" aria-controls="libraryTab">Browse Library</button>
+        </div>
+        
+        <!-- URL Import Tab -->
+        <div class="m3u-tab-content active" id="urlTab" role="tabpanel" aria-labelledby="urlTab">
+            <div class="url-input-section">
+                <h2 style="margin-bottom: 16px; font-size: 18px; font-weight: 500;">Paste M3U URL</h2>
+                <div class="url-input-group">
+                    <label for="m3uUrlInput" class="sr-only">M3U URL input</label>
+                    <input 
+                        type="text" 
+                        id="m3uUrlInput" 
+                        placeholder="https://example.com/playlist.m3u or file:///path/to/playlist.m3u"
+                        style="flex: 1;"
+                        aria-label="M3U playlist URL or file path"
+                    >
+                    <button class="btn btn-primary" id="parseM3UButton" aria-label="Parse M3U playlist and add channels">
+                        <span class="material-icons" style="font-size: 18px;" aria-hidden="true">search</span>
+                        Add Channels
+                    </button>
+                </div>
+                <div id="urlError" class="alert" style="display: none; margin-top: 12px;"></div>
+            </div>
+            
+            <div class="channel-preview-section" id="channelPreviewSection">
+                <div class="preview-controls">
+                    <div class="preview-filters">
+                        <label for="channelSearchInput" class="sr-only">Search channels</label>
+                        <input 
+                            type="text" 
+                            id="channelSearchInput" 
+                            placeholder="Search channels..."
+                            style="min-width: 200px;"
+                            aria-label="Search channels"
+                        >
+                        <label for="groupFilter" class="sr-only">Filter by group</label>
+                        <select id="groupFilter" aria-label="Filter channels by group">
+                            <option value="">All Groups</option>
+                        </select>
+                        <button class="btn btn-outlined" id="selectAllButton" aria-label="Select all channels">Select All</button>
+                        <button class="btn btn-outlined" id="deselectAllButton" aria-label="Deselect all channels">Deselect All</button>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 13px;">
+                        <span id="selectedCount">0</span> of <span id="totalCount">0</span> selected
+                    </div>
+                </div>
+                
+                <div id="channelPreviewList" class="channel-preview-list"></div>
+                
+                <div style="text-align: center; margin-top: 24px;">
+                    <button class="btn btn-primary" id="importSelectedButton" disabled aria-label="Import selected channels">
+                        <span class="material-icons" style="font-size: 18px;" aria-hidden="true">import_export</span>
+                        Import Selected Channels
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Library Browser Tab -->
+        <div class="m3u-tab-content" id="libraryTab" role="tabpanel" aria-labelledby="libraryTab">
+            <div class="library-filters">
+                <label for="countryFilter" class="sr-only">Filter by country</label>
+                <select id="countryFilter" aria-label="Filter channels by country">
+                    <option value="">All Countries</option>
+                </select>
+                <label for="genreFilter" class="sr-only">Filter by genre</label>
+                <select id="genreFilter" aria-label="Filter channels by genre">
+                    <option value="">All Genres</option>
+                </select>
+                <label for="sortFilter" class="sr-only">Sort channels</label>
+                <select id="sortFilter" aria-label="Sort channels">
+                    <option value="country">Sort by Country</option>
+                    <option value="genre">Sort by Genre</option>
+                    <option value="reliability">Sort by Reliability</option>
+                    <option value="name">Sort by Name</option>
+                </select>
+                <label for="minReliabilityFilter" class="sr-only">Minimum reliability percentage</label>
+                <input 
+                    type="number" 
+                    id="minReliabilityFilter" 
+                    placeholder="Min Reliability %"
+                    min="0"
+                    max="100"
+                    aria-label="Minimum reliability percentage"
+                    style="width: 120px;"
+                >
+                <label for="librarySearchInput" class="sr-only">Search streams in library</label>
+                <input 
+                    type="text" 
+                    id="librarySearchInput" 
+                    placeholder="Search streams..."
+                    style="flex: 1; min-width: 200px;"
+                    aria-label="Search streams in library"
+                >
+            </div>
+            
+            <div id="libraryLoading" class="loading" style="display: none; text-align: center; padding: 40px;">
+                <div class="loading-spinner" style="margin: 0 auto 16px;"></div>
+                Loading stream library...
+            </div>
+            
+            <div id="streamLibrary" class="stream-grid"></div>
+            
+            <div id="emptyLibrary" class="empty-library" style="display: none;">
+                <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">📡</div>
+                <h3 style="margin-bottom: 8px;">No streams found</h3>
+                <p>Try adjusting your filters or check back later for more streams.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Restart Confirmation Dialog -->
+    <div class="confirm-dialog" id="restartConfirmDialog">
+        <div class="confirm-dialog-content">
+            <div class="confirm-dialog-title">⚠️ Restart Required</div>
+            <div class="confirm-dialog-message">
+                Enabling the M3U module requires restarting StreamTV. All active connections will be interrupted.
+                <br><br>
+                <strong>Are you sure you want to continue?</strong>
+            </div>
+            <div class="confirm-dialog-actions">
+                <button class="btn btn-outlined" id="cancelRestartButton">Cancel</button>
+                <button class="btn btn-primary" id="confirmRestartButton">
+                    <span class="material-icons" style="font-size: 18px;">refresh</span>
+                    Confirm & Restart
+                </button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script nonce="{{ request.state.csp_nonce }}">
+        let m3uModuleEnabled = false;
+        let parsedChannels = [];
+        let selectedChannelIndices = new Set();
+        let currentM3UUrl = '';
+        let libraryStreams = [];
+        
+        // Check service status on load
+        async function checkServiceStatus() {
+            try {
+                const response = await authenticatedFetch('/api/m3u/service/status');
+                if (response.ok) {
+                    const status = await response.json();
+                    m3uModuleEnabled = status.enabled || false;
+                    updateServiceUI();
+                } else {
+                    // If endpoint doesn't exist, assume disabled
+                    m3uModuleEnabled = false;
+                    updateServiceUI();
+                }
+            } catch (error) {
+                console.error('Error checking service status:', error);
+                m3uModuleEnabled = false;
+                updateServiceUI();
+            }
+        }
+        
+        function updateServiceUI() {
+            const indicator = document.getElementById('serviceIndicator');
+            const statusText = document.getElementById('serviceStatusText');
+            const statusSubtext = document.getElementById('serviceStatusSubtext');
+            const disabledUI = document.getElementById('serviceDisabledUI');
+            const enabledUI = document.getElementById('serviceEnabledUI');
+            const mainContent = document.getElementById('mainContent');
+            
+            if (m3uModuleEnabled) {
+                indicator.classList.add('enabled');
+                statusText.textContent = 'M3U Module: Enabled';
+                statusSubtext.textContent = 'All M3U features are available';
+                disabledUI.style.display = 'none';
+                enabledUI.style.display = 'block';
+                mainContent.style.display = 'block';
+            } else {
+                indicator.classList.remove('enabled');
+                statusText.textContent = 'M3U Module: Disabled';
+                statusSubtext.textContent = 'Enable the module to use M3U import features';
+                disabledUI.style.display = 'block';
+                enabledUI.style.display = 'none';
+                mainContent.style.display = 'none';
+            }
+        }
+        
+        // Enable checkbox handler
+        document.getElementById('enableM3UCheckbox')?.addEventListener('change', function(e) {
+            const startButton = document.getElementById('startM3UButton');
+            startButton.disabled = !e.target.checked;
+        });
+        
+        // Start M3U Module button
+        document.getElementById('startM3UButton')?.addEventListener('click', function() {
+            const dialog = document.getElementById('restartConfirmDialog');
+            dialog.classList.add('show');
+        });
+        
+        // Restart confirmation
+        document.getElementById('confirmRestartButton')?.addEventListener('click', async function() {
+            try {
+                const response = await authenticatedFetch('/api/m3u/service/enable', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        enable: true,
+                        enable_library: true,
+                        enable_testing: false
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.restart_required) {
+                        // Trigger restart
+                        await authenticatedFetch('/api/m3u/service/restart', {
+                            method: 'POST'
+                        });
+                        
+                        // Show message and reload after delay
+                        alert('StreamTV will restart in 3 seconds. The page will reload automatically.');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 3000);
+                    }
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to enable M3U module'));
+                }
+            } catch (error) {
+                console.error('Error enabling M3U module:', error);
+                alert('Error enabling M3U module: ' + error.message);
+            } finally {
+                document.getElementById('restartConfirmDialog').classList.remove('show');
+            }
+        });
+        
+        document.getElementById('cancelRestartButton')?.addEventListener('click', function() {
+            document.getElementById('restartConfirmDialog').classList.remove('show');
+        });
+        
+        // Tab switching
+        document.querySelectorAll('.m3u-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+                
+                // Update tab buttons
+                document.querySelectorAll('.m3u-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update tab content
+                document.querySelectorAll('.m3u-tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(tabName + 'Tab').classList.add('active');
+                
+                // Load library if switching to library tab
+                if (tabName === 'library' && libraryStreams.length === 0) {
+                    loadStreamLibrary();
+                }
+            });
+        });
+        
+        // Event delegation for stream library cards (most efficient - single listener)
+        // This handles clicks on dynamically generated stream cards
+        const streamLibraryContainer = document.getElementById('streamLibrary');
+        if (streamLibraryContainer) {
+            streamLibraryContainer.addEventListener('click', function(e) {
+                // Find the closest stream-card element (handles clicks on child elements)
+                const streamCard = e.target.closest('.stream-card');
+                if (streamCard) {
+                    const streamUrl = streamCard.dataset.streamUrl;
+                    const streamName = streamCard.dataset.streamName;
+                    if (streamUrl) {
+                        importFromLibrary(streamUrl, streamName);
+                    }
+                }
+            });
+        }
+        
+        // Parse M3U URL
+        document.getElementById('parseM3UButton')?.addEventListener('click', parseM3U);
+        document.getElementById('m3uUrlInput')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                parseM3U();
+            }
+        });
+        
+        // Set up event delegation for checkboxes using document (works even if element doesn't exist yet)
+        // This ensures it works even when HTML is regenerated
+        document.addEventListener('change', function(e) {
+            // Only handle events from channel preview checkboxes
+            if (e.target.classList && e.target.classList.contains('channel-preview-checkbox')) {
+                const index = parseInt(e.target.dataset.channelIndex);
+                if (!isNaN(index)) {
+                    toggleChannel(index, e.target.checked);
+                }
+            }
+        });
+        
+        async function parseM3U() {
+            const urlInput = document.getElementById('m3uUrlInput');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showUrlError('Please enter an M3U URL');
+                return;
+            }
+            
+            currentM3UUrl = url;
+            const previewSection = document.getElementById('channelPreviewSection');
+            const errorDiv = document.getElementById('urlError');
+            errorDiv.style.display = 'none';
+            
+            // Show loading
+            previewSection.classList.add('show');
+            previewSection.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading-spinner" style="margin: 0 auto 16px;"></div>Parsing M3U file...</div>';
+            
+            const apiUrl = `/api/import/m3u/preview?m3u_url=${encodeURIComponent(url)}&enrich_metadata=true`;
+            
+            try {
+                const response = await authenticatedFetch(apiUrl, { method: 'POST' });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to parse M3U file');
+                }
+                
+                parsedChannels = await response.json();
+                selectedChannelIndices.clear();
+                
+                if (!parsedChannels || parsedChannels.length === 0) {
+                    showUrlError('No channels found in M3U file');
+                    previewSection.classList.remove('show');
+                    return;
+                }
+                
+                displayChannelPreview();
+                
+            } catch (error) {
+                console.error('Error parsing M3U:', error);
+                showUrlError(error.message || 'Failed to parse M3U file');
+                previewSection.classList.remove('show');
+            }
+        }
+        
+        function showUrlError(message) {
+            const errorDiv = document.getElementById('urlError');
+            errorDiv.textContent = '❌ ' + message;
+            errorDiv.style.display = 'block';
+            errorDiv.className = 'alert';
+        }
+        
+        function displayChannelPreview() {
+            const previewSection = document.getElementById('channelPreviewSection');
+            const listDiv = document.getElementById('channelPreviewList');
+            
+            // Restore preview section structure
+            previewSection.innerHTML = `
+                <div class="preview-controls">
+                    <div class="preview-filters">
+                        <input type="text" id="channelSearchInput" placeholder="Search channels..." style="min-width: 200px;">
+                        <select id="groupFilter">
+                            <option value="">All Groups</option>
+                        </select>
+                        <button class="btn btn-outlined" id="selectAllButton">Select All</button>
+                        <button class="btn btn-outlined" id="deselectAllButton">Deselect All</button>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 13px;">
+                        <span id="selectedCount">0</span> of <span id="totalCount">${parsedChannels.length}</span> selected
+                    </div>
+                </div>
+                <div id="channelPreviewList" class="channel-preview-list"></div>
+                <div style="text-align: center; margin-top: 24px;">
+                    <button class="btn btn-primary" id="importSelectedButton" disabled>
+                        <span class="material-icons" style="font-size: 18px;">import_export</span>
+                        <span>Import Selected Channels</span>
+                    </button>
+                </div>
+            `;
+            
+            // Populate groups filter
+            const groups = [...new Set(parsedChannels.map(c => c.group).filter(Boolean))].sort();
+            const groupFilter = document.getElementById('groupFilter');
+            groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group;
+                option.textContent = group;
+                groupFilter.appendChild(option);
+            });
+            
+            // Render channels
+            renderChannels();
+            
+            // Attach event listeners
+            document.getElementById('channelSearchInput').addEventListener('input', renderChannels);
+            document.getElementById('groupFilter').addEventListener('change', renderChannels);
+            document.getElementById('selectAllButton').addEventListener('click', () => {
+                parsedChannels.forEach((_, i) => selectedChannelIndices.add(i));
+                updateSelection();
+                renderChannels();
+            });
+            document.getElementById('deselectAllButton').addEventListener('click', () => {
+                selectedChannelIndices.clear();
+                updateSelection();
+                renderChannels();
+            });
+            document.getElementById('importSelectedButton').addEventListener('click', importSelectedChannels);
+        }
+        
+        function renderChannels() {
+            const listDiv = document.getElementById('channelPreviewList');
+            if (!listDiv) {
+                return;
+            }
+            
+            const searchTerm = document.getElementById('channelSearchInput')?.value.toLowerCase() || '';
+            const groupFilter = document.getElementById('groupFilter')?.value || '';
+            
+            if (!parsedChannels || parsedChannels.length === 0) {
+                listDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">No channels found</div>';
+                return;
+            }
+            
+            const filtered = parsedChannels.filter((channel, index) => {
+                const matchesSearch = !searchTerm || 
+                    channel.name.toLowerCase().includes(searchTerm) ||
+                    (channel.group && channel.group.toLowerCase().includes(searchTerm));
+                const matchesGroup = !groupFilter || channel.group === groupFilter;
+                return matchesSearch && matchesGroup;
+            });
+            
+            listDiv.innerHTML = filtered.map((channel, displayIndex) => {
+                // Find the actual index in parsedChannels by matching URL (more reliable than object reference)
+                let actualIndex = -1;
+                for (let i = 0; i < parsedChannels.length; i++) {
+                    if (parsedChannels[i].url === channel.url && parsedChannels[i].name === channel.name) {
+                        actualIndex = i;
+                        break;
+                    }
+                }
+                // Fallback to indexOf if URL matching fails
+                if (actualIndex === -1) {
+                    actualIndex = parsedChannels.indexOf(channel);
+                }
+                
+                const isSelected = selectedChannelIndices.has(actualIndex);
+                
+                return `
+                    <div class="channel-preview-card ${isSelected ? 'selected' : ''}" data-index="${actualIndex}">
+                        <input 
+                            type="checkbox" 
+                            class="channel-preview-checkbox" 
+                            ${isSelected ? 'checked' : ''}
+                            data-channel-index="${actualIndex}"
+                        >
+                        ${channel.logo ? `<img src="${channel.logo}" class="channel-preview-logo" alt="${channel.name}" onerror="this.style.display='none'">` : '<div class="channel-preview-logo" style="display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">📺</div>'}
+                        <div class="channel-preview-info">
+                            <div class="channel-preview-name">${escapeHtml(channel.name)}</div>
+                            <div class="channel-preview-meta">
+                                ${channel.channel_number ? `<span class="channel-preview-meta-item"><strong>#</strong> ${channel.channel_number}</span>` : ''}
+                                ${channel.group ? `<span class="channel-preview-meta-item"><strong>Group:</strong> ${escapeHtml(channel.group)}</span>` : ''}
+                                ${channel.country ? `<span class="channel-preview-meta-item"><strong>Country:</strong> ${escapeHtml(channel.country)}</span>` : ''}
+                                ${channel.categories ? `<span class="channel-preview-meta-item"><strong>Genre:</strong> ${escapeHtml(Array.isArray(channel.categories) ? channel.categories.join(', ') : channel.categories)}</span>` : ''}
+                                ${channel.network ? `<span class="channel-preview-meta-item"><strong>Network:</strong> ${escapeHtml(channel.network)}</span>` : ''}
+                            </div>
+                            ${channel.url ? `<div class="channel-preview-url">${escapeHtml(channel.url.substring(0, 80))}${channel.url.length > 80 ? '...' : ''}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            if (filtered.length === 0) {
+                listDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">No channels match the current filters</div>';
+            }
+            
+            const totalCountEl = document.getElementById('totalCount');
+            if (totalCountEl) {
+                totalCountEl.textContent = parsedChannels.length;
+            }
+            updateSelection();
+        }
+        
+        function toggleChannel(index, checked) {
+            // Ensure index is a number
+            const numIndex = parseInt(index);
+            if (isNaN(numIndex)) {
+                return;
+            }
+            
+            if (checked) {
+                selectedChannelIndices.add(numIndex);
+            } else {
+                selectedChannelIndices.delete(numIndex);
+            }
+            
+            updateSelection();
+            renderChannels();
+        }
+        
+        // Make toggleChannel globally accessible for inline handlers (backup)
+        window.toggleChannel = toggleChannel;
+        
+        function updateSelection() {
+            const count = selectedChannelIndices.size;
+            const selectedCountEl = document.getElementById('selectedCount');
+            if (selectedCountEl) {
+                selectedCountEl.textContent = count;
+            }
+            const importButton = document.getElementById('importSelectedButton');
+            if (importButton) {
+                importButton.disabled = count === 0;
+            }
+        }
+        
+        async function importSelectedChannels() {
+            if (selectedChannelIndices.size === 0) {
+                alert('Please select at least one channel to import');
+                return;
+            }
+            
+            const importButton = document.getElementById('importSelectedButton');
+            importButton.disabled = true;
+            importButton.innerHTML = '<span class="loading-spinner" style="margin-right: 8px;"></span>Importing...';
+            
+            try {
+                const selectedList = Array.from(selectedChannelIndices);
+                
+                const response = await authenticatedFetch('/api/import/m3u/import', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        m3u_url: currentM3UUrl,
+                        selected_channels: selectedList,
+                        channel_number_start: 1000,
+                        auto_assign_numbers: true,
+                        create_playlists: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = await response.json();
+                    } catch (e) {
+                        errorData = { detail: `HTTP ${response.status}: ${response.statusText}` };
+                    }
+                    
+                    const errorMsg = errorData.detail || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+                    throw new Error(errorMsg);
+                }
+                
+                let channels;
+                try {
+                    channels = await response.json();
+                } catch (jsonError) {
+                    throw new Error('Failed to parse response: ' + String(jsonError));
+                }
+                
+                // Show success message
+                alert(`✅ Successfully imported ${channels.length} channel(s)!\n\n` +
+                    channels.map(c => `  • ${c.number}: ${c.name}`).join('\n') +
+                    '\n\nRedirecting to channels page...');
+                
+                // Redirect to channels page
+                window.location.href = '/channels';
+                
+            } catch (error) {
+                console.error('Error importing channels:', error);
+                
+                // Extract error message properly
+                let errorMessage = 'Failed to import channels';
+                if (error && typeof error === 'object') {
+                    if (error.message) {
+                        errorMessage = error.message;
+                    } else if (error.detail) {
+                        errorMessage = error.detail;
+                    } else if (Array.isArray(error)) {
+                        errorMessage = error.map(e => String(e)).join(', ');
+                    } else {
+                        try {
+                            errorMessage = JSON.stringify(error);
+                        } catch (e) {
+                            errorMessage = String(error);
+                        }
+                    }
+                } else if (typeof error === 'string') {
+                    errorMessage = error;
+                } else {
+                    errorMessage = String(error);
+                }
+                
+                alert('❌ Error importing channels: ' + errorMessage);
+                importButton.disabled = false;
+                importButton.innerHTML = '<span class="material-icons" style="font-size: 18px;">import_export</span><span>Import Selected Channels</span>';
+            }
+        }
+        
+        // Library functions
+        async function loadStreamLibrary() {
+            // Check if M3U module is enabled first
+            if (!m3uModuleEnabled) {
+                document.getElementById('streamLibrary').innerHTML = '<div class="alert" style="margin: 20px;">M3U module must be enabled to browse the stream library.</div>';
+                return;
+            }
+            
+            const loading = document.getElementById('libraryLoading');
+            const library = document.getElementById('streamLibrary');
+            const empty = document.getElementById('emptyLibrary');
+            
+            loading.style.display = 'block';
+            library.innerHTML = '';
+            empty.style.display = 'none';
+            
+            try {
+                const response = await authenticatedFetch('/api/m3u/library');
+                if (response.ok) {
+                    libraryStreams = await response.json();
+                    renderStreamLibrary();
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Failed to load stream library' }));
+                    throw new Error(errorData.detail || 'Failed to load stream library');
+                }
+            } catch (error) {
+                console.error('Error loading library:', error);
+                library.innerHTML = '<div class="alert" style="margin: 20px;">Error loading stream library: ' + escapeHtml(error.message) + '</div>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        function renderStreamLibrary() {
+            const library = document.getElementById('streamLibrary');
+            const empty = document.getElementById('emptyLibrary');
+            
+            const countryFilter = document.getElementById('countryFilter').value;
+            const genreFilter = document.getElementById('genreFilter').value;
+            const sortBy = document.getElementById('sortFilter').value;
+            const minReliability = parseFloat(document.getElementById('minReliabilityFilter').value) || 0;
+            const searchTerm = document.getElementById('librarySearchInput').value.toLowerCase();
+            
+            let filtered = libraryStreams.filter(stream => {
+                if (!stream.is_active) return false;
+                if (stream.reliability_score < minReliability) return false;
+                if (countryFilter && stream.country !== countryFilter) return false;
+                if (genreFilter && stream.genre !== genreFilter) return false;
+                if (searchTerm && !stream.name.toLowerCase().includes(searchTerm)) return false;
+                return true;
+            });
+            
+            // Sort
+            filtered.sort((a, b) => {
+                switch (sortBy) {
+                    case 'country':
+                        return (a.country || '').localeCompare(b.country || '');
+                    case 'genre':
+                        return (a.genre || '').localeCompare(b.genre || '');
+                    case 'reliability':
+                        return (b.reliability_score || 0) - (a.reliability_score || 0);
+                    case 'name':
+                    default:
+                        return a.name.localeCompare(b.name);
+                }
+            });
+            
+            // Populate filters from library streams
+            const countries = [...new Set(libraryStreams.map(s => s.country).filter(Boolean))].sort();
+            const genres = [...new Set(libraryStreams.map(s => s.genre).filter(Boolean))].sort();
+            
+            const countrySelect = document.getElementById('countryFilter');
+            const genreSelect = document.getElementById('genreFilter');
+            
+            // Always repopulate dropdowns (clear existing options except "All")
+            if (countrySelect) {
+                // Keep only the first "All Countries" option
+                while (countrySelect.children.length > 1) {
+                    countrySelect.removeChild(countrySelect.lastChild);
+                }
+                // Add country options
+                countries.forEach(country => {
+                    const option = document.createElement('option');
+                    option.value = country;
+                    option.textContent = country;
+                    countrySelect.appendChild(option);
+                });
+            }
+            
+            if (genreSelect) {
+                // Keep only the first "All Genres" option
+                while (genreSelect.children.length > 1) {
+                    genreSelect.removeChild(genreSelect.lastChild);
+                }
+                // Add genre options
+                genres.forEach(genre => {
+                    const option = document.createElement('option');
+                    option.value = genre;
+                    option.textContent = genre;
+                    genreSelect.appendChild(option);
+                });
+            }
+            
+            if (filtered.length === 0) {
+                library.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            
+            empty.style.display = 'none';
+            library.innerHTML = filtered.map(stream => {
+                const reliability = stream.reliability_score || 0;
+                let reliabilityClass = 'poor';
+                if (reliability >= 90) reliabilityClass = 'excellent';
+                else if (reliability >= 70) reliabilityClass = 'good';
+                else if (reliability >= 50) reliabilityClass = 'fair';
+                
+                // Use data attribute for URL (safe from XSS, no quote escaping issues)
+                return `
+                    <div class="stream-card" data-stream-url="${escapeHtml(stream.url)}" data-stream-name="${escapeHtml(stream.name)}">
+                        <div class="stream-card-header">
+                            <div>
+                                <div class="stream-card-name">${escapeHtml(stream.name)}</div>
+                                <div class="stream-card-description">${escapeHtml(stream.description || '')}</div>
+                            </div>
+                            <span class="reliability-badge ${reliabilityClass}">${reliability.toFixed(0)}%</span>
+                        </div>
+                        <div class="stream-card-meta">
+                            ${stream.country ? `<span class="stream-meta-badge">🌍 ${escapeHtml(stream.country)}</span>` : ''}
+                            ${stream.genre ? `<span class="stream-meta-badge">${escapeHtml(stream.genre)}</span>` : ''}
+                            ${stream.category ? `<span class="stream-meta-badge">${escapeHtml(stream.category)}</span>` : ''}
+                        </div>
+                        <div class="stream-card-stats">
+                            <span>📺 ${stream.total_channels || 0} channels</span>
+                            <span>✓ ${stream.working_channels || 0} working</span>
+                            ${stream.last_tested ? `<span>🕒 Tested ${formatDate(stream.last_tested)}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Use event delegation for efficient click handling (single listener for all cards)
+            // This is more efficient than attaching individual listeners to each card
+        }
+        
+        async function importFromLibrary(streamUrl, streamName = null) {
+            const confirmMessage = streamName 
+                ? `Import all channels from "${streamName}"?`
+                : 'Import all channels from this stream?';
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            // Switch to URL tab and set URL
+            document.querySelector('[data-tab="url"]').click();
+            const urlInput = document.getElementById('m3uUrlInput');
+            if (urlInput) {
+                urlInput.value = streamUrl;
+            }
+            
+            // Parse and select all
+            await parseM3U();
+            setTimeout(() => {
+                const selectAllBtn = document.getElementById('selectAllButton');
+                const importBtn = document.getElementById('importSelectedButton');
+                if (selectAllBtn) {
+                    selectAllBtn.click();
+                }
+                if (importBtn && !importBtn.disabled) {
+                    importBtn.click();
+                }
+            }, 1000);
+        }
+        
+        // Library filter handlers
+        ['countryFilter', 'genreFilter', 'sortFilter', 'minReliabilityFilter', 'librarySearchInput'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', renderStreamLibrary);
+            document.getElementById(id)?.addEventListener('input', renderStreamLibrary);
+        });
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'Never';
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+            return date.toLocaleDateString();
+        }
+        
+        // Initialize on page load
+        checkServiceStatus();
+    </script>
+{% endblock %}
+

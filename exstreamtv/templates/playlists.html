@@ -1,0 +1,1012 @@
+{% extends "base.html" %}
+{% block title %}Playlists - StreamTV{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Playlists</div>
+            <p class="page-subtitle">Browse, filter, and inspect channel playlists with Apple HIG-aligned controls.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-outlined" type="button" id="playlistsApiButton" aria-label="Open API response in new window">
+                <span class="material-icons" aria-hidden="true">code</span>
+                API Response
+            </button>
+            <button class="btn btn-primary" type="button" id="refreshPlaylistsButton" aria-label="Refresh playlists">
+                <span class="material-icons" aria-hidden="true">refresh</span>
+                Refresh
+            </button>
+        </div>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Playlists</div>
+            <div class="stat-value" id="statPlaylists">--</div>
+            <div class="stat-subtext" id="statPlaylistsSub">Loading…</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Channel Coverage</div>
+            <div class="stat-value" id="statChannels">--</div>
+            <div class="stat-subtext" id="statChannelsSub">Loading…</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Items</div>
+            <div class="stat-value" id="statItems">--</div>
+            <div class="stat-subtext" id="statItemsSub">Loading…</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Last Refreshed</div>
+            <div class="stat-value" id="statUpdated">--</div>
+            <div class="stat-subtext">Local time</div>
+        </div>
+    </div>
+    
+    <div class="card controls-card">
+        <div class="input-group">
+            <span class="material-icons" aria-hidden="true">search</span>
+            <label for="searchInput" class="sr-only">Search playlists</label>
+            <input type="text" id="searchInput" placeholder="Search playlists, channels, or descriptions" aria-label="Search playlists, channels, or descriptions">
+        </div>
+        <div class="segmented-control" role="group" aria-label="Filter playlists">
+            <button class="segment active" id="filterAll" data-filter-value="all" aria-pressed="true">All</button>
+            <button class="segment" id="filterAssigned" data-filter-value="assigned" aria-pressed="false">Assigned</button>
+            <button class="segment" id="filterUnassigned" data-filter-value="unassigned" aria-pressed="false">Unassigned</button>
+        </div>
+    </div>
+    
+    <div class="card table-card">
+        <div class="table-header">
+            <div>
+                <div class="card-title">Playlist Library</div>
+                <p class="card-subtitle">Select a playlist to view its metadata, channel mapping, and contents.</p>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table class="table" id="playlistsTable" role="table" aria-label="Playlists list">
+                <thead>
+                    <tr role="row">
+                        <th scope="col">Playlist</th>
+                        <th scope="col">Channel</th>
+                        <th scope="col">Items</th>
+                        <th scope="col">Updated</th>
+                        <th scope="col" style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="playlistsTableBody"></tbody>
+            </table>
+            <div id="loading" class="loading-state" role="status" aria-live="polite">
+                <div class="spinner" aria-hidden="true"></div>
+                <p>Loading playlists…</p>
+            </div>
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">🎶</div>
+                <h3 style="margin-bottom: 8px;">No playlists</h3>
+                <p>Create or import channels to populate playlists.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="playlist-detail-card" id="playlistDetail">
+        <div class="card-header">
+            <div class="card-title">Playlist Detail</div>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 17px;">Select a playlist above to reveal metadata, channel mapping, and the ordered item list.</p>
+    </div>
+</div>
+
+<!-- Populate by Filter Modal -->
+<div class="modal-overlay" id="populateModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Populate Playlist from Plex</h2>
+            <button class="btn-icon" onclick="closePopulateModal()" aria-label="Close modal">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Filter and add media items from your Plex library to: <strong id="populatePlaylistName"></strong>
+            </p>
+            
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label for="filterTitle">Title Contains</label>
+                <input type="text" id="filterTitle" placeholder="e.g., Bluey, Christmas, Star Wars">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label for="filterType">Content Type</label>
+                <select id="filterType">
+                    <option value="">All Types</option>
+                    <option value="movie">Movies</option>
+                    <option value="episode">TV Episodes</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label for="filterGenre">Genre Contains</label>
+                <input type="text" id="filterGenre" placeholder="e.g., Comedy, Action, Drama">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label for="filterYear">Year (or Range)</label>
+                <input type="text" id="filterYear" placeholder="e.g., 2020 or 1980-1999">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label for="filterShowTitle">TV Show Title</label>
+                <input type="text" id="filterShowTitle" placeholder="e.g., Bluey, Friends, CSI">
+                <small style="color: var(--text-secondary);">For TV episodes only - filter by show name</small>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="filterClearExisting" checked style="width: auto;">
+                    Clear existing playlist items before adding
+                </label>
+            </div>
+            
+            <div id="populatePreview" style="display: none; margin-bottom: 16px; padding: 12px; background: var(--surface-light); border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span id="previewCount">Matching items: --</span>
+                    <button class="btn btn-outlined btn-sm" onclick="previewPopulate()">
+                        <span class="material-icons" style="font-size: 16px;">search</span>
+                        Preview
+                    </button>
+                </div>
+            </div>
+            
+            <div id="populateResult" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outlined" onclick="closePopulateModal()">Cancel</button>
+            <button class="btn btn-outlined" onclick="previewPopulate()">
+                <span class="material-icons" style="font-size: 18px;">preview</span>
+                Preview
+            </button>
+            <button class="btn btn-primary" onclick="executePopulate()" id="populateButton">
+                <span class="material-icons" style="font-size: 18px;">playlist_add</span>
+                Populate Playlist
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Modal styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+    
+    .modal-content {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .modal-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 16px 20px;
+        border-top: 0.5px solid var(--divider);
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .form-group label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+    
+    .form-group input,
+    .form-group select {
+        background: var(--surface-light);
+        border: 0.5px solid var(--divider);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 16px;
+        color: var(--text-primary);
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 13px;
+        min-height: 32px;
+    }
+    
+    .rotating {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .page {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.36px;
+    }
+    
+    .page-subtitle {
+        color: var(--text-secondary);
+        margin-top: 4px;
+        font-size: 17px;
+    }
+    
+    .page-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+    
+    .stat-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .stat-label {
+        font-size: 13px;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        letter-spacing: 0.08px;
+    }
+    
+    .stat-value {
+        font-size: 34px;
+        font-weight: 700;
+        letter-spacing: 0.37px;
+    }
+    
+    .stat-subtext {
+        font-size: 15px;
+        color: var(--text-secondary);
+    }
+    
+    .controls-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+    }
+    
+    .input-group {
+        flex: 1;
+        min-width: 240px;
+        display: flex;
+        align-items: center;
+        background: var(--surface-light);
+        border-radius: 10px;
+        border: 0.5px solid var(--divider);
+        padding: 0 12px;
+        min-height: 44px;
+        gap: 8px;
+    }
+    
+    .input-group .material-icons {
+        color: var(--text-secondary);
+    }
+    
+    .input-group input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        color: var(--text-primary);
+        font-size: 17px;
+        outline: none;
+    }
+    
+    .segmented-control {
+        display: inline-flex;
+        border-radius: 10px;
+        border: 0.5px solid var(--divider);
+        overflow: hidden;
+    }
+    
+    .segment {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 10px 18px;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+        min-width: 90px;
+    }
+    
+    .segment.active {
+        background: var(--apple-fill-secondary);
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    
+    .table-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .table-header {
+        padding: 16px 16px 0 16px;
+    }
+    
+    .table-wrapper {
+        overflow-x: auto;
+        padding: 16px;
+    }
+    
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 15px;
+        min-width: 720px;
+    }
+    
+    .table th,
+    .table td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 0.5px solid var(--divider);
+        vertical-align: middle;
+    }
+    
+    .table th {
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.08px;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+    
+    .table tr {
+        transition: background 0.2s;
+        cursor: pointer;
+    }
+    
+    .table tr:hover {
+        background: var(--hover);
+    }
+    
+    .table tr.selected {
+        background: var(--apple-fill-secondary);
+    }
+    
+    .playlist-detail-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 20px;
+    }
+    
+    .playlist-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+    }
+    
+    .detail-label {
+        font-size: 13px;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        letter-spacing: 0.08px;
+        margin-bottom: 4px;
+    }
+    
+    .detail-value {
+        font-size: 17px;
+        font-weight: 500;
+    }
+    
+    .item-list {
+        margin-top: 20px;
+        border-top: 0.5px solid var(--divider);
+        padding-top: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 360px;
+        overflow-y: auto;
+    }
+    
+    .item-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px;
+        border-radius: 10px;
+        background: var(--surface-light);
+        border: 0.5px solid var(--divider);
+    }
+    
+    .item-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+    
+    .item-meta .title {
+        font-weight: 600;
+        font-size: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .item-meta .subtitle {
+        color: var(--text-secondary);
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .item-timing {
+        text-align: right;
+        font-size: 13px;
+        color: var(--text-secondary);
+        min-width: 120px;
+    }
+    
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .status-pill.assigned {
+        background: rgba(52, 199, 89, 0.15);
+        color: var(--success);
+        border-color: rgba(52, 199, 89, 0.4);
+    }
+    
+    .status-pill.unassigned {
+        background: rgba(255, 149, 0, 0.15);
+        color: var(--warning);
+        border-color: rgba(255, 149, 0, 0.4);
+    }
+    
+    @media (max-width: 960px) {
+        .table-wrapper {
+            padding: 12px;
+        }
+        
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+    let allPlaylists = [];
+    let filteredPlaylists = [];
+    let selectedRow = null;
+    let selectedPlaylistId = null;
+    let channelMap = {};
+    let assignmentFilter = 'all';
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const apiButton = document.getElementById('playlistsApiButton');
+        if (apiButton) {
+            apiButton.addEventListener('click', openPlaylistsApi);
+        }
+
+        const refreshButton = document.getElementById('refreshPlaylistsButton');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', refreshPlaylists);
+        }
+
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', filterPlaylists);
+        }
+
+        document.querySelectorAll('[data-filter-value]').forEach(button => {
+            button.addEventListener('click', () => {
+                const value = button.dataset.filterValue;
+                if (value) {
+                    setAssignmentFilter(value);
+                }
+            });
+        });
+
+        loadPlaylists();
+    });
+    
+    async function loadPlaylists() {
+        try {
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            const [playlistsRes, channelsRes] = await Promise.all([
+                fetch('/api/playlists'),
+                fetch('/api/channels')
+            ]);
+            
+            allPlaylists = await playlistsRes.json();
+            const channels = await channelsRes.json();
+            channelMap = {};
+            channels.forEach(channel => channelMap[channel.id] = channel);
+            
+            updateStats(allPlaylists);
+            applyFilters();
+        } catch (error) {
+            console.error('Error loading playlists:', error);
+            document.getElementById('loading').innerHTML = '<p style="color: var(--error);">Failed to load playlists.</p>';
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+        }
+    }
+    
+    function updateStats(playlists) {
+        const totalPlaylists = playlists.length;
+        const withChannel = playlists.filter(p => !!p.channel_id).length;
+        const totalItems = playlists.reduce((sum, playlist) => sum + (playlist.items?.length || 0), 0);
+        
+        document.getElementById('statPlaylists').textContent = totalPlaylists;
+        document.getElementById('statPlaylistsSub').textContent = totalPlaylists === 1 ? 'Playlist available' : 'Playlists available';
+        
+        document.getElementById('statChannels').textContent = withChannel;
+        document.getElementById('statChannelsSub').textContent = `${withChannel} mapped to channels`;
+        
+        document.getElementById('statItems').textContent = totalItems;
+        document.getElementById('statItemsSub').textContent = totalItems === 1 ? 'Media item scheduled' : 'Media items scheduled';
+        
+        document.getElementById('statUpdated').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    function applyFilters() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        
+        filteredPlaylists = allPlaylists.filter(playlist => {
+            if (assignmentFilter === 'assigned' && !playlist.channel_id) return false;
+            if (assignmentFilter === 'unassigned' && playlist.channel_id) return false;
+            
+            const channel = channelMap[playlist.channel_id];
+            const haystack = [
+                playlist.name,
+                playlist.description || '',
+                channel?.name || '',
+                channel?.number || ''
+            ].join(' ').toLowerCase();
+            
+            return haystack.includes(searchTerm);
+        });
+        
+        displayPlaylists(filteredPlaylists);
+    }
+    
+    function displayPlaylists(playlists) {
+        const table = document.getElementById('playlistsTable');
+        const tableBody = document.getElementById('playlistsTableBody');
+        const emptyState = document.getElementById('emptyState');
+        
+        if (playlists.length === 0) {
+            table.style.display = 'none';
+            emptyState.style.display = 'flex';
+            renderDefaultDetail();
+            return;
+        }
+        
+        table.style.display = 'table';
+        emptyState.style.display = 'none';
+        
+        tableBody.innerHTML = playlists.map(playlist => {
+            const channel = channelMap[playlist.channel_id];
+            const itemCount = playlist.items?.length || 0;
+            return `
+                <tr class="playlist-row ${selectedPlaylistId === playlist.id ? 'selected' : ''}"
+                    data-playlist='${JSON.stringify({ id: playlist.id })}'>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div class="channel-name" style="font-size: 17px; font-weight: 600;">${playlist.name}</div>
+                            <div class="schedule-name" style="color: var(--text-secondary); font-size: 13px;">
+                                ${playlist.description || 'No description'}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        ${channel ? `
+                            <div class="channel-info" style="gap: 12px;">
+                                <div class="channel-number">${channel.number}</div>
+                                <div class="channel-name">${channel.name}</div>
+                            </div>
+                        ` : '<span class="status-pill unassigned">Unassigned</span>'}
+                    </td>
+                    <td>${itemCount}</td>
+                    <td>${formatRelativeTime(playlist.updated_at)}</td>
+                    <td>
+                        <div class="action-buttons" style="justify-content: flex-end; gap: 4px;">
+                            <button class="btn-icon" title="Populate from Plex" aria-label="Populate playlist from Plex" onclick="event.stopPropagation(); openPopulateModal(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')">
+                                <span class="material-icons" aria-hidden="true">playlist_add</span>
+                            </button>
+                            <button class="btn-icon" title="Open API" aria-label="Open Playlist API" data-action="openPlaylistApi" data-stop-propagation="true" data-args='[${playlist.id}]'>
+                                <span class="material-icons" aria-hidden="true">open_in_new</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        document.querySelectorAll('.playlist-row').forEach((row, index) => {
+            row.addEventListener('click', () => {
+                const playlist = playlists[index];
+                selectRow(row, playlist);
+            });
+        });
+        if (typeof bindActionHandlers === 'function') {
+            bindActionHandlers(tableBody);
+        }
+        
+        if (playlists.length > 0 && !selectedRow) {
+            const firstRow = document.querySelector('.playlist-row');
+            if (firstRow) {
+                const playlist = playlists[0];
+                selectRow(firstRow, playlist, false);
+            }
+        }
+    }
+    
+    function selectRow(row, playlist, scroll = true) {
+        if (selectedRow) {
+            selectedRow.classList.remove('selected');
+        }
+        row.classList.add('selected');
+        selectedRow = row;
+        selectedPlaylistId = playlist.id;
+        showPlaylistDetail(playlist, scroll);
+    }
+    
+    function renderDefaultDetail() {
+        const detail = document.getElementById('playlistDetail');
+        detail.innerHTML = `
+            <div class="card-header">
+                <div class="card-title">Playlist Detail</div>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 17px;">Select a playlist above to reveal metadata, channel mapping, and the ordered item list.</p>
+        `;
+    }
+    
+    function showPlaylistDetail(playlist, scroll = true) {
+        const detail = document.getElementById('playlistDetail');
+        const channel = channelMap[playlist.channel_id];
+        const itemCount = playlist.items?.length || 0;
+        
+        detail.innerHTML = `
+            <div class="card-header">
+                <div>
+                    <div class="card-title">${playlist.name}</div>
+                    <div class="card-subtitle" style="margin-top: 4px;">${playlist.description || 'No description provided.'}</div>
+                </div>
+                <span class="status-pill ${channel ? 'assigned' : 'unassigned'}">
+                    ${channel ? 'Channel Assigned' : 'Unassigned'}
+                </span>
+            </div>
+            
+            <div class="playlist-detail-grid">
+                <div>
+                    <div class="detail-label">Channel</div>
+                    <div class="detail-value">
+                        ${channel ? `${channel.number} · ${channel.name}` : 'Not linked to any channel'}
+                    </div>
+                </div>
+                <div>
+                    <div class="detail-label">Items</div>
+                    <div class="detail-value">${itemCount}</div>
+                </div>
+                <div>
+                    <div class="detail-label">Created</div>
+                    <div class="detail-value">${formatAbsoluteDate(playlist.created_at)}</div>
+                </div>
+                <div>
+                    <div class="detail-label">Updated</div>
+                    <div class="detail-value">${formatAbsoluteDate(playlist.updated_at)}</div>
+                </div>
+            </div>
+            
+            <div class="item-list">
+                ${itemCount > 0 ? playlist.items.map(item => renderPlaylistItem(item)).join('') : `
+                    <p style="color: var(--text-secondary); font-size: 15px;">No items in this playlist.</p>
+                `}
+            </div>
+        `;
+        
+        if (scroll) {
+            detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+    
+    function renderPlaylistItem(item) {
+        const media = item.media_item || {};
+        return `
+            <div class="item-row">
+                <div class="item-meta">
+                    <div class="title">${item.order + 1}. ${media.title || 'Untitled item'}</div>
+                    <div class="subtitle">${media.source ? media.source.toUpperCase() : 'Unknown source'} · ${media.uploader || 'Unknown uploader'}</div>
+                </div>
+                <div class="item-timing">
+                    <div>${media.duration ? formatDuration(media.duration) : '--:--'}</div>
+                    <div style="margin-top: 4px;">Media ID: ${media.id || '—'}</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    function filterPlaylists() {
+        applyFilters();
+    }
+    
+    function setAssignmentFilter(filter) {
+        assignmentFilter = filter;
+        document.querySelectorAll('.segment').forEach(button => button.classList.remove('active'));
+        document.getElementById(`filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`).classList.add('active');
+        applyFilters();
+    }
+    
+    function refreshPlaylists() {
+        selectedRow = null;
+        selectedPlaylistId = null;
+        loadPlaylists();
+    }
+
+    function openPlaylistsApi() {
+        window.open('/api/playlists', '_blank');
+    }
+
+    function openPlaylistApi(playlistId) {
+        if (!playlistId && playlistId !== 0) {
+            return;
+        }
+        window.open(`/api/playlists/${playlistId}`, '_blank');
+    }
+    
+    function formatRelativeTime(value) {
+        try {
+            const date = new Date(value);
+            const diff = Date.now() - date.getTime();
+            const minutes = Math.floor(diff / 60000);
+            if (minutes < 1) return 'just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        } catch {
+            return '--';
+        }
+    }
+    
+    function formatAbsoluteDate(value) {
+        try {
+            const date = new Date(value);
+            return date.toLocaleString();
+        } catch {
+            return value || '--';
+        }
+    }
+    
+    function formatDuration(seconds) {
+        if (!seconds) return '00:00';
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
+    }
+    
+    // Populate Modal Functions
+    let currentPopulatePlaylistId = null;
+    
+    function openPopulateModal(playlistId, playlistName) {
+        currentPopulatePlaylistId = playlistId;
+        document.getElementById('populatePlaylistName').textContent = playlistName;
+        document.getElementById('populateModal').style.display = 'flex';
+        document.getElementById('populateResult').style.display = 'none';
+        document.getElementById('populatePreview').style.display = 'block';
+        
+        // Pre-fill title filter with playlist name
+        document.getElementById('filterTitle').value = playlistName;
+        
+        // Reset other fields
+        document.getElementById('filterType').value = '';
+        document.getElementById('filterGenre').value = '';
+        document.getElementById('filterYear').value = '';
+        document.getElementById('filterShowTitle').value = '';
+        document.getElementById('filterClearExisting').checked = true;
+    }
+    
+    function closePopulateModal() {
+        document.getElementById('populateModal').style.display = 'none';
+        currentPopulatePlaylistId = null;
+    }
+    
+    async function previewPopulate() {
+        const previewDiv = document.getElementById('populatePreview');
+        const countSpan = document.getElementById('previewCount');
+        
+        countSpan.innerHTML = '<span class="material-icons rotating" style="font-size: 16px; vertical-align: middle;">sync</span> Counting...';
+        
+        try {
+            const params = new URLSearchParams();
+            
+            const title = document.getElementById('filterTitle').value.trim();
+            const type = document.getElementById('filterType').value;
+            const genre = document.getElementById('filterGenre').value.trim();
+            const year = document.getElementById('filterYear').value.trim();
+            const showTitle = document.getElementById('filterShowTitle').value.trim();
+            
+            if (title) params.append('title', title);
+            if (type) params.append('type', type);
+            if (genre) params.append('genre', genre);
+            if (year) params.append('year', year);
+            if (showTitle) params.append('show_title', showTitle);
+            
+            const response = await fetch(`/api/settings/plex/preview-filter?${params.toString()}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                countSpan.innerHTML = `<strong style="color: var(--primary);">${data.count}</strong> matching items found`;
+                if (data.samples && data.samples.length > 0) {
+                    countSpan.innerHTML += `<div style="margin-top: 8px; font-size: 13px; color: var(--text-secondary);">Sample: ${data.samples.slice(0, 3).join(', ')}${data.samples.length > 3 ? '...' : ''}</div>`;
+                }
+            } else {
+                countSpan.textContent = 'Error: ' + (data.error || 'Failed to preview');
+            }
+        } catch (error) {
+            countSpan.textContent = 'Error: ' + error.message;
+        }
+    }
+    
+    async function executePopulate() {
+        if (!currentPopulatePlaylistId) return;
+        
+        const button = document.getElementById('populateButton');
+        const resultDiv = document.getElementById('populateResult');
+        const originalContent = button.innerHTML;
+        
+        button.disabled = true;
+        button.innerHTML = '<span class="material-icons rotating" style="font-size: 18px;">sync</span> Populating...';
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '<p>Adding items to playlist...</p>';
+        
+        try {
+            const params = new URLSearchParams();
+            params.append('playlist_id', currentPopulatePlaylistId);
+            
+            const title = document.getElementById('filterTitle').value.trim();
+            const type = document.getElementById('filterType').value;
+            const genre = document.getElementById('filterGenre').value.trim();
+            const year = document.getElementById('filterYear').value.trim();
+            const showTitle = document.getElementById('filterShowTitle').value.trim();
+            const clearExisting = document.getElementById('filterClearExisting').checked;
+            
+            // Build URL with query params
+            let url = `/api/settings/plex/rebuild-playlist/${currentPopulatePlaylistId}?clear_existing=${clearExisting}`;
+            if (title) url += `&filter_title=${encodeURIComponent(title)}`;
+            if (type) url += `&filter_type=${encodeURIComponent(type)}`;
+            if (genre) url += `&filter_genre=${encodeURIComponent(genre)}`;
+            if (year) url += `&filter_year=${encodeURIComponent(year)}`;
+            if (showTitle) url += `&filter_show_title=${encodeURIComponent(showTitle)}`;
+            
+            const response = await fetch(url, { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div style="color: var(--success);">
+                        <strong>✅ Success!</strong>
+                        <p style="margin-top: 4px;">${data.items_added} items added to "${data.playlist_name}"</p>
+                        ${data.items_removed > 0 ? `<p style="font-size: 13px; color: var(--text-secondary);">${data.items_removed} previous items removed</p>` : ''}
+                    </div>
+                `;
+                // Refresh the playlists list
+                setTimeout(() => {
+                    closePopulateModal();
+                    refreshPlaylists();
+                }, 1500);
+            } else {
+                resultDiv.innerHTML = `<div style="color: var(--error);">❌ Error: ${data.error}</div>`;
+            }
+        } catch (error) {
+            resultDiv.innerHTML = `<div style="color: var(--error);">❌ Error: ${error.message}</div>`;
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+        }
+    }
+    
+    // Close modal when clicking outside
+    document.getElementById('populateModal')?.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-overlay')) {
+            closePopulateModal();
+        }
+    });
+</script>
+{% endblock %}
+

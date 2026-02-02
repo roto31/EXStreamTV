@@ -1,0 +1,9 @@
+{
+  "name": "get_config_schema",
+  "description": "Get the example configuration (config.example.yaml) and short description of sections (server, database, ffmpeg, streaming, HDHomeRun).",
+  "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

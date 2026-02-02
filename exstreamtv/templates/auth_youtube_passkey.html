@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}YouTube OAuth with Passkey - StreamTV{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>YouTube OAuth Authentication</h1>
+        <p class="subtitle">Secure authentication with Apple Passkey</p>
+    </div>
+
+    <div class="card">
+        <h2>Apple Passkey Verification</h2>
+        <p>Before connecting to Google OAuth, please verify your identity using your Apple Passkey.</p>
+        
+        <div id="passkeyStatus" class="auth-status" style="display: none;">
+            <span class="material-icons" aria-hidden="true">info</span>
+            <div id="passkeyMessage"></div>
+        </div>
+        
+        <div id="registerSection" style="display: none;">
+            <h3>Register Passkey</h3>
+            <p>Create a new Passkey for secure authentication.</p>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">Username</label>
+                    <input type="text" id="registerUsername" name="username" required placeholder="Enter username" value="youtube_user">
+                </div>
+                <button type="submit" class="btn btn-primary" aria-label="Create Passkey">
+                    <span class="material-icons" aria-hidden="true">fingerprint</span>
+                    Create Passkey
+                </button>
+            </form>
+        </div>
+        
+        <div id="authenticateSection">
+            <h3>Authenticate with Passkey</h3>
+            <p>Use your registered Passkey to authenticate.</p>
+            <form id="authenticateForm">
+                <div class="form-group">
+                    <label for="authUsername">Username (optional)</label>
+                    <input type="text" id="authUsername" name="username" placeholder="Leave empty to use any registered Passkey">
+                </div>
+                <button type="submit" class="btn btn-primary" aria-label="Authenticate with Passkey">
+                    <span class="material-icons" aria-hidden="true">verified_user</span>
+                    Authenticate with Passkey
+                </button>
+            </form>
+        </div>
+        
+        <div class="form-actions" style="margin-top: 24px;">
+            <a href="/api/auth/youtube" class="btn btn-secondary" aria-label="Back to YouTube Authentication">
+                <span class="material-icons" aria-hidden="true">arrow_back</span>
+                Back to YouTube Auth
+            </a>
+            <a href="/api/auth/youtube/oauth?skip_passkey=true" class="btn btn-secondary" aria-label="Skip Passkey Authentication">
+                <span class="material-icons" aria-hidden="true">skip_next</span>
+                Skip Passkey (Not Recommended)
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>About Apple Passkeys</h2>
+        <p>Apple Passkeys provide secure, passwordless authentication using biometrics (Face ID, Touch ID) or device authentication.</p>
+        <ul>
+            <li><strong>Secure:</strong> Uses public-key cryptography, resistant to phishing</li>
+            <li><strong>Convenient:</strong> No passwords to remember</li>
+            <li><strong>Private:</strong> Your biometric data never leaves your device</li>
+            <li><strong>Fast:</strong> Quick authentication with Face ID or Touch ID</li>
+        </ul>
+        <p><strong>Note:</strong> Passkeys require a compatible browser and device (Safari on macOS/iOS, Chrome/Edge with WebAuthn support).</p>
+    </div>
+</div>
+
+<style>
+.auth-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.auth-status.info {
+    background: var(--info);
+    color: white;
+}
+
+.auth-status.success {
+    background: var(--success);
+    color: white;
+}
+
+.auth-status.error {
+    background: var(--error);
+    color: white;
+}
+
+.auth-status .material-icons {
+    font-size: 32px;
+}
+</style>
+
+<script nonce="{{ request.state.csp_nonce }}">
+// Check if WebAuthn is supported
+if (!window.PublicKeyCredential) {
+    document.getElementById('passkeyStatus').style.display = 'flex';
+    document.getElementById('passkeyStatus').className = 'auth-status error';
+    document.getElementById('passkeyMessage').innerHTML = '<strong>WebAuthn Not Supported</strong><p>Your browser does not support Passkeys. Please use a modern browser like Safari, Chrome, or Edge.</p>';
+    document.getElementById('registerSection').style.display = 'none';
+    document.getElementById('authenticateSection').style.display = 'none';
+}
+
+async function registerPasskey(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('registerUsername').value;
+    
+    try {
+        // Get registration challenge
+        const challengeResponse = await fetch('/api/auth/youtube/oauth/passkey/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+        
+        const challengeData = await challengeResponse.json();
+        
+        if (!challengeResponse.ok) {
+            throw new Error(challengeData.detail || 'Failed to get registration challenge');
+        }
+        
+        // Convert challenge to PublicKeyCredentialCreationOptions
+        const publicKey = challengeData.challenge;
+        
+        // Helper function to decode base64url
+        function base64urlDecode(str) {
+            str = str.replace(/-/g, '+').replace(/_/g, '/');
+            while (str.length % 4) {
+                str += '=';
+            }
+            return Uint8Array.from(atob(str), c => c.charCodeAt(0));
+        }
+        
+        // Create credential
+        const credential = await navigator.credentials.create({
+            publicKey: {
+                challenge: base64urlDecode(publicKey.challenge),
+                rp: publicKey.rp,
+                user: {
+                    id: base64urlDecode(publicKey.user.id),
+                    name: publicKey.user.name,
+                    displayName: publicKey.user.displayName
+                },
+                pubKeyCredParams: publicKey.pubKeyCredParams,
+                authenticatorSelection: publicKey.authenticatorSelection,
+                timeout: publicKey.timeout,
+                attestation: publicKey.attestation
+            }
+        });
+        
+        // Convert credential to JSON (base64url encode)
+        function base64urlEncode(bytes) {
+            return btoa(String.fromCharCode(...bytes))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+        }
+        
+        const credentialJson = {
+            id: credential.id,
+            rawId: base64urlEncode(new Uint8Array(credential.rawId)),
+            response: {
+                clientDataJSON: base64urlEncode(new Uint8Array(credential.response.clientDataJSON)),
+                attestationObject: base64urlEncode(new Uint8Array(credential.response.attestationObject))
+            },
+            type: credential.type
+        };
+        
+        // Verify registration
+        // Use the challenge from the original options
+        const verifyResponse = await fetch('/api/auth/youtube/oauth/passkey/register/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                challenge: publicKey.challenge,  // Base64url encoded challenge from options
+                credential: credentialJson
+            })
+        });
+        
+        const verifyData = await verifyResponse.json();
+        
+        if (verifyResponse.ok) {
+            document.getElementById('passkeyStatus').style.display = 'flex';
+            document.getElementById('passkeyStatus').className = 'auth-status success';
+            document.getElementById('passkeyMessage').innerHTML = '<strong>Passkey Registered!</strong><p>Your Passkey has been successfully registered. You can now use it to authenticate.</p>';
+            document.getElementById('registerSection').style.display = 'none';
+        } else {
+            throw new Error(verifyData.detail || 'Registration verification failed');
+        }
+        
+    } catch (error) {
+        document.getElementById('passkeyStatus').style.display = 'flex';
+        document.getElementById('passkeyStatus').className = 'auth-status error';
+        document.getElementById('passkeyMessage').innerHTML = `<strong>Error</strong><p>${error.message}</p>`;
+        console.error('Passkey registration error:', error);
+    }
+}
+
+async function authenticatePasskey(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('authUsername').value || null;
+    
+    try {
+        // Get authentication challenge
+        const challengeResponse = await fetch('/api/auth/youtube/oauth/passkey/authenticate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+        
+        const challengeData = await challengeResponse.json();
+        
+        if (!challengeResponse.ok) {
+            throw new Error(challengeData.detail || 'Failed to get authentication challenge');
+        }
+        
+        // Convert challenge to PublicKeyCredentialRequestOptions
+        const publicKey = challengeData.challenge;
+        
+        // Helper function to decode base64url
+        function base64urlDecode(str) {
+            str = str.replace(/-/g, '+').replace(/_/g, '/');
+            while (str.length % 4) {
+                str += '=';
+            }
+            return Uint8Array.from(atob(str), c => c.charCodeAt(0));
+        }
+        
+        // Helper function to encode base64url
+        function base64urlEncode(bytes) {
+            return btoa(String.fromCharCode(...bytes))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+        }
+        
+        // Get credential
+        const credential = await navigator.credentials.get({
+            publicKey: {
+                challenge: base64urlDecode(publicKey.challenge),
+                allowCredentials: publicKey.allowCredentials?.map(cred => ({
+                    id: base64urlDecode(cred.id),
+                    type: cred.type,
+                    transports: cred.transports
+                })),
+                timeout: publicKey.timeout,
+                userVerification: publicKey.userVerification,
+                rpId: publicKey.rpId
+            }
+        });
+        
+        // Convert credential to JSON
+        const credentialJson = {
+            id: credential.id,
+            rawId: base64urlEncode(new Uint8Array(credential.rawId)),
+            response: {
+                clientDataJSON: base64urlEncode(new Uint8Array(credential.response.clientDataJSON)),
+                authenticatorData: base64urlEncode(new Uint8Array(credential.response.authenticatorData)),
+                signature: base64urlEncode(new Uint8Array(credential.response.signature)),
+                userHandle: credential.response.userHandle ? base64urlEncode(new Uint8Array(credential.response.userHandle)) : null
+            },
+            type: credential.type
+        };
+        
+        // Verify authentication
+        // Use the challenge from the original options
+        const verifyResponse = await fetch('/api/auth/youtube/oauth/passkey/authenticate/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                challenge: publicKey.challenge,  // Base64url encoded challenge from options
+                credential: credentialJson
+            })
+        });
+        
+        const verifyData = await verifyResponse.json();
+        
+        if (verifyResponse.ok && verifyData.authenticated) {
+            if (verifyData.oauth_url) {
+                // Redirect to OAuth
+                document.getElementById('passkeyStatus').style.display = 'flex';
+                document.getElementById('passkeyStatus').className = 'auth-status success';
+                document.getElementById('passkeyMessage').innerHTML = '<strong>Passkey Verified!</strong><p>Redirecting to Google OAuth...</p>';
+                setTimeout(() => {
+                    window.location.href = verifyData.oauth_url;
+                }, 1000);
+            } else {
+                document.getElementById('passkeyStatus').style.display = 'flex';
+                document.getElementById('passkeyStatus').className = 'auth-status info';
+                document.getElementById('passkeyMessage').innerHTML = '<strong>Passkey Verified!</strong><p>' + (verifyData.message || 'OAuth setup required.') + '</p>';
+            }
+        } else {
+            throw new Error(verifyData.detail || 'Authentication verification failed');
+        }
+        
+    } catch (error) {
+        document.getElementById('passkeyStatus').style.display = 'flex';
+        document.getElementById('passkeyStatus').className = 'auth-status error';
+        document.getElementById('passkeyMessage').innerHTML = `<strong>Error</strong><p>${error.message}</p>`;
+        console.error('Passkey authentication error:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', registerPasskey);
+    }
+
+    const authenticateForm = document.getElementById('authenticateForm');
+    if (authenticateForm) {
+        authenticateForm.addEventListener('submit', authenticatePasskey);
+    }
+});
+</script>
+{% endblock %}
+

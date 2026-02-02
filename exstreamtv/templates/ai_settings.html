@@ -1,0 +1,515 @@
+{% extends "base.html" %}
+{% block title %}AI Settings - StreamTV{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">AI Settings</div>
+            <p class="page-subtitle">Configure AI providers and troubleshooting features for enhanced automation.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-outlined" type="button" id="testConnectionButton" aria-label="Test AI connections">
+                <span class="material-icons" aria-hidden="true">network_check</span>
+                Test Connections
+            </button>
+            <button class="btn btn-outlined" type="button" id="refreshSettingsButton" aria-label="Reload settings">
+                <span class="material-icons" aria-hidden="true">refresh</span>
+                Reload
+            </button>
+            <button class="btn btn-primary" type="button" id="saveSettingsButton" aria-label="Save AI settings">
+                <span class="material-icons" aria-hidden="true">save</span>
+                Save Changes
+            </button>
+        </div>
+    </div>
+    
+    <div class="card status-card" id="statusCard" style="display: none;">
+        <span id="statusMessage"></span>
+    </div>
+    
+    <div class="settings-grid">
+        <!-- Provider Selection -->
+        <div class="card settings-card">
+            <div class="card-title">AI Provider</div>
+            <div class="form-group">
+                <label for="providerType">Provider Type</label>
+                <select id="providerType" aria-describedby="providerTypeHelp">
+                    <option value="cloud">Cloud (Groq - Fast & Free)</option>
+                    <option value="local">Local (Ollama - Private)</option>
+                    <option value="hybrid">Hybrid (Best of Both)</option>
+                </select>
+                <small id="providerTypeHelp">Choose how AI features are powered.</small>
+            </div>
+        </div>
+        
+        <!-- Cloud Settings -->
+        <div class="card settings-card" id="cloudSettings">
+            <div class="card-title">Cloud AI (Groq)</div>
+            <div class="form-group">
+                <label for="cloudProvider">Provider</label>
+                <select id="cloudProvider">
+                    <option value="groq">Groq (Recommended)</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="cloudApiKey">API Key</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="password" id="cloudApiKey" placeholder="Enter your API key" style="flex: 1;">
+                    <button class="btn btn-outlined" type="button" id="toggleApiKeyButton" style="white-space: nowrap;" aria-label="Toggle API key visibility">
+                        <span class="material-icons" id="apiKeyVisibilityIcon" aria-hidden="true">visibility</span>
+                    </button>
+                </div>
+                <small>Get a free API key at <a href="https://console.groq.com" target="_blank">console.groq.com</a></small>
+            </div>
+            <div class="form-group">
+                <label for="cloudModel">Model</label>
+                <select id="cloudModel">
+                    <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Best)</option>
+                    <option value="llama-3.1-8b-instant">Llama 3.1 8B (Faster)</option>
+                    <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Local Settings -->
+        <div class="card settings-card" id="localSettings">
+            <div class="card-title">Local AI (Ollama)</div>
+            <div class="form-group">
+                <label for="localHost">Ollama Host</label>
+                <input type="text" id="localHost" placeholder="http://localhost:11434">
+                <small>Default: http://localhost:11434</small>
+            </div>
+            <div class="form-group">
+                <label for="localModel">Model</label>
+                <select id="localModel">
+                    <option value="auto">Auto-detect</option>
+                </select>
+                <small id="ollamaStatus">Checking Ollama status...</small>
+            </div>
+            <div class="form-group">
+                <a href="/ollama" class="btn btn-outlined" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <span class="material-icons" aria-hidden="true">settings</span>
+                    Manage Ollama
+                </a>
+            </div>
+        </div>
+        
+        <!-- Troubleshooting Settings -->
+        <div class="card settings-card">
+            <div class="card-title">AI Troubleshooting</div>
+            <div class="form-group">
+                <label for="troubleshootingEnabled">
+                    <input type="checkbox" id="troubleshootingEnabled" style="width: auto; margin-right: 8px;">
+                    Enable AI Troubleshooting
+                </label>
+                <small>Use AI to analyze errors and suggest fixes.</small>
+            </div>
+            <div class="form-group">
+                <label for="autoFix">
+                    <input type="checkbox" id="autoFix" style="width: auto; margin-right: 8px;">
+                    Auto-Apply Fixes (Advanced)
+                </label>
+                <small>Automatically apply AI-suggested fixes. Use with caution.</small>
+            </div>
+            <div class="form-group">
+                <label for="learningEnabled">
+                    <input type="checkbox" id="learningEnabled" style="width: auto; margin-right: 8px;" checked>
+                    Enable Learning
+                </label>
+                <small>Allow AI to learn from your system's patterns.</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Connection Status -->
+    <div class="card info-card" style="margin-top: 16px;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="font-size: 20px;" aria-hidden="true">info</span>
+            Connection Status
+        </div>
+        <div id="connectionStatus" style="margin-top: 12px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <div id="ollamaConnectionStatus" style="padding: 12px; background: var(--surface-light); border-radius: 8px;">
+                    <div style="font-weight: 600; margin-bottom: 4px;">Ollama (Local)</div>
+                    <div style="color: var(--text-secondary); font-size: 14px;">Click "Test Connections" to check</div>
+                </div>
+                <div id="cloudConnectionStatus" style="padding: 12px; background: var(--surface-light); border-radius: 8px;">
+                    <div style="font-weight: 600; margin-bottom: 4px;">Cloud API</div>
+                    <div style="color: var(--text-secondary); font-size: 14px;">Click "Test Connections" to check</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- One-Click Setup -->
+    <div class="card info-card" style="margin-top: 16px;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="font-size: 20px;" aria-hidden="true">rocket_launch</span>
+            Quick Setup
+        </div>
+        <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 12px;">
+            <button class="btn btn-outlined" type="button" id="setupLocalButton">
+                <span class="material-icons" aria-hidden="true">computer</span>
+                Setup Local AI (Free)
+            </button>
+            <button class="btn btn-outlined" type="button" id="setupCloudButton">
+                <span class="material-icons" aria-hidden="true">cloud</span>
+                Setup Cloud AI
+            </button>
+            <button class="btn btn-outlined" type="button" id="setupTroubleshootingButton">
+                <span class="material-icons" aria-hidden="true">healing</span>
+                Enable Troubleshooting
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.36px;
+    }
+    
+    .page-subtitle {
+        color: var(--text-secondary);
+        margin-top: 4px;
+        font-size: 17px;
+    }
+    
+    .page-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .status-card {
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 12px 16px;
+        font-size: 15px;
+    }
+    
+    .status-card.success {
+        color: var(--success);
+        border-color: rgba(52, 199, 89, 0.4);
+        background: rgba(52, 199, 89, 0.15);
+    }
+    
+    .status-card.error {
+        color: var(--error);
+        border-color: rgba(255, 59, 48, 0.4);
+        background: rgba(255, 59, 48, 0.15);
+    }
+    
+    .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+    }
+    
+    .settings-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .info-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 16px;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .form-group label {
+        font-size: 15px;
+        font-weight: 600;
+    }
+    
+    .form-group input,
+    .form-group select {
+        background: var(--surface-light);
+        border-radius: 10px;
+        border: 0.5px solid var(--divider);
+        color: var(--text-primary);
+        font-size: 17px;
+        padding: 10px 12px;
+        font-family: inherit;
+        min-height: 44px;
+    }
+    
+    .form-group small {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+    
+    .form-group a {
+        color: var(--primary);
+        text-decoration: none;
+    }
+    
+    .form-group a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+    let settings = null;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSettings();
+        
+        document.getElementById('refreshSettingsButton')?.addEventListener('click', () => loadSettings(true));
+        document.getElementById('saveSettingsButton')?.addEventListener('click', saveSettings);
+        document.getElementById('testConnectionButton')?.addEventListener('click', testConnections);
+        document.getElementById('setupLocalButton')?.addEventListener('click', setupLocal);
+        document.getElementById('setupCloudButton')?.addEventListener('click', setupCloud);
+        document.getElementById('setupTroubleshootingButton')?.addEventListener('click', setupTroubleshooting);
+        
+        document.getElementById('toggleApiKeyButton')?.addEventListener('click', () => {
+            const input = document.getElementById('cloudApiKey');
+            const icon = document.getElementById('apiKeyVisibilityIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility_off';
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility';
+            }
+        });
+        
+        document.getElementById('providerType')?.addEventListener('change', updateProviderVisibility);
+    });
+    
+    function updateProviderVisibility() {
+        const type = document.getElementById('providerType').value;
+        const cloudSettings = document.getElementById('cloudSettings');
+        const localSettings = document.getElementById('localSettings');
+        
+        cloudSettings.style.display = (type === 'cloud' || type === 'hybrid') ? 'flex' : 'none';
+        localSettings.style.display = (type === 'local' || type === 'hybrid') ? 'flex' : 'none';
+    }
+    
+    async function loadSettings(showStatus = false) {
+        try {
+            const response = await fetch('/api/ai/settings');
+            if (!response.ok) throw new Error('Failed to load settings');
+            
+            settings = await response.json();
+            
+            // Populate form
+            document.getElementById('providerType').value = settings.provider?.type || 'cloud';
+            document.getElementById('cloudProvider').value = settings.provider?.cloud?.provider || 'groq';
+            document.getElementById('cloudModel').value = settings.provider?.cloud?.model || 'llama-3.3-70b-versatile';
+            document.getElementById('localHost').value = settings.provider?.local?.host || 'http://localhost:11434';
+            
+            document.getElementById('troubleshootingEnabled').checked = settings.troubleshooting?.enabled || false;
+            document.getElementById('autoFix').checked = settings.troubleshooting?.auto_fix || false;
+            document.getElementById('learningEnabled').checked = settings.troubleshooting?.learning_enabled || true;
+            
+            // Update Ollama status
+            const ollamaStatus = document.getElementById('ollamaStatus');
+            if (settings.ollama_status?.server_running) {
+                ollamaStatus.textContent = 'Ollama is running';
+                ollamaStatus.style.color = 'var(--success)';
+                
+                // Populate installed models
+                const modelSelect = document.getElementById('localModel');
+                modelSelect.innerHTML = '<option value="auto">Auto-detect</option>';
+                for (const model of settings.ollama_status.installed_models || []) {
+                    const option = document.createElement('option');
+                    option.value = model.name || model;
+                    option.textContent = model.name || model;
+                    modelSelect.appendChild(option);
+                }
+            } else if (settings.ollama_status?.installed) {
+                ollamaStatus.textContent = 'Ollama installed but not running';
+                ollamaStatus.style.color = 'var(--warning)';
+            } else {
+                ollamaStatus.textContent = 'Ollama not installed';
+                ollamaStatus.style.color = 'var(--text-secondary)';
+            }
+            
+            updateProviderVisibility();
+            
+            if (showStatus) {
+                showStatusMessage('Settings refreshed.', 'success');
+            }
+        } catch (error) {
+            console.error(error);
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    async function saveSettings() {
+        try {
+            const payload = {
+                provider: {
+                    provider_type: document.getElementById('providerType').value,
+                    cloud_provider: document.getElementById('cloudProvider').value,
+                    cloud_model: document.getElementById('cloudModel').value,
+                    local_host: document.getElementById('localHost').value,
+                    local_model: document.getElementById('localModel').value,
+                },
+                troubleshooting: {
+                    enabled: document.getElementById('troubleshootingEnabled').checked,
+                    auto_fix: document.getElementById('autoFix').checked,
+                    learning_enabled: document.getElementById('learningEnabled').checked,
+                }
+            };
+            
+            const response = await fetch('/api/ai/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) throw new Error('Failed to save settings');
+            
+            showStatusMessage('AI settings saved.', 'success');
+        } catch (error) {
+            console.error(error);
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    async function testConnections() {
+        try {
+            const response = await fetch('/api/ai/settings/test-connection');
+            if (!response.ok) throw new Error('Failed to test connections');
+            
+            const results = await response.json();
+            
+            // Update Ollama status
+            const ollamaDiv = document.getElementById('ollamaConnectionStatus');
+            if (results.ollama?.available) {
+                ollamaDiv.innerHTML = `
+                    <div style="font-weight: 600; margin-bottom: 4px; color: var(--success);">Ollama (Local) - Connected</div>
+                    <div style="color: var(--text-secondary); font-size: 14px;">${results.ollama.message}</div>
+                `;
+            } else {
+                ollamaDiv.innerHTML = `
+                    <div style="font-weight: 600; margin-bottom: 4px; color: var(--error);">Ollama (Local) - Not Available</div>
+                    <div style="color: var(--text-secondary); font-size: 14px;">${results.ollama?.message || 'Not connected'}</div>
+                `;
+            }
+            
+            // Update Cloud status
+            const cloudDiv = document.getElementById('cloudConnectionStatus');
+            if (results.cloud?.available) {
+                cloudDiv.innerHTML = `
+                    <div style="font-weight: 600; margin-bottom: 4px; color: var(--success);">Cloud API - Connected</div>
+                    <div style="color: var(--text-secondary); font-size: 14px;">${results.cloud.message}</div>
+                `;
+            } else {
+                cloudDiv.innerHTML = `
+                    <div style="font-weight: 600; margin-bottom: 4px; color: var(--warning);">Cloud API - Not Configured</div>
+                    <div style="color: var(--text-secondary); font-size: 14px;">${results.cloud?.message || 'No API key'}</div>
+                `;
+            }
+            
+            showStatusMessage('Connection test complete.', 'success');
+        } catch (error) {
+            console.error(error);
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    async function setupLocal() {
+        try {
+            showStatusMessage('Setting up local AI...', 'success');
+            const response = await fetch('/api/ai/settings/one-click/local', { method: 'POST' });
+            const result = await response.json();
+            
+            if (result.success) {
+                showStatusMessage('Local AI setup complete! ' + result.steps.join(', '), 'success');
+                loadSettings();
+            } else {
+                showStatusMessage('Setup failed: ' + result.errors.join(', '), 'error');
+            }
+        } catch (error) {
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    async function setupCloud() {
+        const apiKey = prompt('Enter your Groq API key (get one free at console.groq.com):');
+        if (!apiKey) return;
+        
+        try {
+            const response = await fetch('/api/ai/settings/one-click/cloud', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider: 'groq', api_key: apiKey })
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showStatusMessage(result.message, 'success');
+                loadSettings();
+            } else {
+                showStatusMessage(result.message, 'error');
+            }
+        } catch (error) {
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    async function setupTroubleshooting() {
+        try {
+            const response = await fetch('/api/ai/settings/one-click/troubleshooting', { method: 'POST' });
+            const result = await response.json();
+            
+            if (result.success) {
+                showStatusMessage(result.message, 'success');
+                loadSettings();
+            } else {
+                showStatusMessage('Setup failed', 'error');
+            }
+        } catch (error) {
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    function showStatusMessage(message, status) {
+        const card = document.getElementById('statusCard');
+        const text = document.getElementById('statusMessage');
+        card.classList.remove('success', 'error');
+        card.classList.add(status);
+        text.textContent = message;
+        card.style.display = 'block';
+        setTimeout(() => { card.style.display = 'none'; }, 4000);
+    }
+</script>
+{% endblock %}

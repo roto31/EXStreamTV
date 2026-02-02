@@ -1,0 +1,726 @@
+{% extends "base.html" %}
+
+{% block title %}Program Guide - EXStreamTV{% endblock %}
+
+{% block extra_styles %}
+    .guide-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 160px);
+    }
+    
+    .guide-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    
+    .guide-nav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .guide-date {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-primary);
+        min-width: 200px;
+        text-align: center;
+    }
+    
+    .guide-time-selector {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .time-btn {
+        padding: 8px 16px;
+        background: var(--apple-fill);
+        border: none;
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .time-btn:hover {
+        background: var(--apple-fill-secondary);
+    }
+    
+    .time-btn.active {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .guide-wrapper {
+        flex: 1;
+        overflow: hidden;
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .guide-grid {
+        display: flex;
+        height: 100%;
+        overflow: auto;
+    }
+    
+    /* Channel Column */
+    .channel-column {
+        width: 200px;
+        flex-shrink: 0;
+        background: var(--surface-light);
+        border-right: 1px solid var(--divider);
+        position: sticky;
+        left: 0;
+        z-index: 10;
+    }
+    
+    .channel-header {
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--divider);
+        background: var(--surface-light);
+    }
+    
+    .channel-list {
+        overflow-y: auto;
+        height: calc(100% - 48px);
+    }
+    
+    .channel-row {
+        height: 80px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--divider);
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+    
+    .channel-row:hover {
+        background: var(--apple-fill);
+    }
+    
+    .channel-logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: var(--apple-fill);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+    
+    .channel-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .channel-number {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+    
+    .channel-name {
+        font-size: 14px;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Timeline */
+    .timeline-container {
+        flex: 1;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+    
+    .timeline-header {
+        height: 48px;
+        display: flex;
+        border-bottom: 1px solid var(--divider);
+        background: var(--surface-light);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+    }
+    
+    .time-slot {
+        min-width: 180px;
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        border-right: 1px solid var(--divider);
+    }
+    
+    .time-slot.now {
+        color: var(--primary);
+        font-weight: 600;
+    }
+    
+    .timeline-body {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .program-row {
+        height: 80px;
+        display: flex;
+        position: relative;
+        border-bottom: 1px solid var(--divider);
+    }
+    
+    .program-item {
+        position: absolute;
+        top: 4px;
+        bottom: 4px;
+        background: var(--apple-fill);
+        border-radius: 8px;
+        padding: 8px 12px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-left: 3px solid var(--primary);
+    }
+    
+    .program-item:hover {
+        background: var(--apple-fill-secondary);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        z-index: 2;
+    }
+    
+    .program-item.live {
+        border-left-color: #34C759;
+        background: rgba(52, 199, 89, 0.1);
+    }
+    
+    .program-item.past {
+        opacity: 0.5;
+        border-left-color: var(--apple-gray-3);
+    }
+    
+    .program-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .program-time {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 2px;
+    }
+    
+    .program-duration {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+    }
+    
+    /* Now Indicator */
+    .now-indicator {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #FF3B30;
+        z-index: 20;
+    }
+    
+    .now-indicator::before {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        width: 10px;
+        height: 10px;
+        background: #FF3B30;
+        border-radius: 50%;
+    }
+    
+    /* Program Details Modal */
+    .program-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .program-modal.active {
+        display: flex;
+    }
+    
+    .program-modal-content {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 24px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .program-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+    
+    .program-modal-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .program-modal-channel {
+        font-size: 14px;
+        color: var(--primary);
+        margin-top: 4px;
+    }
+    
+    .program-modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+    
+    .program-modal-time {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+        padding: 12px;
+        background: var(--apple-fill);
+        border-radius: 8px;
+    }
+    
+    .program-time-item {
+        text-align: center;
+    }
+    
+    .program-time-label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+    }
+    
+    .program-time-value {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .program-modal-description {
+        font-size: 15px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+    
+    /* Empty State */
+    .guide-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        padding: 40px;
+    }
+    
+    .guide-empty-icon {
+        font-size: 64px;
+        opacity: 0.5;
+        margin-bottom: 16px;
+    }
+    
+    .guide-empty-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+    
+    .guide-empty-message {
+        color: var(--text-secondary);
+    }
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">Program Guide</h1>
+            <p class="page-subtitle">See what's on now and upcoming across all channels.</p>
+        </div>
+    </div>
+    
+    <div class="guide-header">
+        <div class="guide-nav">
+            <button class="btn btn-secondary btn-sm" onclick="navigateDate(-1)">← Previous</button>
+            <span class="guide-date" id="currentDate">Today</span>
+            <button class="btn btn-secondary btn-sm" onclick="navigateDate(1)">Next →</button>
+        </div>
+        <div class="guide-time-selector">
+            <button class="time-btn" onclick="jumpToTime('now')">Now</button>
+            <button class="time-btn" onclick="jumpToTime('primetime')">Prime Time</button>
+            <button class="time-btn" onclick="jumpToTime('morning')">Morning</button>
+        </div>
+    </div>
+    
+    <div class="guide-container">
+        <div class="guide-wrapper">
+            <div class="guide-grid" id="guideGrid">
+                <!-- Guide loaded via JS -->
+                <div class="guide-empty" id="guideEmpty">
+                    <div class="guide-empty-icon">📺</div>
+                    <div class="guide-empty-title">No Program Data</div>
+                    <div class="guide-empty-message">Add channels and schedule content to see the program guide.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Program Details Modal -->
+<div class="program-modal" id="programModal">
+    <div class="program-modal-content">
+        <div class="program-modal-header">
+            <div>
+                <div class="program-modal-title" id="modalTitle">Program Title</div>
+                <div class="program-modal-channel" id="modalChannel">Channel Name</div>
+            </div>
+            <button class="program-modal-close" onclick="closeProgramModal()">×</button>
+        </div>
+        <div class="program-modal-time">
+            <div class="program-time-item">
+                <div class="program-time-label">Start</div>
+                <div class="program-time-value" id="modalStart">--:--</div>
+            </div>
+            <div class="program-time-item">
+                <div class="program-time-label">End</div>
+                <div class="program-time-value" id="modalEnd">--:--</div>
+            </div>
+            <div class="program-time-item">
+                <div class="program-time-label">Duration</div>
+                <div class="program-time-value" id="modalDuration">-- min</div>
+            </div>
+        </div>
+        <div class="program-modal-description" id="modalDescription">
+            No description available.
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const HOUR_WIDTH = 180; // pixels per hour
+    const VISIBLE_HOURS = 6;
+    
+    let currentDate = new Date();
+    let channels = [];
+    let programs = {};
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        loadGuide();
+    });
+    
+    async function loadGuide() {
+        try {
+            // Load channels
+            const channelResponse = await fetch('/api/channels');
+            channels = await channelResponse.json();
+            
+            // For now, generate sample programs since EPG might not be fully populated
+            programs = generateSamplePrograms();
+            
+            if (channels.length > 0) {
+                document.getElementById('guideEmpty').style.display = 'none';
+                renderGuide();
+            }
+            
+            updateDateDisplay();
+        } catch (error) {
+            console.error('Failed to load guide:', error);
+        }
+    }
+    
+    function generateSamplePrograms() {
+        // Generate sample programming data
+        const programData = {};
+        const now = new Date();
+        now.setMinutes(0, 0, 0);
+        
+        channels.forEach(channel => {
+            programData[channel.id] = [];
+            
+            // Generate programs for 24 hours
+            let currentTime = new Date(now);
+            currentTime.setHours(0, 0, 0, 0);
+            
+            for (let i = 0; i < 24; i++) {
+                const duration = [30, 60, 90, 120][Math.floor(Math.random() * 4)];
+                const endTime = new Date(currentTime.getTime() + duration * 60000);
+                
+                programData[channel.id].push({
+                    id: `prog_${channel.id}_${i}`,
+                    title: getRandomProgramTitle(),
+                    start: new Date(currentTime),
+                    end: endTime,
+                    duration: duration,
+                    description: 'Program description goes here.',
+                });
+                
+                currentTime = endTime;
+                if (currentTime.getDate() !== now.getDate()) break;
+            }
+        });
+        
+        return programData;
+    }
+    
+    function getRandomProgramTitle() {
+        const titles = [
+            'Morning News', 'Talk Show', 'Documentary', 'Movie Night',
+            'Sports Center', 'Comedy Hour', 'Drama Series', 'Reality TV',
+            'Music Videos', 'Kids Show', 'Evening News', 'Late Night',
+            'Action Movie', 'Sci-Fi Series', 'Nature Documentary',
+        ];
+        return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    function renderGuide() {
+        const grid = document.getElementById('guideGrid');
+        
+        // Calculate time range (show from 6 AM for readability)
+        const startHour = 0;
+        const endHour = 24;
+        const hours = [];
+        for (let h = startHour; h < endHour; h++) {
+            hours.push(h);
+        }
+        
+        const now = new Date();
+        const nowHour = now.getHours();
+        const nowMinutes = now.getMinutes();
+        
+        // Build channel column
+        let channelHTML = `
+            <div class="channel-column">
+                <div class="channel-header">Channels</div>
+                <div class="channel-list">
+                    ${channels.map(ch => `
+                        <div class="channel-row" onclick="playChannel(${ch.id})">
+                            <div class="channel-logo">${ch.logo_url ? `<img src="${ch.logo_url}" alt="">` : '📺'}</div>
+                            <div class="channel-info">
+                                <div class="channel-number">${ch.number}</div>
+                                <div class="channel-name">${escapeHtml(ch.name)}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        // Build timeline header
+        let timelineHTML = `
+            <div class="timeline-container">
+                <div class="timeline-header">
+                    ${hours.map(h => {
+                        const isNow = h === nowHour;
+                        const timeStr = formatHour(h);
+                        return `<div class="time-slot ${isNow ? 'now' : ''}">${timeStr}</div>`;
+                    }).join('')}
+                </div>
+                <div class="timeline-body" style="width: ${hours.length * HOUR_WIDTH}px; position: relative;">
+        `;
+        
+        // Add now indicator
+        const nowOffset = (nowHour - startHour) * HOUR_WIDTH + (nowMinutes / 60) * HOUR_WIDTH;
+        timelineHTML += `<div class="now-indicator" style="left: ${nowOffset}px;"></div>`;
+        
+        // Build program rows
+        channels.forEach(channel => {
+            const channelPrograms = programs[channel.id] || [];
+            
+            timelineHTML += `<div class="program-row">`;
+            
+            channelPrograms.forEach(program => {
+                const startDate = new Date(program.start);
+                const endDate = new Date(program.end);
+                
+                // Calculate position and width
+                const startHourOffset = startDate.getHours() + startDate.getMinutes() / 60;
+                const endHourOffset = endDate.getHours() + endDate.getMinutes() / 60;
+                
+                const left = startHourOffset * HOUR_WIDTH;
+                const width = (endHourOffset - startHourOffset) * HOUR_WIDTH - 4; // 4px gap
+                
+                // Determine if live or past
+                const isLive = now >= startDate && now < endDate;
+                const isPast = now >= endDate;
+                const statusClass = isLive ? 'live' : (isPast ? 'past' : '');
+                
+                timelineHTML += `
+                    <div class="program-item ${statusClass}" 
+                         style="left: ${left}px; width: ${Math.max(width, 50)}px;"
+                         onclick="showProgramDetails(${channel.id}, '${program.id}')">
+                        <div class="program-title">${escapeHtml(program.title)}</div>
+                        <div class="program-time">${formatTime(startDate)} - ${formatTime(endDate)}</div>
+                        ${isLive ? '<div class="program-duration">🔴 LIVE</div>' : ''}
+                    </div>
+                `;
+            });
+            
+            timelineHTML += `</div>`;
+        });
+        
+        timelineHTML += `</div></div>`;
+        
+        grid.innerHTML = channelHTML + timelineHTML;
+        
+        // Scroll to current time
+        setTimeout(() => jumpToTime('now'), 100);
+    }
+    
+    function formatHour(hour) {
+        if (hour === 0) return '12 AM';
+        if (hour === 12) return '12 PM';
+        if (hour > 12) return `${hour - 12} PM`;
+        return `${hour} AM`;
+    }
+    
+    function formatTime(date) {
+        return date.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        });
+    }
+    
+    function updateDateDisplay() {
+        const dateEl = document.getElementById('currentDate');
+        const today = new Date();
+        
+        if (currentDate.toDateString() === today.toDateString()) {
+            dateEl.textContent = 'Today';
+        } else {
+            dateEl.textContent = currentDate.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+    }
+    
+    function navigateDate(delta) {
+        currentDate.setDate(currentDate.getDate() + delta);
+        updateDateDisplay();
+        // Would reload EPG data for new date
+    }
+    
+    function jumpToTime(preset) {
+        const container = document.querySelector('.timeline-container');
+        if (!container) return;
+        
+        let targetHour;
+        const now = new Date();
+        
+        switch (preset) {
+            case 'now':
+                targetHour = now.getHours();
+                break;
+            case 'primetime':
+                targetHour = 20; // 8 PM
+                break;
+            case 'morning':
+                targetHour = 6;
+                break;
+            default:
+                targetHour = 0;
+        }
+        
+        const scrollPos = targetHour * HOUR_WIDTH - 100;
+        container.scrollTo({ left: Math.max(0, scrollPos), behavior: 'smooth' });
+        
+        // Update active button
+        document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
+        event?.target?.classList?.add('active');
+    }
+    
+    function showProgramDetails(channelId, programId) {
+        const channel = channels.find(c => c.id === channelId);
+        const channelPrograms = programs[channelId] || [];
+        const program = channelPrograms.find(p => p.id === programId);
+        
+        if (!program || !channel) return;
+        
+        document.getElementById('modalTitle').textContent = program.title;
+        document.getElementById('modalChannel').textContent = `${channel.number}. ${channel.name}`;
+        document.getElementById('modalStart').textContent = formatTime(new Date(program.start));
+        document.getElementById('modalEnd').textContent = formatTime(new Date(program.end));
+        document.getElementById('modalDuration').textContent = `${program.duration} min`;
+        document.getElementById('modalDescription').textContent = program.description || 'No description available.';
+        
+        document.getElementById('programModal').classList.add('active');
+    }
+    
+    function closeProgramModal() {
+        document.getElementById('programModal').classList.remove('active');
+    }
+    
+    function playChannel(channelId) {
+        window.location.href = `/player?channel=${channelId}`;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+    
+    // Close modal on outside click
+    document.getElementById('programModal').addEventListener('click', (e) => {
+        if (e.target.id === 'programModal') {
+            closeProgramModal();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,95 @@
+================================================================================
+EXSTREAMTV RELIABILITY TEST REPORT
+================================================================================
+Test Run ID: 20260127_232214
+Duration: 7451.3 seconds
+Start: 2026-01-27T23:22:14.107452
+End: 2026-01-28T01:26:25.395184
+
+OVERALL METRICS:
+----------------------------------------
+Total Channels Tested: 34
+Total Tests Executed: 510
+Passed: 48
+Failed: 0
+Errors: 0
+Timeouts: 462
+Success Rate: 9.41%
+Overall MTBF: 1.0 seconds
+
+CHANNEL-LEVEL METRICS:
+--------------------------------------------------------------------------------
+Channel    Name                           Tests    Pass%    MTBF         Avail%  
+--------------------------------------------------------------------------------
+80         Magnum P.I. Complete Series    15       0.0%   N/A          0.0%
+102        Ashley                         15       0.0%   N/A          0.0%
+103        1980s TV                       15       13.3%   2s           9.3%
+104        The X-Files and Califormicatio 15       0.0%   N/A          0.0%
+105        Disney                         15       13.3%   2s           9.3%
+106        Westerns                       15       13.3%   2s           9.3%
+107        Taylor Swift                   15       6.7%   1s           4.4%
+108        ABC Sitcoms                    15       86.7%   65s          81.2%
+109        PBS Afternoon                  15       53.3%   11s          43.2%
+110        PBS Evening                    15       6.7%   1s           4.5%
+111        Ken Burns                      15       6.7%   1s           4.5%
+112        Kids Movies                    15       6.7%   1s           4.5%
+113        Comedy Movies                  15       0.0%   N/A          0.0%
+114        Big City Greens                15       86.7%   65s          81.2%
+115        AppleTV                        15       0.0%   N/A          0.0%
+116        Classic TV                     15       6.7%   1s           4.9%
+117        CSI                            15       6.7%   1s           4.5%
+118        Marvel                         15       0.0%   N/A          0.0%
+119        Coen Brothers                  15       0.0%   N/A          0.0%
+120        Superman and Batman            15       6.7%   1s           4.6%
+121        Christmas                      15       6.7%   1s           4.5%
+122        All Apple                      15       0.0%   N/A          0.0%
+123        Sesame Street                  15       0.0%   N/A          0.0%
+143        IPOY 143                       15       0.0%   N/A          0.0%
+1929       Disney Classics                15       0.0%   N/A          0.0%
+1980       1980 Lake Placid Winter Olympi 15       0.0%   N/A          0.0%
+1984       1984 Sarajevo Winter Olympics  15       0.0%   N/A          0.0%
+1984.1     Computer Chronicles            15       0.0%   N/A          0.0%
+1985       1985 Country Music             15       0.0%   N/A          0.0%
+1988       1988 Calgary Winter Olympics   15       0.0%   N/A          0.0%
+1991       1980s-1990s Country            15       0.0%   N/A          0.0%
+1992       1992 Albertville Winter Olympi 15       0.0%   N/A          0.0%
+1994       1994 Lillehammer Winter Olympi 15       0.0%   N/A          0.0%
+2000       2000's Movies                  15       0.0%   N/A          0.0%
+
+FAILURES DETECTED:
+--------------------------------------------------------------------------------
+Channel 80 (Magnum P.I. Complete Series):
+Channel 102 (Ashley):
+Channel 103 (1980s TV):
+Channel 104 (The X-Files and Califormication):
+Channel 105 (Disney):
+Channel 106 (Westerns):
+Channel 107 (Taylor Swift):
+Channel 108 (ABC Sitcoms):
+Channel 109 (PBS Afternoon):
+Channel 110 (PBS Evening):
+Channel 111 (Ken Burns):
+Channel 112 (Kids Movies):
+Channel 113 (Comedy Movies):
+Channel 114 (Big City Greens):
+Channel 115 (AppleTV ):
+Channel 116 (Classic TV):
+Channel 117 (CSI):
+Channel 118 (Marvel):
+Channel 119 (Coen Brothers):
+Channel 120 (Superman and Batman):
+Channel 121 (Christmas):
+Channel 122 (All Apple):
+Channel 123 (Sesame Street):
+Channel 143 (IPOY 143):
+Channel 1929 (Disney Classics):
+Channel 1980 (1980 Lake Placid Winter Olympics):
+Channel 1984 (1984 Sarajevo Winter Olympics):
+Channel 1984.1 (Computer Chronicles):
+Channel 1985 (1985 Country Music):
+Channel 1988 (1988 Calgary Winter Olympics):
+Channel 1991 (1980s-1990s Country):
+Channel 1992 (1992 Albertville Winter Olympics):
+Channel 1994 (1994 Lillehammer Winter Olympics):
+Channel 2000 (2000's Movies):
+================================================================================

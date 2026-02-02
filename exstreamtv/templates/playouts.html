@@ -1,0 +1,735 @@
+{% extends "base.html" %}
+
+{% block title %}Playouts - StreamTV{% endblock %}
+
+{% block extra_styles %}
+    .playouts-toolbar {
+        background: var(--surface);
+        border-radius: 12px; /* Apple HIG standard */
+        padding: 16px; /* Apple HIG standard */
+        margin-bottom: 16px; /* Apple 8pt grid */
+        display: flex;
+        align-items: center;
+        gap: 16px; /* Apple HIG standard spacing */
+        border: 0.5px solid var(--divider);
+    }
+    
+    .playouts-table-wrapper {
+        background: var(--surface);
+        border-radius: 12px; /* Apple HIG standard */
+        overflow: hidden;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        border-spacing: 0;
+        margin: 0;
+    }
+    
+    .table th {
+        text-align: left;
+        padding: 16px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        font-size: 12px;
+        text-transform: uppercase;
+        border-bottom: 0.5px solid var(--divider);
+        border-top: none;
+        border-left: none;
+        border-right: none;
+        background: var(--surface-light);
+        margin: 0;
+    }
+    
+    .table th:first-child {
+        padding-left: 16px;
+    }
+    
+    .table th:last-child {
+        padding-right: 16px;
+    }
+    
+    .table td {
+        padding: 16px;
+        border-bottom: 0.5px solid var(--divider);
+        border-top: none;
+        border-left: none;
+        border-right: none;
+        color: var(--text-primary);
+        margin: 0;
+        vertical-align: middle;
+    }
+    
+    .table td:first-child {
+        padding-left: 16px;
+    }
+    
+    .table td:last-child {
+        padding-right: 16px;
+    }
+    
+    .table tr {
+        margin: 0;
+    }
+    
+    .table tr:hover {
+        background: var(--hover);
+        cursor: pointer;
+    }
+    
+        .table tr.selected {
+            background: var(--apple-fill-secondary);
+        }
+    
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .table thead {
+        border-collapse: collapse;
+    }
+    
+    .table tbody {
+        border-collapse: collapse;
+    }
+    
+    .channel-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .channel-number {
+        font-weight: 500;
+        color: var(--primary);
+        font-size: 16px;
+        min-width: 60px;
+    }
+    
+    .channel-name {
+        font-weight: 500;
+    }
+    
+    .schedule-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .schedule-name {
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+    
+    .schedule-file {
+        font-size: 12px;
+        color: var(--text-secondary);
+        font-family: monospace;
+    }
+    
+    .schedule-kind {
+        display: inline-block;
+        padding: 4px 10px; /* Apple HIG standard badge padding */
+        border-radius: 6px; /* Apple HIG standard badge radius */
+        font-size: 13px; /* Apple HIG standard caption */
+        font-weight: 600; /* Apple HIG standard */
+        letter-spacing: 0.08px; /* Apple HIG standard */
+        background: var(--hover);
+        color: var(--text-secondary);
+    }
+    
+    .schedule-kind.yaml {
+        background: rgba(0, 192, 192, 0.1);
+        color: var(--info);
+    }
+    
+    /* Button styles now handled by base.html */
+    /* Additional button variants if needed */
+    .btn-icon.refresh {
+        color: var(--primary);
+    }
+    
+    .btn-icon.view {
+        color: var(--secondary);
+    }
+    
+    .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .status-indicator.active {
+        background: var(--success);
+    }
+    
+    .status-indicator.inactive {
+        background: var(--text-disabled);
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state-icon {
+        font-size: 64px;
+        opacity: 0.5;
+        margin-bottom: 16px;
+    }
+    
+    .playout-detail-card {
+        background: var(--surface);
+        border-radius: 12px; /* Apple HIG */
+        padding: 20px;
+        border: 0.5px solid var(--divider);
+        margin-top: 16px;
+    }
+    
+    .playout-detail-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 8px 0;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .playout-detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .playout-detail-label {
+        font-size: 13px;
+        color: var(--text-secondary);
+        font-weight: 600;
+        white-space: nowrap;
+        min-width: 120px;
+    }
+    
+    .playout-detail-value {
+        flex: 1;
+        font-size: 17px;
+        color: var(--text-primary);
+    }
+    
+    .playout-detail-list {
+        margin-top: 12px;
+        padding-left: 20px;
+        color: var(--text-secondary);
+        font-size: 15px;
+    }
+    
+    .schedule-blocks {
+        margin-top: 16px;
+    }
+    
+    .schedule-block {
+        border: 0.5px solid var(--divider);
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+        background: var(--background);
+    }
+    
+    .schedule-block-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .schedule-block-time {
+        font-size: 15px;
+        color: var(--text-secondary);
+    }
+    
+    .schedule-block-description {
+        font-size: 15px;
+        color: var(--text-secondary);
+        line-height: 1.47059;
+    }
+    
+    .search-box {
+        flex: 1;
+        max-width: 400px;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 10px 16px 10px 40px;
+        background: var(--background);
+        border: 1px solid var(--divider);
+        border-radius: 4px;
+        color: var(--text-primary);
+        font-size: 14px;
+        transition: border-color 0.2s;
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+    }
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Playouts</h1>
+        <p>Manage channel playouts and schedules</p>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <!-- Toolbar -->
+    <div class="playouts-toolbar">
+        <div class="search-box" style="position: relative;">
+            <span class="material-icons search-icon" aria-hidden="true">search</span>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search playouts..." aria-label="Search playouts">
+        </div>
+        <div style="flex: 1;"></div>
+        <button class="btn btn-primary" id="refreshAllPlayoutsButton" aria-label="Refresh all playouts">
+            <span class="material-icons" style="font-size: 18px;" aria-hidden="true">refresh</span>
+            Refresh All
+        </button>
+    </div>
+    
+    <!-- Playouts Table -->
+    <div class="playouts-table-wrapper">
+        <div id="loading" class="loading">Loading playouts...</div>
+        <table class="table" id="playoutsTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Channel</th>
+                    <th>Schedule</th>
+                    <th>Schedule File</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="playoutsTableBody">
+            </tbody>
+        </table>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">📺</div>
+            <h3 style="margin-bottom: 8px;">No playouts found</h3>
+            <p>Create channels with schedule files to see playouts</p>
+        </div>
+    </div>
+    
+    <div class="playout-detail-card" id="playoutDetail">
+        <div class="card-header">
+            <div class="card-title">Playout Detail</div>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 17px;">Select a channel playout above to view the associated schedule details.</p>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script nonce="{{ request.state.csp_nonce }}">
+        let allPlayouts = [];
+        let selectedRow = null;
+        let selectedChannelNumber = null;
+        const scheduleCache = new Map();
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', filterPlayouts);
+            }
+
+            const refreshAllButton = document.getElementById('refreshAllPlayoutsButton');
+            if (refreshAllButton) {
+                refreshAllButton.addEventListener('click', refreshAllPlayouts);
+            }
+
+            loadPlayouts();
+        });
+        
+        async function loadPlayouts() {
+            try {
+                scheduleCache.clear();
+                const channelsRes = await fetch('/api/channels');
+                const channels = await channelsRes.json();
+                
+                allPlayouts = channels.map(channel => ({
+                    channelId: channel.id,
+                    channelNumber: channel.number,
+                    channelName: channel.name,
+                    channelEnabled: channel.enabled
+                }));
+                
+                document.getElementById('loading').style.display = 'none';
+                displayPlayouts(allPlayouts);
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                console.error('Error loading playouts:', error);
+            }
+        }
+        
+        function displayPlayouts(playouts) {
+            const table = document.getElementById('playoutsTable');
+            const tableBody = document.getElementById('playoutsTableBody');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (playouts.length === 0) {
+                table.style.display = 'none';
+                emptyState.style.display = 'block';
+                renderDefaultPlayoutDetail();
+                return;
+            }
+            
+            table.style.display = 'table';
+            emptyState.style.display = 'none';
+            
+            tableBody.innerHTML = playouts.map(playout => `
+                <tr class="playout-row"
+                    data-channel="${playout.channelNumber}"
+                    data-name="${playout.channelName}"
+                    data-enabled="${playout.channelEnabled}">
+                    <td>
+                        <div class="channel-info">
+                            <div class="channel-number">${playout.channelNumber}</div>
+                            <div>
+                                <div class="channel-name">${playout.channelName}</div>
+                                ${!playout.channelEnabled ? '<span class="badge badge-error" style="font-size: 10px;">Disabled</span>' : ''}
+                            </div>
+                        </div>
+                    </td>
+                    <td id="schedule-${playout.channelNumber}" class="schedule-info">
+                        <div class="schedule-name" style="color: var(--text-disabled);">Loading…</div>
+                    </td>
+                    <td id="file-${playout.channelNumber}" class="schedule-file" style="color: var(--text-disabled);">-</td>
+                    <td>
+                        <div style="display: flex; align-items: center;">
+                            <span class="status-indicator ${playout.channelEnabled ? 'active' : 'inactive'}"></span>
+                            <span class="schedule-kind" id="kind-${playout.channelNumber}">
+                                Loading…
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon view" data-action="viewSchedule" data-args='${JSON.stringify([playout.channelNumber])}' title="View Schedule" aria-label="View schedule">
+                                <span class="material-icons" aria-hidden="true">visibility</span>
+                            </button>
+                            <button class="btn-icon refresh" data-action="refreshPlayout" data-args='${JSON.stringify([playout.channelNumber])}' title="Refresh Playout" aria-label="Refresh playout">
+                                <span class="material-icons" aria-hidden="true">refresh</span>
+                            </button>
+                            <a href="/channels" class="btn-icon edit" title="Manage Channel">
+                                <span class="material-icons" aria-hidden="true">settings</span>
+                            </a>
+                            ${playout.channelEnabled ? `
+                                <a href="/player" class="btn-icon" data-action="setAutoPlayChannel" data-args='${JSON.stringify([playout.channelNumber])}' title="Play Channel">
+                                    <span class="material-icons" aria-hidden="true">play_circle</span>
+                                </a>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            playouts.forEach(playout => loadScheduleSummary(playout.channelNumber));
+            if (typeof bindActionHandlers === 'function') {
+                bindActionHandlers(tableBody);
+            }
+            attachPlayoutRowHandlers();
+            autoSelectRow();
+        }
+        
+        function attachPlayoutRowHandlers() {
+            document.querySelectorAll('.playout-row').forEach(row => {
+                row.addEventListener('click', () => selectRow(row));
+            });
+        }
+
+        function autoSelectRow() {
+            if (selectedChannelNumber) {
+                const existing = document.querySelector(`.playout-row[data-channel="${selectedChannelNumber}"]`);
+                if (existing) {
+                    selectRow(existing, false);
+                    return;
+                }
+            }
+            const firstRow = document.querySelector('.playout-row');
+            if (firstRow) {
+                selectRow(firstRow, false);
+            }
+        }
+
+        function selectRow(row, scroll = true) {
+            if (selectedRow) {
+                selectedRow.classList.remove('selected');
+            }
+            row.classList.add('selected');
+            selectedRow = row;
+            selectedChannelNumber = row.dataset.channel;
+            
+            showPlayoutDetail({
+                channelNumber: row.dataset.channel,
+                channelName: row.dataset.name,
+                channelEnabled: row.dataset.enabled === 'true'
+            }, scroll);
+        }
+        
+        function filterPlayouts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allPlayouts.filter(playout => 
+                playout.channelNumber.toLowerCase().includes(searchTerm) ||
+                playout.channelName.toLowerCase().includes(searchTerm)
+            );
+            displayPlayouts(filtered);
+        }
+        
+        function renderDefaultPlayoutDetail() {
+            const detail = document.getElementById('playoutDetail');
+            detail.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">Playout Detail</div>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 17px;">Select a channel playout above to view the associated schedule details.</p>
+            `;
+        }
+        
+        function showPlayoutDetail(playout, scroll = false) {
+            const detail = document.getElementById('playoutDetail');
+            
+            detail.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">${playout.channelName}</div>
+                </div>
+                <div class="playout-detail-row">
+                    <div class="playout-detail-label">Channel</div>
+                    <div class="playout-detail-value">${playout.channelNumber}</div>
+                </div>
+                <div class="playout-detail-row">
+                    <div class="playout-detail-label">Status</div>
+                    <div class="playout-detail-value">${playout.channelEnabled ? 'Active' : 'Disabled'}</div>
+                </div>
+                <div id="scheduleMeta"></div>
+                <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn btn-outlined" type="button" style="flex: 1 1 200px;" data-action="viewSchedule" data-args='${JSON.stringify([playout.channelNumber])}'>View Schedule</button>
+                    ${playout.channelEnabled ? `<a href="/player" class="btn btn-primary" style="flex: 1 1 200px; text-align: center;" data-action="setAutoPlayChannel" data-args='${JSON.stringify([playout.channelNumber])}'>Play Channel ${playout.channelNumber}</a>` : ''}
+                </div>
+                <div id="scheduleDetail" class="schedule-blocks" style="margin-top: 16px;">
+                    <p style="color: var(--text-secondary); font-size: 15px;">Loading schedule…</p>
+                </div>
+            `;
+            
+            loadScheduleDetail(playout.channelNumber, scroll);
+        }
+
+        function viewSchedule(channelNumber) {
+            loadScheduleDetail(channelNumber, true);
+        }
+
+        async function loadScheduleSummary(channelNumber) {
+            try {
+                const summaryCell = document.getElementById(`schedule-${channelNumber}`);
+                const fileCell = document.getElementById(`file-${channelNumber}`);
+                const kindCell = document.getElementById(`kind-${channelNumber}`);
+                
+                const data = await fetchSchedule(channelNumber);
+                if (!summaryCell) return;
+                
+                if (data.schedule) {
+                    summaryCell.innerHTML = `<div class="schedule-name">${escapeHtml(data.schedule.name || 'Schedule')}</div>`;
+                    if (fileCell) {
+                        fileCell.textContent = data.schedule.file || '-';
+                        fileCell.style.color = 'var(--text-secondary)';
+                    }
+                    if (kindCell) {
+                        // Show schedule type with status
+                        const statusText = data.enabled ? 'YAML Schedule' : 'Disabled';
+                        kindCell.textContent = statusText;
+                        if (data.enabled) {
+                        kindCell.classList.add('yaml');
+                        } else {
+                            kindCell.classList.remove('yaml');
+                        }
+                    }
+                } else {
+                    summaryCell.innerHTML = '<div class="schedule-name" style="color: var(--text-disabled);">No schedule</div>';
+                    if (fileCell) {
+                        fileCell.textContent = '-';
+                        fileCell.style.color = 'var(--text-disabled)';
+                    }
+                    if (kindCell) {
+                        kindCell.textContent = 'No Schedule';
+                        kindCell.classList.remove('yaml');
+                    }
+                }
+            } catch (error) {
+                const summaryCell = document.getElementById(`schedule-${channelNumber}`);
+                if (summaryCell) {
+                    summaryCell.innerHTML = '<div class="schedule-name" style="color: var(--error);">Error loading schedule</div>';
+                }
+            }
+        }
+
+        async function loadScheduleDetail(channelNumber, scrollAfter = false) {
+            const scheduleDetail = document.getElementById('scheduleDetail');
+            const scheduleMeta = document.getElementById('scheduleMeta');
+            if (!scheduleDetail) return;
+            scheduleDetail.innerHTML = '<p style="color: var(--text-secondary); font-size: 15px;">Loading schedule…</p>';
+            if (scheduleMeta) scheduleMeta.innerHTML = '';
+            
+            try {
+                const data = await fetchSchedule(channelNumber);
+                renderScheduleMetadata(data, scheduleMeta);
+                renderScheduleBlocks(data, scheduleDetail);
+                if (scrollAfter) {
+                    scheduleDetail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } catch (error) {
+                scheduleDetail.innerHTML = `<p style="color: var(--error); font-size: 15px;">${error.message}</p>`;
+            }
+        }
+
+        async function fetchSchedule(channelNumber) {
+            if (scheduleCache.has(channelNumber)) {
+                return scheduleCache.get(channelNumber);
+            }
+            const response = await fetch(`/api/playouts/channel/${channelNumber}`);
+            if (!response.ok) {
+                throw new Error('Failed to load schedule');
+            }
+            const data = await response.json();
+            scheduleCache.set(channelNumber, data);
+            return data;
+        }
+
+        function renderScheduleMetadata(data, container) {
+            if (!container || !data) return;
+            let html = '';
+            if (data.schedule) {
+                html += `
+                    <div class="playout-detail-row">
+                        <div class="playout-detail-label">Schedule</div>
+                        <div class="playout-detail-value">${data.schedule.name || 'Unnamed schedule'}</div>
+                    </div>
+                    <div class="playout-detail-row">
+                        <div class="playout-detail-label">Schedule File</div>
+                        <div class="playout-detail-value">${data.schedule.file || '-'}</div>
+                    </div>
+                    <div class="playout-detail-row">
+                        <div class="playout-detail-label">Description</div>
+                        <div class="playout-detail-value">${data.schedule.description || 'No description provided.'}</div>
+                    </div>
+                    <div class="playout-detail-row">
+                        <div class="playout-detail-label">Content Items</div>
+                        <div class="playout-detail-value">${data.schedule.content_items}</div>
+                    </div>
+                    <div class="playout-detail-row">
+                        <div class="playout-detail-label">Sequences</div>
+                        <div class="playout-detail-value">${data.schedule.sequences}</div>
+                    </div>
+                `;
+            }
+            
+            if (data.metadata?.highlights?.length) {
+                html += `
+                    <div style="margin-top: 16px;">
+                        <div class="playout-detail-label" style="margin-bottom: 8px;">Highlights</div>
+                        <ul class="playout-detail-list">
+                            ${data.metadata.highlights.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function renderScheduleBlocks(data, container) {
+            const blocks = data.time_blocks || [];
+            if (!blocks.length) {
+                container.innerHTML = '<p style="color: var(--text-secondary); font-size: 15px;">No time blocks available for this schedule.</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="playout-detail-label" style="margin-bottom: 8px;">Time Blocks</div>
+                ${blocks.map(block => `
+                    <div class="schedule-block">
+                        <div class="schedule-block-header">
+                            <div>${block.title}</div>
+                            <div class="schedule-block-time">${formatTime(block.start_time)} &middot; ${formatDuration(block.duration)}</div>
+                        </div>
+                        <div class="schedule-block-description">
+                            ${block.description || 'No description provided.'}
+                            ${block.metadata?.custom_title ? `<div><strong>Custom Title:</strong> ${block.metadata.custom_title}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function formatTime(value) {
+            if (!value) return '--:--';
+            try {
+                const date = new Date(value);
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch {
+                return value;
+            }
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return '00:00:00';
+            const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${hrs}:${mins}:${secs}`;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function refreshPlayout(channelNumber) {
+            if (confirm(`Refresh playout for channel ${channelNumber}?`)) {
+                scheduleCache.delete(channelNumber);
+                alert('Playout refresh initiated for channel ' + channelNumber);
+                loadPlayouts();
+            }
+        }
+        
+        function refreshAllPlayouts() {
+            if (confirm('Refresh all playouts? This will regenerate schedules for all channels.')) {
+                scheduleCache.clear();
+                alert('Refreshing all playouts...');
+                loadPlayouts();
+            }
+        }
+
+        function setAutoPlayChannel(channelNumber) {
+            if (!channelNumber) {
+                return;
+            }
+            localStorage.setItem('autoPlayChannel', channelNumber);
+        }
+    </script>
+{% endblock %}
+

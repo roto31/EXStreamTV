@@ -1,0 +1,838 @@
+{% extends "base.html" %}
+
+{% block title %}Media Browser - EXStreamTV{% endblock %}
+
+{% block extra_styles %}
+    .browser-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 24px;
+        height: calc(100vh - 180px);
+    }
+    
+    @media (max-width: 1024px) {
+        .browser-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .browser-sidebar {
+            display: none;
+        }
+    }
+    
+    /* Sidebar */
+    .browser-sidebar {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .sidebar-header {
+        padding: 20px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .sidebar-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .sidebar-section {
+        padding: 12px 0;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .sidebar-section:last-child {
+        border-bottom: none;
+    }
+    
+    .sidebar-section-title {
+        padding: 8px 20px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+    }
+    
+    .sidebar-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--text-primary);
+        text-decoration: none;
+    }
+    
+    .sidebar-item:hover {
+        background: var(--apple-fill);
+    }
+    
+    .sidebar-item.active {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .sidebar-item-icon {
+        font-size: 18px;
+        width: 24px;
+        text-align: center;
+    }
+    
+    .sidebar-item-label {
+        flex: 1;
+        font-size: 14px;
+    }
+    
+    .sidebar-item-count {
+        font-size: 12px;
+        color: var(--text-secondary);
+        background: var(--apple-fill);
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+    
+    .sidebar-item.active .sidebar-item-count {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    
+    /* Main Content */
+    .browser-content {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .browser-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .search-box {
+        flex: 1;
+        min-width: 200px;
+        max-width: 400px;
+        position: relative;
+    }
+    
+    .search-box input {
+        width: 100%;
+        padding: 10px 16px 10px 40px;
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 15px;
+    }
+    
+    .search-box input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .search-box::before {
+        content: '🔍';
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 14px;
+        opacity: 0.5;
+    }
+    
+    .view-toggle {
+        display: flex;
+        background: var(--surface);
+        border-radius: 8px;
+        overflow: hidden;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .view-btn {
+        padding: 8px 16px;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+    
+    .view-btn:hover {
+        background: var(--apple-fill);
+    }
+    
+    .view-btn.active {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .sort-dropdown {
+        padding: 8px 16px;
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 14px;
+        cursor: pointer;
+    }
+    
+    /* Media Grid */
+    .media-container {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+    
+    .media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 20px;
+    }
+    
+    .media-grid.list-view {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .media-card {
+        background: var(--surface);
+        border-radius: 12px;
+        overflow: hidden;
+        border: 0.5px solid var(--divider);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .media-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+        border-color: var(--primary);
+    }
+    
+    .media-poster {
+        aspect-ratio: 2/3;
+        background: var(--apple-fill);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .media-poster img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .media-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 4px 8px;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: white;
+    }
+    
+    .media-badge.movie { background: #AF52DE; }
+    .media-badge.episode { background: #0A84FF; }
+    .media-badge.show { background: #34C759; }
+    
+    .media-info {
+        padding: 12px;
+    }
+    
+    .media-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .media-subtitle {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .media-meta {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        font-size: 11px;
+        color: var(--text-secondary);
+    }
+    
+    /* List View */
+    .media-grid.list-view .media-card {
+        display: flex;
+        align-items: center;
+    }
+    
+    .media-grid.list-view .media-poster {
+        width: 80px;
+        aspect-ratio: 2/3;
+        flex-shrink: 0;
+    }
+    
+    .media-grid.list-view .media-poster {
+        font-size: 24px;
+    }
+    
+    .media-grid.list-view .media-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .media-grid.list-view .media-actions {
+        padding: 12px;
+        display: flex;
+        gap: 8px;
+    }
+    
+    /* Show/Season View */
+    .show-header {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 24px;
+        padding: 24px;
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .show-poster {
+        width: 200px;
+        aspect-ratio: 2/3;
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--apple-fill);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+        flex-shrink: 0;
+    }
+    
+    .show-poster img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .show-details {
+        flex: 1;
+    }
+    
+    .show-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+    
+    .show-meta-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+    
+    .show-description {
+        font-size: 15px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        margin-bottom: 16px;
+    }
+    
+    .season-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .season-tab {
+        padding: 8px 16px;
+        background: var(--apple-fill);
+        border: none;
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .season-tab:hover {
+        background: var(--apple-fill-secondary);
+    }
+    
+    .season-tab.active {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .episode-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .episode-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 16px;
+        background: var(--surface);
+        border-radius: 10px;
+        border: 0.5px solid var(--divider);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .episode-card:hover {
+        background: var(--apple-fill);
+    }
+    
+    .episode-number {
+        width: 48px;
+        height: 48px;
+        background: var(--apple-fill);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+    
+    .episode-info {
+        flex: 1;
+    }
+    
+    .episode-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .episode-meta {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-top: 2px;
+    }
+    
+    .episode-duration {
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+    
+    .empty-icon {
+        font-size: 64px;
+        opacity: 0.5;
+        margin-bottom: 16px;
+    }
+    
+    .empty-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+    
+    .empty-message {
+        color: var(--text-secondary);
+    }
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">Media Browser</h1>
+            <p class="page-subtitle">Browse and manage content from your libraries.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-primary" onclick="window.location.href='/libraries'">
+                <span class="btn-icon">+</span>
+                Add Library
+            </button>
+        </div>
+    </div>
+    
+    <div class="browser-layout">
+        <!-- Sidebar -->
+        <div class="browser-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Browse</div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-item active" onclick="filterMedia('all')">
+                    <span class="sidebar-item-icon">📚</span>
+                    <span class="sidebar-item-label">All Media</span>
+                    <span class="sidebar-item-count" id="allCount">0</span>
+                </div>
+                <div class="sidebar-item" onclick="filterMedia('recent')">
+                    <span class="sidebar-item-icon">🕐</span>
+                    <span class="sidebar-item-label">Recently Added</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Types</div>
+                <div class="sidebar-item" onclick="filterMedia('movie')">
+                    <span class="sidebar-item-icon">🎬</span>
+                    <span class="sidebar-item-label">Movies</span>
+                    <span class="sidebar-item-count" id="movieCount">0</span>
+                </div>
+                <div class="sidebar-item" onclick="filterMedia('show')">
+                    <span class="sidebar-item-icon">📺</span>
+                    <span class="sidebar-item-label">TV Shows</span>
+                    <span class="sidebar-item-count" id="showCount">0</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-section" id="libraryList">
+                <div class="sidebar-section-title">Libraries</div>
+                <!-- Libraries loaded via JS -->
+            </div>
+            
+            <div class="sidebar-section" id="genreList" style="display: none;">
+                <div class="sidebar-section-title">Genres</div>
+                <!-- Genres loaded via JS -->
+            </div>
+        </div>
+        
+        <!-- Content Area -->
+        <div class="browser-content">
+            <div class="browser-toolbar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search media..." 
+                           oninput="debounceSearch()">
+                </div>
+                
+                <div class="view-toggle">
+                    <button class="view-btn active" onclick="setView('grid')">Grid</button>
+                    <button class="view-btn" onclick="setView('list')">List</button>
+                </div>
+                
+                <select class="sort-dropdown" id="sortSelect" onchange="sortMedia()">
+                    <option value="title">Title A-Z</option>
+                    <option value="title-desc">Title Z-A</option>
+                    <option value="year">Year (Newest)</option>
+                    <option value="year-asc">Year (Oldest)</option>
+                    <option value="added">Recently Added</option>
+                </select>
+            </div>
+            
+            <div class="media-container">
+                <div class="media-grid" id="mediaGrid">
+                    <!-- Media items loaded via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let allMedia = [];
+    let filteredMedia = [];
+    let currentFilter = 'all';
+    let currentView = 'grid';
+    let searchTimeout;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        loadLibraries();
+        loadMedia();
+    });
+    
+    async function loadLibraries() {
+        try {
+            const response = await fetch('/api/libraries');
+            const libraries = await response.json();
+            
+            const container = document.getElementById('libraryList');
+            let html = '<div class="sidebar-section-title">Libraries</div>';
+            
+            libraries.forEach(lib => {
+                html += `
+                    <div class="sidebar-item" onclick="filterByLibrary(${lib.id}, '${lib.source_type}')">
+                        <span class="sidebar-item-icon">${getLibraryIcon(lib.source_type)}</span>
+                        <span class="sidebar-item-label">${escapeHtml(lib.name)}</span>
+                        <span class="sidebar-item-count">${lib.item_count}</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        } catch (error) {
+            console.error('Failed to load libraries:', error);
+        }
+    }
+    
+    async function loadMedia() {
+        try {
+            // Load from playlists/media API
+            const response = await fetch('/api/media');
+            allMedia = await response.json();
+            
+            // Update counts
+            updateCounts();
+            
+            // Apply current filter
+            filterMedia(currentFilter);
+        } catch (error) {
+            console.error('Failed to load media:', error);
+            showEmptyState();
+        }
+    }
+    
+    function updateCounts() {
+        document.getElementById('allCount').textContent = allMedia.length;
+        document.getElementById('movieCount').textContent = 
+            allMedia.filter(m => m.media_type === 'movie').length;
+        document.getElementById('showCount').textContent = 
+            allMedia.filter(m => m.media_type === 'show' || m.media_type === 'episode').length;
+    }
+    
+    function filterMedia(filter) {
+        currentFilter = filter;
+        
+        // Update active state
+        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+        event?.target?.closest('.sidebar-item')?.classList.add('active');
+        
+        switch (filter) {
+            case 'movie':
+                filteredMedia = allMedia.filter(m => m.media_type === 'movie');
+                break;
+            case 'show':
+                filteredMedia = allMedia.filter(m => m.media_type === 'show' || m.media_type === 'episode');
+                break;
+            case 'recent':
+                filteredMedia = [...allMedia].sort((a, b) => 
+                    new Date(b.added_date || 0) - new Date(a.added_date || 0)
+                ).slice(0, 50);
+                break;
+            default:
+                filteredMedia = [...allMedia];
+        }
+        
+        renderMedia();
+    }
+    
+    function filterByLibrary(libraryId, sourceType) {
+        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+        event?.target?.closest('.sidebar-item')?.classList.add('active');
+        
+        filteredMedia = allMedia.filter(m => 
+            m.library_id === libraryId && m.library_source === sourceType
+        );
+        
+        renderMedia();
+    }
+    
+    function debounceSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (query) {
+                filteredMedia = allMedia.filter(m => 
+                    m.title?.toLowerCase().includes(query) ||
+                    m.show_title?.toLowerCase().includes(query)
+                );
+            } else {
+                filterMedia(currentFilter);
+                return;
+            }
+            
+            renderMedia();
+        }, 300);
+    }
+    
+    function sortMedia() {
+        const sort = document.getElementById('sortSelect').value;
+        
+        switch (sort) {
+            case 'title':
+                filteredMedia.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+                break;
+            case 'title-desc':
+                filteredMedia.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+                break;
+            case 'year':
+                filteredMedia.sort((a, b) => (b.year || 0) - (a.year || 0));
+                break;
+            case 'year-asc':
+                filteredMedia.sort((a, b) => (a.year || 0) - (b.year || 0));
+                break;
+            case 'added':
+                filteredMedia.sort((a, b) => 
+                    new Date(b.added_date || 0) - new Date(a.added_date || 0)
+                );
+                break;
+        }
+        
+        renderMedia();
+    }
+    
+    function setView(view) {
+        currentView = view;
+        
+        document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        const grid = document.getElementById('mediaGrid');
+        if (view === 'list') {
+            grid.classList.add('list-view');
+        } else {
+            grid.classList.remove('list-view');
+        }
+    }
+    
+    function renderMedia() {
+        const grid = document.getElementById('mediaGrid');
+        
+        if (filteredMedia.length === 0) {
+            showEmptyState();
+            return;
+        }
+        
+        grid.innerHTML = filteredMedia.map(media => `
+            <div class="media-card" onclick="openMedia(${media.id})">
+                <div class="media-poster">
+                    ${media.poster_path || media.thumbnail 
+                        ? `<img src="${media.poster_path || media.thumbnail}" alt="">`
+                        : getMediaEmoji(media.media_type)
+                    }
+                    <span class="media-badge ${media.media_type}">${formatMediaType(media.media_type)}</span>
+                </div>
+                <div class="media-info">
+                    <div class="media-title">${escapeHtml(media.title)}</div>
+                    <div class="media-subtitle">
+                        ${media.show_title ? escapeHtml(media.show_title) : (media.year || '')}
+                    </div>
+                    <div class="media-meta">
+                        ${media.duration ? `<span>${formatDuration(media.duration)}</span>` : ''}
+                        ${media.season_number ? `<span>S${media.season_number}E${media.episode_number}</span>` : ''}
+                    </div>
+                </div>
+                ${currentView === 'list' ? `
+                    <div class="media-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); addToPlaylist(${media.id})">
+                            Add to Playlist
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+    }
+    
+    function showEmptyState() {
+        const grid = document.getElementById('mediaGrid');
+        grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-icon">📚</div>
+                <div class="empty-title">No Media Found</div>
+                <div class="empty-message">
+                    ${allMedia.length === 0 
+                        ? 'Add media from your libraries to see it here.'
+                        : 'Try adjusting your search or filters.'}
+                </div>
+            </div>
+        `;
+    }
+    
+    function openMedia(mediaId) {
+        const media = allMedia.find(m => m.id === mediaId);
+        if (media) {
+            window.location.href = `/player?media=${mediaId}`;
+        }
+    }
+    
+    function addToPlaylist(mediaId) {
+        // Would open playlist selection modal
+        alert('Add to playlist: ' + mediaId);
+    }
+    
+    function getLibraryIcon(type) {
+        const icons = {
+            'local': '📁',
+            'plex': '🎬',
+            'jellyfin': '🔮',
+            'emby': '📺'
+        };
+        return icons[type] || '📚';
+    }
+    
+    function getMediaEmoji(type) {
+        const emojis = {
+            'movie': '🎬',
+            'episode': '📺',
+            'show': '📺',
+            'music': '🎵'
+        };
+        return emojis[type] || '📹';
+    }
+    
+    function formatMediaType(type) {
+        const labels = {
+            'movie': 'Movie',
+            'episode': 'Episode',
+            'show': 'Show',
+            'music': 'Music'
+        };
+        return labels[type] || type;
+    }
+    
+    function formatDuration(seconds) {
+        if (!seconds) return '';
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        if (hours > 0) {
+            return `${hours}h ${mins}m`;
+        }
+        return `${mins}m`;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

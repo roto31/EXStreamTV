@@ -1,0 +1,736 @@
+{% extends "base.html" %}
+
+{% block title %}Media Sources - EXStreamTV{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>📚 Media Sources</h1>
+        <p class="subtitle">Connect to Plex, Jellyfin, or Emby to import your media libraries</p>
+    </div>
+
+    <!-- Source Type Selector -->
+    <div class="card source-selector">
+        <h2>Add Media Source</h2>
+        <p>Select a media server type to connect:</p>
+        
+        <div class="source-buttons">
+            <button class="source-btn" data-source="plex" onclick="showSourceForm('plex')">
+                <span class="source-icon">🟠</span>
+                <span class="source-name">Plex</span>
+                <span class="source-desc">Connect to Plex Media Server</span>
+            </button>
+            
+            <button class="source-btn" data-source="jellyfin" onclick="showSourceForm('jellyfin')">
+                <span class="source-icon">🟣</span>
+                <span class="source-name">Jellyfin</span>
+                <span class="source-desc">Connect to Jellyfin Server</span>
+            </button>
+            
+            <button class="source-btn" data-source="emby" onclick="showSourceForm('emby')">
+                <span class="source-icon">🟢</span>
+                <span class="source-name">Emby</span>
+                <span class="source-desc">Connect to Emby Server</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Plex Connection Form (hidden by default) -->
+    <div id="plex-form" class="card source-form" style="display: none;">
+        <div class="form-header">
+            <h2>🟠 Connect to Plex</h2>
+            <button class="btn-close" onclick="hideSourceForms()">&times;</button>
+        </div>
+        
+        <form id="plexConnectionForm" onsubmit="testPlexConnection(event)">
+            <div class="form-group">
+                <label for="plex-name">Display Name</label>
+                <input type="text" id="plex-name" name="name" required placeholder="My Plex Server">
+                <small>A friendly name to identify this server</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="plex-url">Server URL</label>
+                <input type="url" id="plex-url" name="server_url" required placeholder="http://192.168.1.100:32400">
+                <small>The URL of your Plex server (e.g., http://localhost:32400)</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="plex-token">Plex Token</label>
+                <input type="password" id="plex-token" name="token" required placeholder="Your Plex token">
+                <small>
+                    <a href="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/" target="_blank">
+                        How to find your Plex token
+                    </a>
+                </small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="hideSourceForms()">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="plex-test-btn">
+                    <span class="material-icons">wifi_tethering</span>
+                    Test Connection
+                </button>
+            </div>
+        </form>
+        
+        <div id="plex-libraries" class="libraries-section" style="display: none;">
+            <h3>Available Libraries</h3>
+            <div class="libraries-list"></div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="savePlexSource()">
+                    <span class="material-icons">add</span>
+                    Add Selected Libraries
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jellyfin Connection Form -->
+    <div id="jellyfin-form" class="card source-form" style="display: none;">
+        <div class="form-header">
+            <h2>🟣 Connect to Jellyfin</h2>
+            <button class="btn-close" onclick="hideSourceForms()">&times;</button>
+        </div>
+        
+        <form id="jellyfinConnectionForm" onsubmit="testJellyfinConnection(event)">
+            <div class="form-group">
+                <label for="jellyfin-name">Display Name</label>
+                <input type="text" id="jellyfin-name" name="name" required placeholder="My Jellyfin Server">
+            </div>
+            
+            <div class="form-group">
+                <label for="jellyfin-url">Server URL</label>
+                <input type="url" id="jellyfin-url" name="server_url" required placeholder="http://192.168.1.100:8096">
+                <small>The URL of your Jellyfin server</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="jellyfin-api-key">API Key</label>
+                <input type="password" id="jellyfin-api-key" name="api_key" required placeholder="Your Jellyfin API key">
+                <small>Dashboard → API Keys → Add API Key</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="hideSourceForms()">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <span class="material-icons">wifi_tethering</span>
+                    Test Connection
+                </button>
+            </div>
+        </form>
+        
+        <div id="jellyfin-libraries" class="libraries-section" style="display: none;">
+            <h3>Available Libraries</h3>
+            <div class="libraries-list"></div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="saveJellyfinSource()">
+                    <span class="material-icons">add</span>
+                    Add Selected Libraries
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emby Connection Form -->
+    <div id="emby-form" class="card source-form" style="display: none;">
+        <div class="form-header">
+            <h2>🟢 Connect to Emby</h2>
+            <button class="btn-close" onclick="hideSourceForms()">&times;</button>
+        </div>
+        
+        <form id="embyConnectionForm" onsubmit="testEmbyConnection(event)">
+            <div class="form-group">
+                <label for="emby-name">Display Name</label>
+                <input type="text" id="emby-name" name="name" required placeholder="My Emby Server">
+            </div>
+            
+            <div class="form-group">
+                <label for="emby-url">Server URL</label>
+                <input type="url" id="emby-url" name="server_url" required placeholder="http://192.168.1.100:8096">
+                <small>The URL of your Emby server</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="emby-api-key">API Key</label>
+                <input type="password" id="emby-api-key" name="api_key" required placeholder="Your Emby API key">
+                <small>Settings → API Keys → New API Key</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="hideSourceForms()">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <span class="material-icons">wifi_tethering</span>
+                    Test Connection
+                </button>
+            </div>
+        </form>
+        
+        <div id="emby-libraries" class="libraries-section" style="display: none;">
+            <h3>Available Libraries</h3>
+            <div class="libraries-list"></div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="saveEmbySource()">
+                    <span class="material-icons">add</span>
+                    Add Selected Libraries
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configured Sources -->
+    <div class="card">
+        <h2>Configured Media Sources</h2>
+        <div id="sources-list" class="sources-list">
+            <p class="loading">Loading sources...</p>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="card">
+        <h2>Library Summary</h2>
+        <div id="sources-summary" class="sources-summary">
+            <div class="summary-item">
+                <span class="summary-icon">🟠</span>
+                <span class="summary-label">Plex</span>
+                <span class="summary-value" id="plex-count">0 items</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-icon">🟣</span>
+                <span class="summary-label">Jellyfin</span>
+                <span class="summary-value" id="jellyfin-count">0 items</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-icon">🟢</span>
+                <span class="summary-label">Emby</span>
+                <span class="summary-value" id="emby-count">0 items</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-icon">📁</span>
+                <span class="summary-label">Local</span>
+                <span class="summary-value" id="local-count">0 items</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.source-selector {
+    margin-bottom: 24px;
+}
+
+.source-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.source-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.source-btn:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.source-btn.active {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+}
+
+.source-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.source-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.source-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.source-form {
+    margin-bottom: 24px;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.form-header h2 {
+    margin: 0;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.btn-close:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.libraries-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+.libraries-list {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.library-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.library-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.library-item .library-info {
+    flex: 1;
+}
+
+.library-item .library-name {
+    font-weight: 600;
+}
+
+.library-item .library-type {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.sources-list {
+    display: grid;
+    gap: 16px;
+}
+
+.source-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.source-card .source-icon {
+    font-size: 32px;
+}
+
+.source-card .source-info {
+    flex: 1;
+}
+
+.source-card .source-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.source-card .source-details {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.source-card .source-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.sources-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    background: var(--surface);
+    border-radius: 8px;
+}
+
+.summary-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.summary-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.summary-value {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.loading {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 24px;
+}
+
+.status-connected {
+    color: var(--success);
+}
+
+.status-error {
+    color: var(--error);
+}
+</style>
+
+<script>
+// Store test results
+let plexTestResult = null;
+let jellyfinTestResult = null;
+let embyTestResult = null;
+
+function showSourceForm(sourceType) {
+    hideSourceForms();
+    document.getElementById(`${sourceType}-form`).style.display = 'block';
+    document.querySelector(`[data-source="${sourceType}"]`).classList.add('active');
+}
+
+function hideSourceForms() {
+    document.querySelectorAll('.source-form').forEach(form => form.style.display = 'none');
+    document.querySelectorAll('.source-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.libraries-section').forEach(section => section.style.display = 'none');
+}
+
+async function testPlexConnection(event) {
+    event.preventDefault();
+    const btn = document.getElementById('plex-test-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-icons rotating">sync</span> Testing...';
+    
+    const formData = {
+        source_type: 'plex',
+        server_url: document.getElementById('plex-url').value,
+        token: document.getElementById('plex-token').value,
+    };
+    
+    try {
+        const response = await fetch('/api/media-sources/test-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData),
+        });
+        
+        const result = await response.json();
+        plexTestResult = result;
+        
+        if (result.success) {
+            showLibraries('plex', result);
+            showToast(`Connected to ${result.server_name}!`, 'success');
+        } else {
+            showToast(result.message, 'error');
+        }
+    } catch (error) {
+        showToast(`Connection failed: ${error.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons">wifi_tethering</span> Test Connection';
+    }
+}
+
+async function testJellyfinConnection(event) {
+    event.preventDefault();
+    const formData = {
+        source_type: 'jellyfin',
+        server_url: document.getElementById('jellyfin-url').value,
+        api_key: document.getElementById('jellyfin-api-key').value,
+    };
+    
+    try {
+        const response = await fetch('/api/media-sources/test-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData),
+        });
+        
+        const result = await response.json();
+        jellyfinTestResult = result;
+        
+        if (result.success) {
+            showLibraries('jellyfin', result);
+            showToast(`Connected to ${result.server_name}!`, 'success');
+        } else {
+            showToast(result.message, 'error');
+        }
+    } catch (error) {
+        showToast(`Connection failed: ${error.message}`, 'error');
+    }
+}
+
+async function testEmbyConnection(event) {
+    event.preventDefault();
+    const formData = {
+        source_type: 'emby',
+        server_url: document.getElementById('emby-url').value,
+        api_key: document.getElementById('emby-api-key').value,
+    };
+    
+    try {
+        const response = await fetch('/api/media-sources/test-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData),
+        });
+        
+        const result = await response.json();
+        embyTestResult = result;
+        
+        if (result.success) {
+            showLibraries('emby', result);
+            showToast(`Connected to ${result.server_name}!`, 'success');
+        } else {
+            showToast(result.message, 'error');
+        }
+    } catch (error) {
+        showToast(`Connection failed: ${error.message}`, 'error');
+    }
+}
+
+function showLibraries(sourceType, result) {
+    const section = document.getElementById(`${sourceType}-libraries`);
+    const list = section.querySelector('.libraries-list');
+    
+    list.innerHTML = result.libraries.map(lib => `
+        <label class="library-item">
+            <input type="checkbox" name="library" value="${lib.id}" checked>
+            <div class="library-info">
+                <div class="library-name">${lib.name}</div>
+                <div class="library-type">${lib.type}</div>
+            </div>
+        </label>
+    `).join('');
+    
+    section.style.display = 'block';
+}
+
+async function savePlexSource() {
+    const name = document.getElementById('plex-name').value;
+    const serverUrl = document.getElementById('plex-url').value;
+    const token = document.getElementById('plex-token').value;
+    
+    try {
+        const response = await fetch('/api/media-sources/plex', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, server_url: serverUrl, token }),
+        });
+        
+        if (response.ok) {
+            showToast('Plex source added successfully!', 'success');
+            hideSourceForms();
+            loadSources();
+        } else {
+            const error = await response.json();
+            showToast(error.detail || 'Failed to add source', 'error');
+        }
+    } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+    }
+}
+
+async function saveJellyfinSource() {
+    const name = document.getElementById('jellyfin-name').value;
+    const serverUrl = document.getElementById('jellyfin-url').value;
+    const apiKey = document.getElementById('jellyfin-api-key').value;
+    
+    try {
+        const response = await fetch('/api/media-sources/jellyfin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, server_url: serverUrl, api_key: apiKey }),
+        });
+        
+        if (response.ok) {
+            showToast('Jellyfin source added successfully!', 'success');
+            hideSourceForms();
+            loadSources();
+        } else {
+            const error = await response.json();
+            showToast(error.detail || 'Failed to add source', 'error');
+        }
+    } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+    }
+}
+
+async function saveEmbySource() {
+    const name = document.getElementById('emby-name').value;
+    const serverUrl = document.getElementById('emby-url').value;
+    const apiKey = document.getElementById('emby-api-key').value;
+    
+    try {
+        const response = await fetch('/api/media-sources/emby', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, server_url: serverUrl, api_key: apiKey }),
+        });
+        
+        if (response.ok) {
+            showToast('Emby source added successfully!', 'success');
+            hideSourceForms();
+            loadSources();
+        } else {
+            const error = await response.json();
+            showToast(error.detail || 'Failed to add source', 'error');
+        }
+    } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+    }
+}
+
+async function scanSource(sourceType, sourceId) {
+    showToast(`Scanning ${sourceType} library...`, 'info');
+    
+    try {
+        const response = await fetch(`/api/media-sources/${sourceType}/${sourceId}/scan`, {
+            method: 'POST',
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(`Scan complete: ${result.items_imported} new items imported`, 'success');
+            loadSources();
+        } else {
+            showToast(result.message || 'Scan failed', 'error');
+        }
+    } catch (error) {
+        showToast(`Scan error: ${error.message}`, 'error');
+    }
+}
+
+async function loadSources() {
+    const list = document.getElementById('sources-list');
+    
+    try {
+        // Load summary
+        const summaryResponse = await fetch('/api/media-sources/summary');
+        const summary = await summaryResponse.json();
+        
+        document.getElementById('plex-count').textContent = `${summary.plex.total_items} items`;
+        document.getElementById('jellyfin-count').textContent = `${summary.jellyfin.total_items} items`;
+        document.getElementById('emby-count').textContent = `${summary.emby.total_items} items`;
+        document.getElementById('local-count').textContent = `${summary.local.total_items} items`;
+        
+        // Load sources
+        const [plexSources, jellyfinSources, embySources] = await Promise.all([
+            fetch('/api/media-sources/plex').then(r => r.json()),
+            fetch('/api/media-sources/jellyfin').then(r => r.json()),
+            fetch('/api/media-sources/emby').then(r => r.json()),
+        ]);
+        
+        const allSources = [
+            ...plexSources.map(s => ({ ...s, type: 'plex', icon: '🟠' })),
+            ...jellyfinSources.map(s => ({ ...s, type: 'jellyfin', icon: '🟣' })),
+            ...embySources.map(s => ({ ...s, type: 'emby', icon: '🟢' })),
+        ];
+        
+        if (allSources.length === 0) {
+            list.innerHTML = '<p class="loading">No media sources configured. Add one above!</p>';
+            return;
+        }
+        
+        list.innerHTML = allSources.map(source => `
+            <div class="source-card">
+                <span class="source-icon">${source.icon}</span>
+                <div class="source-info">
+                    <div class="source-title">${source.name}</div>
+                    <div class="source-details">
+                        ${source.server_url} • ${source.library_count} libraries • ${source.item_count} items
+                        ${source.last_scan ? ` • Last scan: ${new Date(source.last_scan).toLocaleString()}` : ''}
+                    </div>
+                </div>
+                <div class="source-actions">
+                    <button class="btn btn-sm" onclick="scanSource('${source.type}', ${source.id})">
+                        <span class="material-icons">sync</span> Scan
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        list.innerHTML = `<p class="loading status-error">Error loading sources: ${error.message}</p>`;
+    }
+}
+
+function showToast(message, type = 'info') {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--primary)'};
+        color: white;
+        border-radius: 8px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+}
+
+// Load sources on page load
+document.addEventListener('DOMContentLoaded', loadSources);
+</script>
+{% endblock %}

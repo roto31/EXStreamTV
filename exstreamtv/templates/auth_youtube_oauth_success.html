@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}OAuth Success - StreamTV{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>OAuth Authentication Successful</h1>
+    </div>
+
+    <div class="card">
+        <div class="auth-status success">
+            <span class="material-icons" aria-hidden="true">check_circle</span>
+            <div>
+                <strong>Authentication Complete</strong>
+                <p>{{ message }}</p>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <a href="/api/auth/youtube" class="btn btn-primary" aria-label="Back to YouTube Authentication">
+                <span class="material-icons" aria-hidden="true">arrow_back</span>
+                Back to YouTube Auth
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.auth-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.auth-status.success {
+    background: var(--success);
+    color: white;
+}
+
+.auth-status .material-icons {
+    font-size: 32px;
+}
+</style>
+{% endblock %}
+

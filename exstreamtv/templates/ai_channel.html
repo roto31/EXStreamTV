@@ -1,0 +1,1178 @@
+{% extends "base.html" %}
+
+{% block title %}AI Channel Creator - EXStreamTV{% endblock %}
+
+{% block extra_styles %}
+    .ai-channel-container {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 24px;
+        height: calc(100vh - 180px);
+        min-height: 600px;
+    }
+    
+    @media (max-width: 1200px) {
+        .ai-channel-container {
+            grid-template-columns: 1fr;
+            height: auto;
+        }
+    }
+    
+    .chat-panel {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .chat-header {
+        padding: 20px 24px;
+        border-bottom: 0.5px solid var(--divider);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .chat-header-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #AF52DE, #8944AB);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+    
+    .chat-header-info h2 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+    }
+    
+    .chat-header-info p {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin: 0;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .message {
+        max-width: 85%;
+        padding: 14px 18px;
+        border-radius: 18px;
+        line-height: 1.5;
+        font-size: 15px;
+    }
+    
+    .message-user {
+        background: var(--primary);
+        color: white;
+        align-self: flex-end;
+        border-bottom-right-radius: 4px;
+    }
+    
+    .message-assistant {
+        background: var(--apple-fill-tertiary);
+        color: var(--text-primary);
+        align-self: flex-start;
+        border-bottom-left-radius: 4px;
+    }
+    
+    .message-assistant .speaker {
+        font-weight: 600;
+        color: var(--primary);
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+    }
+    
+    .message-content {
+        white-space: pre-wrap;
+    }
+    
+    .message-content strong {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    
+    .message-time {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        margin-top: 6px;
+    }
+    
+    .message-user .message-time {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 14px 18px;
+        background: var(--apple-fill-tertiary);
+        border-radius: 18px;
+        border-bottom-left-radius: 4px;
+        align-self: flex-start;
+        max-width: 80px;
+    }
+    
+    .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        background: var(--text-secondary);
+        border-radius: 50%;
+        animation: typing 1.4s infinite ease-in-out;
+    }
+    
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+        30% { transform: translateY(-4px); opacity: 1; }
+    }
+    
+    .chat-input-area {
+        padding: 16px 24px;
+        border-top: 0.5px solid var(--divider);
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+    
+    .chat-input-wrapper {
+        flex: 1;
+        position: relative;
+    }
+    
+    .chat-input {
+        width: 100%;
+        min-height: 44px;
+        max-height: 120px;
+        padding: 12px 16px;
+        border: 1px solid var(--divider);
+        border-radius: 22px;
+        background: var(--apple-fill-tertiary);
+        color: var(--text-primary);
+        font-size: 15px;
+        font-family: inherit;
+        resize: none;
+        line-height: 1.4;
+    }
+    
+    .chat-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+    }
+    
+    .chat-input::placeholder {
+        color: var(--text-tertiary);
+    }
+    
+    .send-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 22px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+    
+    .send-btn:hover:not(:disabled) {
+        transform: scale(1.05);
+    }
+    
+    .send-btn:disabled {
+        background: var(--apple-fill-secondary);
+        cursor: not-allowed;
+    }
+    
+    .preview-panel {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .preview-header {
+        padding: 20px 24px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .preview-header h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .preview-header p {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin: 0;
+    }
+    
+    .preview-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 24px;
+    }
+    
+    .preview-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-tertiary);
+    }
+    
+    .preview-empty .material-icons {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+    }
+    
+    .spec-section {
+        margin-bottom: 20px;
+    }
+    
+    .spec-section h4 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 12px 0;
+    }
+    
+    .spec-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 0.5px solid var(--divider);
+        font-size: 14px;
+    }
+    
+    .spec-item:last-child {
+        border-bottom: none;
+    }
+    
+    .spec-label {
+        color: var(--text-secondary);
+    }
+    
+    .spec-value {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+    
+    .daypart-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .daypart-item {
+        background: var(--apple-fill-quaternary);
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+    }
+    
+    .daypart-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .daypart-time {
+        color: var(--text-secondary);
+        margin-left: 8px;
+    }
+    
+    .daypart-genres {
+        color: var(--text-tertiary);
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    
+    .preview-actions {
+        padding: 16px 24px;
+        border-top: 0.5px solid var(--divider);
+        display: flex;
+        gap: 12px;
+    }
+    
+    .preview-actions .btn {
+        flex: 1;
+    }
+    
+    .stage-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .stage-initial { background: var(--apple-fill-secondary); color: var(--text-secondary); }
+    .stage-sources { background: rgba(10, 132, 255, 0.15); color: #0A84FF; }
+    .stage-schedule { background: rgba(175, 82, 222, 0.15); color: #AF52DE; }
+    .stage-details { background: rgba(255, 149, 0, 0.15); color: #FF9500; }
+    .stage-ready { background: rgba(52, 199, 89, 0.15); color: #34C759; }
+    .stage-building { background: rgba(90, 200, 250, 0.15); color: #5AC8FA; }
+    .stage-complete { background: rgba(52, 199, 89, 0.2); color: #34C759; }
+    .stage-error { background: rgba(255, 59, 48, 0.15); color: #FF3B30; }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    
+    .status-ready {
+        background: rgba(52, 199, 89, 0.15);
+        color: #34C759;
+    }
+    
+    .status-not-ready {
+        background: var(--apple-fill-secondary);
+        color: var(--text-secondary);
+    }
+    
+    /* Persona Selector Styles */
+    .persona-selector {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+    
+    .persona-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+    }
+    
+    .persona-card {
+        background: var(--apple-fill-quaternary);
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+        display: flex;
+        gap: 16px;
+    }
+    
+    .persona-card:hover {
+        background: var(--apple-fill-tertiary);
+        transform: translateY(-2px);
+    }
+    
+    .persona-card.selected {
+        border-color: var(--primary);
+        background: rgba(10, 132, 255, 0.1);
+    }
+    
+    .persona-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .persona-icon .material-icons {
+        font-size: 24px;
+        color: white;
+    }
+    
+    .persona-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .persona-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 2px;
+    }
+    
+    .persona-title {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+    }
+    
+    .persona-specialties {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    
+    .persona-specialty {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: var(--apple-fill-secondary);
+        color: var(--text-secondary);
+    }
+    
+    .persona-loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-tertiary);
+        grid-column: 1 / -1;
+    }
+    
+    .btn-ghost {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .btn-ghost:hover {
+        background: var(--apple-fill-tertiary);
+        color: var(--text-primary);
+    }
+    
+    /* Build Plan Preview Styles */
+    .plan-section {
+        margin-bottom: 20px;
+        background: var(--apple-fill-quaternary);
+        border-radius: 10px;
+        padding: 16px;
+    }
+    
+    .plan-section h4 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 12px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .plan-warning {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+    
+    .plan-warning.warning-info {
+        background: rgba(10, 132, 255, 0.1);
+        color: #0A84FF;
+    }
+    
+    .plan-warning.warning-warning {
+        background: rgba(255, 149, 0, 0.1);
+        color: #FF9500;
+    }
+    
+    .plan-warning.warning-error {
+        background: rgba(255, 59, 48, 0.1);
+        color: #FF3B30;
+    }
+    
+    .plan-warning .material-icons {
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+    
+    .source-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        background: var(--apple-fill-secondary);
+        color: var(--text-primary);
+        margin: 2px;
+    }
+    
+    .source-badge.primary {
+        background: rgba(52, 199, 89, 0.15);
+        color: #34C759;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <h1>
+            <span class="material-icons" aria-hidden="true">smart_toy</span>
+            AI Channel Creator
+        </h1>
+        <span id="stageIndicator" class="stage-indicator stage-initial">
+            <span class="material-icons" style="font-size: 14px;">hourglass_empty</span>
+            Starting...
+        </span>
+    </div>
+    <p class="page-description">
+        Choose an expert persona to help create your perfect channel.
+        Each persona specializes in different content types.
+    </p>
+</div>
+
+<!-- Persona Selector (shown before session starts) -->
+<div id="personaSelector" class="persona-selector">
+    <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Choose Your Expert</h3>
+    <div id="personaGrid" class="persona-grid">
+        <!-- Personas loaded dynamically -->
+        <div class="persona-loading">Loading personas...</div>
+    </div>
+</div>
+
+<div id="channelCreator" class="ai-channel-container" style="display: none;">
+    <!-- Chat Panel -->
+    <div class="chat-panel">
+        <div class="chat-header">
+            <div id="chatHeaderIcon" class="chat-header-icon" style="background: linear-gradient(135deg, #AF52DE, #8944AB);">
+                <span class="material-icons">person</span>
+            </div>
+            <div class="chat-header-info">
+                <h2 id="chatHeaderName">Max Sterling</h2>
+                <p id="chatHeaderTitle">TV Programming Executive</p>
+            </div>
+            <button id="changePersonaBtn" class="btn btn-ghost" style="margin-left: auto;" title="Change persona">
+                <span class="material-icons">swap_horiz</span>
+            </button>
+        </div>
+        
+        <div id="chatMessages" class="chat-messages">
+            <!-- Messages will be added here -->
+        </div>
+        
+        <div class="chat-input-area">
+            <div class="chat-input-wrapper">
+                <textarea 
+                    id="chatInput" 
+                    class="chat-input" 
+                    placeholder="Describe your ideal channel..."
+                    rows="1"
+                ></textarea>
+            </div>
+            <button id="sendBtn" class="send-btn" title="Send message">
+                <span class="material-icons">send</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Preview Panel -->
+    <div class="preview-panel">
+        <div class="preview-header">
+            <h3>
+                <span class="material-icons" style="font-size: 20px;">preview</span>
+                Channel Preview
+            </h3>
+            <p id="previewStatus">
+                <span class="status-badge status-not-ready">
+                    <span class="material-icons" style="font-size: 14px;">pending</span>
+                    Gathering information...
+                </span>
+            </p>
+        </div>
+        
+        <div id="previewContent" class="preview-content">
+            <div class="preview-empty">
+                <span class="material-icons">live_tv</span>
+                <p>Your channel specification will appear here as you chat with Max.</p>
+            </div>
+        </div>
+        
+        <div id="previewActions" class="preview-actions" style="display: none;">
+            <button id="cancelBtn" class="btn btn-secondary">
+                <span class="material-icons">close</span>
+                Cancel
+            </button>
+            <button id="createBtn" class="btn btn-primary" disabled>
+                <span class="material-icons">add_circle</span>
+                Create Channel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // State
+    let sessionId = null;
+    let isReady = false;
+    let isProcessing = false;
+    let selectedPersona = null;
+    let personas = [];
+    
+    // Elements
+    const personaSelector = document.getElementById('personaSelector');
+    const personaGrid = document.getElementById('personaGrid');
+    const channelCreator = document.getElementById('channelCreator');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const stageIndicator = document.getElementById('stageIndicator');
+    const previewStatus = document.getElementById('previewStatus');
+    const previewContent = document.getElementById('previewContent');
+    const previewActions = document.getElementById('previewActions');
+    const createBtn = document.getElementById('createBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const chatHeaderIcon = document.getElementById('chatHeaderIcon');
+    const chatHeaderName = document.getElementById('chatHeaderName');
+    const chatHeaderTitle = document.getElementById('chatHeaderTitle');
+    const changePersonaBtn = document.getElementById('changePersonaBtn');
+    
+    // Icon mapping for SF Symbols to Material Icons
+    const iconMap = {
+        'tv': 'tv',
+        'sportscourt': 'sports_basketball',
+        'desktopcomputer': 'computer',
+        'film': 'movie',
+        'figure.2.and.child.holdinghands': 'family_restroom',
+        'book': 'menu_book',
+        'person': 'person'
+    };
+    
+    // Load personas
+    async function loadPersonas() {
+        try {
+            const response = await fetch('/api/ai/channel/personas');
+            if (!response.ok) throw new Error('Failed to load personas');
+            
+            personas = await response.json();
+            renderPersonaGrid();
+            
+        } catch (error) {
+            console.error('Error loading personas:', error);
+            personaGrid.innerHTML = '<div class="persona-loading">Failed to load personas. Please refresh.</div>';
+        }
+    }
+    
+    // Render persona grid
+    function renderPersonaGrid() {
+        personaGrid.innerHTML = personas.map(persona => `
+            <div class="persona-card" data-persona-id="${persona.id}" onclick="selectPersona('${persona.id}')">
+                <div class="persona-icon" style="background: ${persona.color};">
+                    <span class="material-icons">${iconMap[persona.icon] || 'person'}</span>
+                </div>
+                <div class="persona-info">
+                    <div class="persona-name">${persona.name}</div>
+                    <div class="persona-title">${persona.title}</div>
+                    <div class="persona-specialties">
+                        ${persona.specialties.slice(0, 3).map(s => 
+                            `<span class="persona-specialty">${s.replace(/_/g, ' ')}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Select persona and start session
+    window.selectPersona = async function(personaId) {
+        selectedPersona = personas.find(p => p.id === personaId);
+        if (!selectedPersona) return;
+        
+        // Update UI to show selected
+        document.querySelectorAll('.persona-card').forEach(card => {
+            card.classList.toggle('selected', card.dataset.personaId === personaId);
+        });
+        
+        // Start session with selected persona
+        await startSessionWithPersona(personaId);
+    };
+    
+    // Start session with persona
+    async function startSessionWithPersona(personaId) {
+        try {
+            const response = await fetch('/api/ai/channel/start-with-persona', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ persona_id: personaId })
+            });
+            
+            if (!response.ok) throw new Error('Failed to start session');
+            
+            const data = await response.json();
+            sessionId = data.session_id;
+            selectedPersona = data.persona;
+            
+            // Update header with persona info
+            updatePersonaHeader(data.persona);
+            
+            // Hide persona selector, show chat
+            personaSelector.style.display = 'none';
+            channelCreator.style.display = 'grid';
+            
+            // Add welcome message
+            addMessage('assistant', data.welcome_message);
+            updateStage(data.stage);
+            
+            // Enable input
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
+            
+        } catch (error) {
+            console.error('Error starting session:', error);
+            alert('Failed to start session. Please try again.');
+        }
+    }
+    
+    // Update persona header
+    function updatePersonaHeader(persona) {
+        chatHeaderIcon.style.background = persona.color;
+        chatHeaderIcon.innerHTML = `<span class="material-icons">${iconMap[persona.icon] || 'person'}</span>`;
+        chatHeaderName.textContent = persona.name;
+        chatHeaderTitle.textContent = persona.title;
+    }
+    
+    // Change persona (go back to selector)
+    changePersonaBtn.addEventListener('click', async () => {
+        if (confirm('Change persona? This will start a new conversation.')) {
+            // Delete current session
+            if (sessionId) {
+                try {
+                    await fetch(`/api/ai/channel/session/${sessionId}`, { method: 'DELETE' });
+                } catch (e) {
+                    console.warn('Could not delete session:', e);
+                }
+            }
+            
+            // Reset state
+            sessionId = null;
+            isReady = false;
+            chatMessages.innerHTML = '';
+            previewContent.innerHTML = `
+                <div class="preview-empty">
+                    <span class="material-icons">live_tv</span>
+                    <p>Your channel specification will appear here.</p>
+                </div>
+            `;
+            previewActions.style.display = 'none';
+            
+            // Show persona selector
+            channelCreator.style.display = 'none';
+            personaSelector.style.display = 'block';
+            
+            // Deselect all
+            document.querySelectorAll('.persona-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+        }
+    });
+    
+    // Initialize - load personas first
+    async function init() {
+        await loadPersonas();
+    }
+    
+    // Add message to chat
+    function addMessage(role, content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message message-${role}`;
+        
+        if (role === 'assistant') {
+            const speakerName = selectedPersona ? selectedPersona.name : 'AI Assistant';
+            messageDiv.innerHTML = `
+                <span class="speaker">${escapeHtml(speakerName)}</span>
+                <div class="message-content">${formatContent(content)}</div>
+                <div class="message-time">${formatTime(new Date())}</div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="message-content">${escapeHtml(content)}</div>
+                <div class="message-time">${formatTime(new Date())}</div>
+            `;
+        }
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Show typing indicator
+    function showTyping() {
+        const typingDiv = document.createElement('div');
+        typingDiv.id = 'typingIndicator';
+        typingDiv.className = 'typing-indicator';
+        typingDiv.innerHTML = '<span></span><span></span><span></span>';
+        chatMessages.appendChild(typingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Hide typing indicator
+    function hideTyping() {
+        const typing = document.getElementById('typingIndicator');
+        if (typing) typing.remove();
+    }
+    
+    // Format content for display
+    function formatContent(content) {
+        // Remove JSON blocks from display (they're shown in preview)
+        content = content.replace(/```json[\s\S]*?```/g, '');
+        
+        // Convert markdown-style bold
+        content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Convert line breaks
+        content = escapeHtml(content);
+        content = content.replace(/\n/g, '<br>');
+        
+        return content;
+    }
+    
+    // Escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Format time
+    function formatTime(date) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Update stage indicator
+    function updateStage(stage) {
+        const stageLabels = {
+            'initial': { label: 'Starting', icon: 'hourglass_empty' },
+            'sources': { label: 'Content Sources', icon: 'source' },
+            'schedule': { label: 'Schedule', icon: 'schedule' },
+            'details': { label: 'Details', icon: 'tune' },
+            'ready': { label: 'Ready to Build', icon: 'check_circle' },
+            'building': { label: 'Building...', icon: 'build' },
+            'complete': { label: 'Complete', icon: 'done_all' },
+            'error': { label: 'Error', icon: 'error' }
+        };
+        
+        const info = stageLabels[stage] || stageLabels.initial;
+        stageIndicator.className = `stage-indicator stage-${stage}`;
+        stageIndicator.innerHTML = `
+            <span class="material-icons" style="font-size: 14px;">${info.icon}</span>
+            ${info.label}
+        `;
+    }
+    
+    // Update preview panel
+    function updatePreview(specification) {
+        if (!specification) {
+            previewContent.innerHTML = `
+                <div class="preview-empty">
+                    <span class="material-icons">live_tv</span>
+                    <p>Your channel specification will appear here.</p>
+                </div>
+            `;
+            previewActions.style.display = 'none';
+            createBtn.disabled = true;
+            return;
+        }
+        
+        // Show specification
+        let html = '';
+        
+        // Channel info
+        html += `
+            <div class="plan-section">
+                <h4><span class="material-icons" style="font-size: 16px;">live_tv</span> Channel</h4>
+                <div class="spec-item">
+                    <span class="spec-label">Name</span>
+                    <span class="spec-value">${escapeHtml(specification.name || 'Untitled')}</span>
+                </div>
+                ${specification.number ? `
+                <div class="spec-item">
+                    <span class="spec-label">Number</span>
+                    <span class="spec-value">${specification.number}</span>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        
+        // Sources
+        if (specification.sources && specification.sources.length > 0) {
+            html += `
+                <div class="plan-section">
+                    <h4><span class="material-icons" style="font-size: 16px;">source</span> Sources</h4>
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        ${specification.sources.map((s, i) => 
+                            `<span class="source-badge ${i === 0 ? 'primary' : ''}">${s}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Era - handle both start_year/end_year and start/end formats
+        if (specification.era && (specification.era.start || specification.era.start_year || specification.era.end || specification.era.end_year)) {
+            const startYear = specification.era.start_year || specification.era.start || '?';
+            const endYear = specification.era.end_year || specification.era.end || '?';
+            html += `
+                <div class="plan-section">
+                    <h4><span class="material-icons" style="font-size: 16px;">history</span> Era</h4>
+                    <div class="spec-item">
+                        <span class="spec-label">Years</span>
+                        <span class="spec-value">${startYear} - ${endYear}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Dayparts
+        if (specification.dayparts && Object.keys(specification.dayparts).length > 0) {
+            html += `
+                <div class="plan-section">
+                    <h4><span class="material-icons" style="font-size: 16px;">schedule</span> Schedule</h4>
+                    <div class="daypart-list">
+            `;
+            
+            for (const [name, config] of Object.entries(specification.dayparts)) {
+                if (config) {
+                    html += `
+                        <div class="daypart-item">
+                            <span class="daypart-name">${formatDaypartName(name)}</span>
+                            <span class="daypart-time">${config.start || '?'} - ${config.end || '?'}</span>
+                            ${config.genres ? `<div class="daypart-genres">${config.genres.join(', ')}</div>` : ''}
+                        </div>
+                    `;
+                }
+            }
+            
+            html += '</div></div>';
+        }
+        
+        // Special blocks
+        if (specification.special_blocks && specification.special_blocks.length > 0) {
+            html += `
+                <div class="plan-section">
+                    <h4><span class="material-icons" style="font-size: 16px;">star</span> Special Programming</h4>
+                    <div class="daypart-list">
+            `;
+            
+            for (const block of specification.special_blocks) {
+                html += `
+                    <div class="daypart-item">
+                        <span class="daypart-name">${escapeHtml(block.name || 'Unnamed Block')}</span>
+                        <span class="daypart-time">${block.day || 'Daily'} ${block.start || ''}</span>
+                    </div>
+                `;
+            }
+            
+            html += '</div></div>';
+        }
+        
+        // Commercials / Filler
+        if (specification.commercials && specification.commercials.enabled) {
+            html += `
+                <div class="plan-section">
+                    <h4><span class="material-icons" style="font-size: 16px;">movie_filter</span> Filler Content</h4>
+                    <div class="spec-item">
+                        <span class="spec-label">Source</span>
+                        <span class="spec-value">${specification.commercials.source || 'archive.org'}</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Style</span>
+                        <span class="spec-value">${specification.commercials.collection || 'vintage'}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        previewContent.innerHTML = html;
+        previewActions.style.display = 'flex';
+        createBtn.disabled = false;
+        
+        previewStatus.innerHTML = `
+            <span class="status-badge status-ready">
+                <span class="material-icons" style="font-size: 14px;">check_circle</span>
+                Ready to create
+            </span>
+        `;
+    }
+    
+    // Format daypart name
+    function formatDaypartName(name) {
+        return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+    
+    // Send message
+    async function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message || isProcessing || !sessionId) return;
+        
+        isProcessing = true;
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        sendBtn.disabled = true;
+        
+        // Add user message
+        addMessage('user', message);
+        showTyping();
+        
+        try {
+            const response = await fetch('/api/ai/channel/message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    message: message
+                })
+            });
+            
+            hideTyping();
+            
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+            
+            const data = await response.json();
+            
+            // Add AI response
+            addMessage('assistant', data.response);
+            
+            // Update state
+            updateStage(data.stage);
+            isReady = data.ready_to_build;
+            
+            if (data.specification) {
+                updatePreview(data.specification);
+            }
+            
+        } catch (error) {
+            hideTyping();
+            console.error('Error sending message:', error);
+            addMessage('assistant', 'Sorry, I had trouble processing that. Could you try again?');
+        } finally {
+            isProcessing = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
+        }
+    }
+    
+    // Create channel
+    async function createChannel() {
+        if (!sessionId || !isReady) return;
+        
+        createBtn.disabled = true;
+        createBtn.innerHTML = '<span class="material-icons">hourglass_empty</span> Creating...';
+        updateStage('building');
+        
+        try {
+            const response = await fetch('/api/ai/channel/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: sessionId
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                updateStage('complete');
+                addMessage('assistant', `Excellent! I've created your channel "${data.channel_name}" (Channel ${data.channel_number}). It's ready to go! You can view it in the Channels page or start streaming right away. It was a pleasure working with you!`);
+                
+                createBtn.innerHTML = '<span class="material-icons">check</span> Created!';
+                
+                // Redirect after delay
+                setTimeout(() => {
+                    window.location.href = '/channels';
+                }, 3000);
+                
+            } else {
+                throw new Error(data.error || 'Failed to create channel');
+            }
+            
+        } catch (error) {
+            console.error('Error creating channel:', error);
+            updateStage('error');
+            addMessage('assistant', `I'm sorry, there was a problem creating the channel: ${error.message}. Let me know if you'd like to try again.`);
+            
+            createBtn.disabled = false;
+            createBtn.innerHTML = '<span class="material-icons">add_circle</span> Create Channel';
+        }
+    }
+    
+    // Cancel session
+    async function cancelSession() {
+        if (confirm('Are you sure you want to cancel? All progress will be lost.')) {
+            if (sessionId) {
+                try {
+                    await fetch(`/api/ai/channel/session/${sessionId}`, {
+                        method: 'DELETE'
+                    });
+                } catch (e) {
+                    console.warn('Could not delete session:', e);
+                }
+            }
+            window.location.href = '/channels';
+        }
+    }
+    
+    // Event listeners
+    sendBtn.addEventListener('click', sendMessage);
+    
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    // Auto-resize textarea
+    chatInput.addEventListener('input', () => {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    });
+    
+    createBtn.addEventListener('click', createChannel);
+    cancelBtn.addEventListener('click', cancelSession);
+    
+    // Initialize on load
+    init();
+})();
+</script>
+{% endblock %}

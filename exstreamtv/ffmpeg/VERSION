@@ -1,0 +1,6 @@
+COMPONENT_NAME=ffmpeg
+VERSION=2.6.0
+FIRST_INTRODUCED=1.0.2
+LAST_MODIFIED=2026-01-31
+PLATFORM_COMPATIBILITY=2.6.0
+DESCRIPTION=FFmpeg pipeline with hardware transcoding, subtitle/audio stream pickers

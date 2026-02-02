@@ -1,0 +1,129 @@
+================================================================================
+EXSTREAMTV PLATFORM REGRESSION TEST REPORT
+================================================================================
+Timestamp: 2026-01-27T23:37:07.703497
+Total Tests: 69
+Passed: 52 (75.4%)
+Failed: 17
+
+RESULTS BY SUBSYSTEM:
+--------------------------------------------------------------------------------
+ai_agent        | Pass:   1 | Fail:   2 | 33%
+api             | Pass:  17 | Fail:  10 | 63%
+core            | Pass:   5 | Fail:   1 | 83%
+database        | Pass:   5 | Fail:   2 | 71%
+ffmpeg          | Pass:   4 | Fail:   0 | 100%
+integration     | Pass:   2 | Fail:   1 | 67%
+media           | Pass:   3 | Fail:   0 | 100%
+streaming       | Pass:   3 | Fail:   0 | 100%
+tasks           | Pass:   3 | Fail:   0 | 100%
+webui           | Pass:   9 | Fail:   1 | 90%
+
+DETAILED RESULTS:
+--------------------------------------------------------------------------------
+CORE-001     | ✓ PASS | Server Health
+CORE-002     | ✓ PASS | Database Connection
+CORE-003     | ✓ PASS | FFmpeg Available
+CORE-004     | ✓ PASS | FFprobe Available
+CORE-005     | ✓ PASS | Config Loaded
+CORE-006     | ✗ FAIL | Static Files
+API-CH-001   | ✓ PASS | List Channels
+API-CH-002   | ✓ PASS | Get Channel by ID
+API-CH-003   | ✗ FAIL | Channel Playout
+API-MD-001   | ✓ PASS | List Media Items
+API-MD-002   | ✓ PASS | Search Media
+API-PL-001   | ✗ FAIL | List Playlists
+API-SC-001   | ✓ PASS | List Schedules
+API-SC-002   | ✗ FAIL | List Templates
+API-IP-001   | ✓ PASS | M3U Playlist
+API-IP-002   | ✓ PASS | XMLTV EPG
+API-IP-003   | ✗ FAIL | Channel Stream
+API-LB-001   | ✓ PASS | List Libraries
+API-ST-001   | ✓ PASS | Get Settings
+API-ST-002   | ✓ PASS | FFmpeg Profiles
+API-ST-003   | ✓ PASS | Resolutions
+API-HE-001   | ✓ PASS | Health Check
+API-HE-002   | ✓ PASS | Detailed Health
+API-HE-003   | ✓ PASS | Channel Health
+API-DB-001   | ✗ FAIL | Dashboard Stats
+API-AI-001   | ✗ FAIL | AI Settings
+API-AI-002   | ✗ FAIL | AI Providers
+API-CO-001   | ✗ FAIL | List Collections
+API-HD-001   | ✓ PASS | Discover
+API-HD-002   | ✓ PASS | Lineup
+API-HD-003   | ✓ PASS | Lineup Status
+API-LG-001   | ✗ FAIL | List Logs
+API-IE-001   | ✗ FAIL | Export Data
+DB-001       | ✓ PASS | Channel Table
+DB-002       | ✓ PASS | Media Table
+DB-003       | ✗ FAIL | Playlist Table
+DB-004       | ✗ FAIL | Playout Table
+DB-005       | ✓ PASS | Schedule Table
+DB-006       | ✓ PASS | Library Table
+DB-007       | ✓ PASS | FFmpeg Profile Table
+STR-001      | ✓ PASS | Channel Manager Active
+STR-002      | ✓ PASS | Active Streams
+STR-003      | ✓ PASS | URL Resolution
+MED-001      | ✓ PASS | Plex Connection
+MED-002      | ✓ PASS | Library Scan
+MED-003      | ✓ PASS | Media Metadata
+AI-001       | ✓ PASS | AI Provider Available
+AI-002       | ✗ FAIL | Persona Manager
+AI-003       | ✗ FAIL | Channel Creator
+TSK-001      | ✓ PASS | Task Queue Active
+TSK-002      | ✓ PASS | Scheduler Active
+TSK-003      | ✓ PASS | Playout Rebuild Task
+FFM-001      | ✓ PASS | FFmpeg Version
+FFM-002      | ✓ PASS | Hardware Accel
+FFM-003      | ✓ PASS | Codec Support
+FFM-004      | ✓ PASS | Process Pool
+INT-001      | ✗ FAIL | HDHomeRun Emulation
+INT-002      | ✓ PASS | IPTV Source Manager
+INT-003      | ✓ PASS | Notification System
+WEB-001      | ✓ PASS | Dashboard Page
+WEB-002      | ✓ PASS | Channels Page
+WEB-003      | ✓ PASS | Playlists Page
+WEB-004      | ✓ PASS | Libraries Page
+WEB-005      | ✓ PASS | Schedules Page
+WEB-006      | ✓ PASS | Settings Page
+WEB-007      | ✓ PASS | Logs Page
+WEB-008      | ✗ FAIL | AI Channel Page
+WEB-009      | ✓ PASS | Import Page
+WEB-010      | ✓ PASS | Guide Page
+
+FAILURES:
+--------------------------------------------------------------------------------
+CORE-006: Static Files
+  Details: {'status_code': 404}
+API-CH-003: Channel Playout
+  Details: {'channel_id': 1}
+API-PL-001: List Playlists
+  Details: {'endpoint': '/api/playlists', 'status': 500}
+API-SC-002: List Templates
+  Details: {'endpoint': '/api/schedule-templates', 'status': 404}
+API-IP-003: Channel Stream
+API-DB-001: Dashboard Stats
+  Details: {'endpoint': '/api/dashboard', 'status': 404}
+API-AI-001: AI Settings
+  Details: {'endpoint': '/api/ai/settings', 'error': ''}
+API-AI-002: AI Providers
+  Details: {'endpoint': '/api/ai/providers', 'status': 404}
+API-CO-001: List Collections
+  Details: {'endpoint': '/api/collections', 'status': 500}
+API-LG-001: List Logs
+  Details: {'endpoint': '/api/logs', 'status': 404}
+API-IE-001: Export Data
+  Details: {'endpoint': '/api/export', 'status': 404}
+DB-003: Playlist Table
+  Details: {'endpoint': '/api/playlists', 'accessible': True}
+DB-004: Playout Table
+  Details: {'has_playout_table': True}
+AI-002: Persona Manager
+  Details: {'persona_page_exists': True}
+AI-003: Channel Creator
+  Details: {'channel_creator_exists': True}
+INT-001: HDHomeRun Emulation
+  Details: {'error': 'HDHomeRun endpoints not responding'}
+WEB-008: AI Channel Page
+  Details: {'page': '/ai/channel', 'status': 404}
+================================================================================

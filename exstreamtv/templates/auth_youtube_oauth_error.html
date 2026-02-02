@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}OAuth Error - StreamTV{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>OAuth Authentication Error</h1>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--error);">
+        <h3 style="color: var(--error);">Error</h3>
+        <p>{{ error }}</p>
+    </div>
+    
+    <div class="form-actions">
+        <a href="/api/auth/youtube" class="btn btn-secondary" aria-label="Back to YouTube Authentication">
+            <span class="material-icons" aria-hidden="true">arrow_back</span>
+            Back to YouTube Auth
+        </a>
+        <a href="/api/auth/youtube/oauth" class="btn btn-primary" aria-label="Try OAuth Again">
+            <span class="material-icons" aria-hidden="true">refresh</span>
+            Try Again
+        </a>
+    </div>
+</div>
+{% endblock %}
+

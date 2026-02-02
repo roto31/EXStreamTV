@@ -1,0 +1,39 @@
+================================================================================
+EXSTREAMTV PLATFORM REGRESSION TEST REPORT
+================================================================================
+Timestamp: 2026-01-31T13:18:03.645915
+Total Tests: 15
+Passed: 14 (93.3%)
+Failed: 1
+
+RESULTS BY SUBSYSTEM:
+--------------------------------------------------------------------------------
+api             | Pass:   4 | Fail:   1 | 80%
+core            | Pass:   5 | Fail:   0 | 100%
+database        | Pass:   2 | Fail:   0 | 100%
+ffmpeg          | Pass:   1 | Fail:   0 | 100%
+streaming       | Pass:   1 | Fail:   0 | 100%
+webui           | Pass:   1 | Fail:   0 | 100%
+
+DETAILED RESULTS:
+--------------------------------------------------------------------------------
+CORE-001     | ✓ PASS | Server Health
+CORE-002     | ✓ PASS | Database Connection
+CORE-003     | ✓ PASS | FFmpeg Available
+CORE-004     | ✓ PASS | FFprobe Available
+CORE-005     | ✓ PASS | Config Loaded
+API-CH-001   | ✓ PASS | List Channels
+API-IP-001   | ✓ PASS | M3U Playlist
+API-IP-002   | ✓ PASS | XMLTV EPG
+API-IP-003   | ✗ FAIL | Channel Stream
+API-HE-001   | ✓ PASS | Health Check
+DB-001       | ✓ PASS | Channel Table
+DB-002       | ✓ PASS | Media Table
+STR-001      | ✓ PASS | Channel Manager Active
+FFM-001      | ✓ PASS | FFmpeg Version
+WEB-001      | ✓ PASS | Dashboard Page
+
+FAILURES:
+--------------------------------------------------------------------------------
+API-IP-003: Channel Stream
+================================================================================

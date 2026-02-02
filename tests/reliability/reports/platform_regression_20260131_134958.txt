@@ -1,0 +1,79 @@
+================================================================================
+EXSTREAMTV PLATFORM REGRESSION TEST REPORT
+================================================================================
+Timestamp: 2026-01-31T13:49:58.456994
+Total Tests: 15
+Passed: 0 (0.0%)
+Failed: 15
+
+RESULTS BY SUBSYSTEM:
+--------------------------------------------------------------------------------
+api             | Pass:   0 | Fail:   5 | 0%
+core            | Pass:   0 | Fail:   5 | 0%
+database        | Pass:   0 | Fail:   2 | 0%
+ffmpeg          | Pass:   0 | Fail:   1 | 0%
+streaming       | Pass:   0 | Fail:   1 | 0%
+webui           | Pass:   0 | Fail:   1 | 0%
+
+DETAILED RESULTS:
+--------------------------------------------------------------------------------
+CORE-001     | ✗ FAIL | Server Health
+             Error: All connection attempts failed
+CORE-002     | ✗ FAIL | Database Connection
+             Error: All connection attempts failed
+CORE-003     | ✗ FAIL | FFmpeg Available
+             Error: All connection attempts failed
+CORE-004     | ✗ FAIL | FFprobe Available
+             Error: All connection attempts failed
+CORE-005     | ✗ FAIL | Config Loaded
+             Error: All connection attempts failed
+API-CH-001   | ✗ FAIL | List Channels
+API-IP-001   | ✗ FAIL | M3U Playlist
+API-IP-002   | ✗ FAIL | XMLTV EPG
+API-IP-003   | ✗ FAIL | Channel Stream
+             Error: All connection attempts failed
+API-HE-001   | ✗ FAIL | Health Check
+DB-001       | ✗ FAIL | Channel Table
+             Error: All connection attempts failed
+DB-002       | ✗ FAIL | Media Table
+             Error: All connection attempts failed
+STR-001      | ✗ FAIL | Channel Manager Active
+             Error: All connection attempts failed
+FFM-001      | ✗ FAIL | FFmpeg Version
+             Error: All connection attempts failed
+WEB-001      | ✗ FAIL | Dashboard Page
+             Error: All connection attempts failed
+
+FAILURES:
+--------------------------------------------------------------------------------
+CORE-001: Server Health
+  Error: All connection attempts failed
+CORE-002: Database Connection
+  Error: All connection attempts failed
+CORE-003: FFmpeg Available
+  Error: All connection attempts failed
+CORE-004: FFprobe Available
+  Error: All connection attempts failed
+CORE-005: Config Loaded
+  Error: All connection attempts failed
+API-CH-001: List Channels
+  Details: {'endpoint': '/api/channels', 'error': 'All connection attempts failed'}
+API-IP-001: M3U Playlist
+  Details: {'endpoint': '/iptv/channels.m3u', 'error': 'All connection attempts failed'}
+API-IP-002: XMLTV EPG
+  Details: {'endpoint': '/iptv/xmltv.xml', 'error': 'All connection attempts failed'}
+API-IP-003: Channel Stream
+  Error: All connection attempts failed
+API-HE-001: Health Check
+  Details: {'endpoint': '/api/health', 'error': 'All connection attempts failed'}
+DB-001: Channel Table
+  Error: All connection attempts failed
+DB-002: Media Table
+  Error: All connection attempts failed
+STR-001: Channel Manager Active
+  Error: All connection attempts failed
+FFM-001: FFmpeg Version
+  Error: All connection attempts failed
+WEB-001: Dashboard Page
+  Error: All connection attempts failed
+================================================================================

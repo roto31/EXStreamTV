@@ -1,0 +1,3531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}StreamTV{% endblock %}</title>
+    <!-- Performance: Preconnect to improve font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Material Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            /* Apple System Colors - Dark Mode (per HIG) */
+            --apple-blue: #0A84FF;
+            --apple-blue-dark: #0051D5;
+            --apple-gray-1: #8E8E93;
+            --apple-gray-2: #636366;
+            --apple-gray-3: #48484A;
+            --apple-gray-4: #3A3A3C;
+            --apple-gray-5: #2C2C2E;
+            --apple-gray-6: #1C1C1E;
+            --apple-label: #FFFFFF;
+            --apple-label-secondary: rgba(255, 255, 255, 0.60);
+            --apple-label-tertiary: rgba(255, 255, 255, 0.40);
+            --apple-separator: rgba(255, 255, 255, 0.20);
+            --apple-fill: rgba(255, 255, 255, 0.10);
+            --apple-fill-secondary: rgba(255, 255, 255, 0.15);
+            --apple-fill-tertiary: rgba(255, 255, 255, 0.20);
+            --apple-background: #000000;
+            --apple-background-secondary: #1C1C1E;
+            --apple-background-tertiary: #2C2C2E;
+            --apple-grouped-background: #000000;
+            --apple-grouped-background-secondary: #1C1C1E;
+            --apple-grouped-background-tertiary: #2C2C2E;
+            
+            /* Primary colors */
+            --primary: var(--apple-blue);
+            --primary-dark: var(--apple-blue-dark);
+            --secondary: var(--apple-gray-2);
+            --background: var(--apple-grouped-background);
+            --surface: var(--apple-grouped-background-secondary);
+            --surface-light: var(--apple-grouped-background-tertiary);
+            --appbar: var(--apple-background-secondary);
+            --drawer: var(--apple-background-secondary);
+            --text-primary: var(--apple-label);
+            --text-secondary: var(--apple-label-secondary);
+            --text-disabled: var(--apple-label-tertiary);
+            --divider: var(--apple-separator);
+            --hover: var(--apple-fill);
+            --error: #FF3B30;
+            --warning: #FF9500;
+            --success: #34C759;
+            --info: var(--apple-blue);
+            
+            /* Apple.com Design System Variables - Must be defined before design system CSS loads */
+            /* Typography */
+            --font-hero-xl: clamp(56px, 8vw, 120px);
+            --font-hero-lg: clamp(48px, 7vw, 96px);
+            --font-hero-md: clamp(40px, 6vw, 80px);
+            --font-hero-sm: clamp(32px, 5vw, 64px);
+            --font-title-xl: clamp(40px, 5vw, 72px);
+            --font-title-lg: clamp(32px, 4vw, 56px);
+            --font-title-md: clamp(28px, 3.5vw, 48px);
+            --font-title-sm: clamp(24px, 3vw, 40px);
+            --font-body-lg: 19px;
+            --font-body-md: 17px;
+            --font-body-sm: 15px;
+            --font-body-xs: 13px;
+            --line-height-hero: 1.05;
+            --line-height-title: 1.1;
+            --line-height-body-lg: 1.4211;
+            --line-height-body-md: 1.47059;
+            --line-height-body-sm: 1.5;
+            --letter-spacing-hero: -0.5px;
+            --letter-spacing-hero-xl: -1px;
+            --letter-spacing-title: -0.3px;
+            --letter-spacing-body: 0.011em;
+            --letter-spacing-caption: 0.08px;
+            
+            /* Spacing - 8px Base Unit */
+            --space-1: 8px;
+            --space-2: 16px;
+            --space-3: 24px;
+            --space-4: 32px;
+            --space-5: 40px;
+            --space-6: 48px;
+            --space-8: 64px;
+            --space-10: 80px;
+            --space-12: 96px;
+            --space-15: 120px;
+            --component-padding: 24px;
+            --component-padding-lg: 24px;
+            --component-gap: 16px;
+            --component-gap-lg: 24px;
+            --section-margin: 80px;
+            --section-margin-lg: 120px;
+            --hero-margin: 120px;
+            --content-padding: 32px;
+            --content-padding-lg: 48px;
+            
+            /* Animation */
+            --ease-apple: cubic-bezier(0.4, 0.0, 0.2, 1);
+            --ease-apple-in: cubic-bezier(0.4, 0.0, 1, 1);
+            --ease-apple-out: cubic-bezier(0.0, 0.0, 0.2, 1);
+            --ease-apple-in-out: cubic-bezier(0.4, 0.0, 0.2, 1);
+            --duration-fast: 0.2s;
+            --duration-normal: 0.3s;
+            --duration-slow: 0.6s;
+        }
+        
+        [data-theme="light"] {
+            /* Apple System Colors - Light Mode (per HIG) */
+            --apple-blue: #007AFF;
+            --apple-blue-dark: #0051D5;
+            --apple-gray-1: #8E8E93;
+            --apple-gray-2: #AEAEB2;
+            --apple-gray-3: #C7C7CC;
+            --apple-gray-4: #D1D1D6;
+            --apple-gray-5: #E5E5EA;
+            --apple-gray-6: #F2F2F7;
+            --apple-label: #000000;
+            --apple-label-secondary: rgba(0, 0, 0, 0.60);
+            --apple-label-tertiary: rgba(0, 0, 0, 0.40);
+            --apple-separator: rgba(0, 0, 0, 0.20);
+            --apple-fill: rgba(0, 0, 0, 0.05);
+            --apple-fill-secondary: rgba(0, 0, 0, 0.10);
+            --apple-fill-tertiary: rgba(0, 0, 0, 0.15);
+            --apple-background: #FFFFFF;
+            --apple-background-secondary: #F2F2F7;
+            --apple-background-tertiary: #FFFFFF;
+            --apple-grouped-background: #F2F2F7;
+            --apple-grouped-background-secondary: #FFFFFF;
+            --apple-grouped-background-tertiary: #F2F2F7;
+            
+            --primary: var(--apple-blue);
+            --primary-dark: var(--apple-blue-dark);
+            --secondary: var(--apple-gray-2);
+            --background: var(--apple-grouped-background);
+            --surface: var(--apple-grouped-background-secondary);
+            --surface-light: var(--apple-grouped-background-tertiary);
+            --appbar: var(--apple-background-secondary);
+            --drawer: var(--apple-background-secondary);
+            --text-primary: var(--apple-label);
+            --text-secondary: var(--apple-label-secondary);
+            --text-disabled: var(--apple-label-tertiary);
+            --divider: var(--apple-separator);
+            --hover: var(--apple-fill);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-feature-settings: "kern" 1;
+            text-rendering: optimizeLegibility;
+            font-size: 19px; /* Apple.com standard body text size (upgraded from 17px) */
+            line-height: 1.4211; /* Apple.com standard line height */
+            letter-spacing: 0.011em; /* Apple.com letter spacing */
+        }
+        
+        /* Apple Typography Hierarchy (per HIG) */
+        h1 {
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: 0.374px;
+            line-height: 1.17647;
+        }
+        
+        h2 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 0.364px;
+            line-height: 1.21429;
+        }
+        
+        h3 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.352px;
+            line-height: 1.27273;
+        }
+        
+        /* Navigation Bar - Apple HIG Component */
+        .app-bar {
+            background: var(--appbar);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            color: var(--text-primary);
+            height: 44px; /* Apple standard navigation bar height */
+            display: flex;
+            align-items: center;
+            padding: 0 16px; /* Apple standard horizontal padding */
+            border-bottom: 0.5px solid var(--divider);
+            z-index: 1100;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            pointer-events: auto;
+        }
+        
+        /* Ensure app bar content is clickable */
+        .app-bar * {
+            pointer-events: auto;
+        }
+        
+        .app-bar .menu-button {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 0;
+            margin-right: 8px;
+            border-radius: 8px;
+            transition: background 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            width: 44px; /* Apple minimum touch target */
+            height: 44px; /* Apple minimum touch target */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            pointer-events: auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .app-bar .menu-button:hover {
+            background: var(--hover);
+        }
+        
+        .app-bar .menu-button:active {
+            background: var(--apple-fill-secondary);
+        }
+        
+        .app-bar .logo {
+            display: flex;
+            align-items: center;
+            margin-right: 24px;
+            min-width: 180px;
+            flex-shrink: 0;
+        }
+        
+        .app-bar .logo span {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: -0.41px;
+        }
+        
+        .app-bar .search-form {
+            flex: 1;
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .app-bar .search-bar {
+            width: 100%;
+            background: var(--surface);
+            border: 0.5px solid var(--divider);
+            border-radius: 10px; /* Apple standard corner radius */
+            padding: 8px 16px 8px 36px;
+            color: var(--text-primary);
+            font-size: 17px; /* Apple standard */
+            font-weight: 400;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            min-height: 36px; /* Apple minimum input height */
+        }
+        
+        .app-bar .search-bar:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--surface-light);
+        }
+        
+        .app-bar .search-bar::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .app-bar .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 17px;
+            pointer-events: none;
+        }
+
+        .search-result-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+            border-radius: 10px;
+            margin: 4px;
+            min-height: 44px;
+        }
+
+        .search-result-item:hover {
+            background: var(--hover);
+        }
+        
+        .app-bar .actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+        
+        .app-bar .action-link {
+            color: var(--primary);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: background 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            font-size: 17px;
+            font-weight: 400;
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            pointer-events: auto;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .app-bar .action-link:hover {
+            background: var(--hover);
+        }
+        
+        .app-bar .action-button {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            padding: 0;
+            border-radius: 8px;
+            transition: background 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            width: 44px; /* Apple minimum touch target */
+            height: 44px; /* Apple minimum touch target */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .app-bar .action-button:hover {
+            background: var(--hover);
+        }
+        
+        .app-bar .action-button:active {
+            background: var(--apple-fill-secondary);
+        }
+        
+        /* Quick Access Toolbar - Apple HIG Component */
+        .quick-access-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 16px;
+            position: relative;
+        }
+        
+        .quick-access-dropdown {
+            position: relative;
+        }
+        
+        .quick-access-button {
+            background: var(--surface);
+            border: 0.5px solid var(--divider);
+            border-radius: 8px;
+            padding: 6px 12px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 32px;
+            white-space: nowrap;
+        }
+        
+        .quick-access-button:hover {
+            background: var(--hover);
+            border-color: var(--primary);
+        }
+        
+        .quick-access-button:active {
+            background: var(--apple-fill-secondary);
+        }
+        
+        .quick-access-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            background: var(--surface);
+            border: 0.5px solid var(--divider);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+            max-width: 320px;
+            z-index: 1200;
+            display: none;
+            overflow: hidden;
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+        }
+        
+        .quick-access-menu.active {
+            display: block;
+        }
+        
+        .quick-access-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: background 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            gap: 12px;
+            min-height: 44px;
+            font-size: 17px;
+        }
+        
+        .quick-access-item:hover {
+            background: var(--hover);
+        }
+        
+        .quick-access-item .material-icons,
+        .quick-access-item .icon-emoji {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        
+        .quick-access-divider {
+            height: 0.5px;
+            background: var(--divider);
+            margin: 4px 0;
+        }
+        
+        /* Breadcrumbs - Apple HIG Component */
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            font-size: 15px;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+        
+        .breadcrumb-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .breadcrumb-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .breadcrumb-link:hover {
+            color: var(--primary);
+        }
+        
+        .breadcrumb-separator {
+            color: var(--text-disabled);
+        }
+        
+        .breadcrumb-current {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        /* Toast Notifications - Apple HIG Component */
+        .toast-container {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            z-index: 1300;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 400px;
+            pointer-events: none;
+        }
+        
+        .toast {
+            background: var(--surface);
+            border: 0.5px solid var(--divider);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            min-width: 300px;
+            max-width: 400px;
+            pointer-events: auto;
+            animation: toastSlideIn 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        
+        .toast.hiding {
+            animation: toastSlideOut 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes toastSlideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+        
+        .toast-icon {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        
+        .toast-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .toast-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .toast-message {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        .toast-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .toast-close:hover {
+            background: var(--hover);
+            color: var(--text-primary);
+        }
+        
+        .toast-success {
+            border-left: 4px solid var(--success);
+        }
+        
+        .toast-error {
+            border-left: 4px solid var(--error);
+        }
+        
+        .toast-warning {
+            border-left: 4px solid var(--warning);
+        }
+        
+        .toast-info {
+            border-left: 4px solid var(--info);
+        }
+        
+        /* Hero Section - Now using Apple Design System classes */
+        /* Old styles removed - using .hero-section-apple from design system */
+        
+        /* Accessibility Improvements */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        /* Focus visible for keyboard navigation */
+        *:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        
+        /* Skip to main content link */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            z-index: 1400;
+            border-radius: 0 0 8px 0;
+        }
+        
+        .skip-link:focus {
+            top: 0;
+        }
+        
+        /* Sidebar Navigation - Apple HIG Component */
+        .drawer {
+            position: fixed;
+            top: 44px;
+            left: 0;
+            width: 280px;
+            height: calc(100vh - 44px);
+            background: var(--drawer);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-right: 0.5px solid var(--divider);
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 1000;
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .drawer.closed {
+            transform: translateX(-100%);
+        }
+        
+        /* Ensure drawer content is clickable */
+        .drawer * {
+            pointer-events: auto;
+        }
+        
+        .drawer .nav-menu {
+            padding: 8px 0; /* Apple standard vertical padding */
+        }
+        
+        /* Navigation Link - Apple HIG Component */
+        .drawer .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px; /* Apple standard padding */
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: background 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            border-radius: 10px; /* Apple standard corner radius */
+            margin: 2px 8px;
+            font-size: 17px; /* Apple standard */
+            font-weight: 400;
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
+            min-height: 44px; /* Apple minimum touch target */
+            box-sizing: border-box;
+            gap: 12px; /* Apple standard spacing between icon and text */
+            pointer-events: auto;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .drawer .nav-link:hover {
+            background: var(--hover);
+        }
+        
+        .drawer .nav-link.active {
+            background: var(--apple-fill-secondary);
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .drawer .nav-link .material-icons {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        
+        .drawer .nav-link > span:not(.material-icons):not(.dropdown-icon) {
+            flex: 1;
+            min-width: 0;
+            overflow: visible;
+            text-overflow: clip;
+            white-space: nowrap;
+        }
+        
+        .drawer .nav-dropdown-toggle > span:not(.material-icons):not(.dropdown-icon) {
+            flex: 0 1 auto;
+            overflow: visible;
+        }
+        
+        .drawer .nav-group {
+            margin-top: 8px; /* Apple 8pt grid */
+        }
+        
+        .drawer .nav-group-title {
+            padding: 8px 16px; /* Apple standard padding */
+            font-size: 13px; /* Apple standard caption size */
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            font-weight: 600;
+            letter-spacing: 0.08px;
+        }
+        
+        .drawer .nav-group-content {
+            padding: 4px 0;
+        }
+        
+        .drawer .divider {
+            height: 0.5px;
+            background: var(--divider);
+            margin: 8px 16px; /* Apple standard margins */
+        }
+        
+        .drawer .version-info {
+            padding: 16px; /* Apple standard padding */
+            text-align: right;
+            font-size: 13px; /* Apple standard caption size */
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+        
+        /* Dropdown Menu */
+        .nav-dropdown {
+            position: relative;
+        }
+        
+        .nav-dropdown-menu {
+            display: none;
+            margin-left: 16px;
+            border-left: 2px solid var(--divider);
+            padding-left: 8px;
+            overflow: visible;
+        }
+        
+        .nav-dropdown.active .nav-dropdown-menu {
+            display: block;
+        }
+        
+        .nav-dropdown-menu .nav-link {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            min-height: auto;
+            padding: 8px 12px;
+        }
+        
+        .nav-dropdown-menu .nav-link > span:not(.material-icons) {
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+        }
+        
+        .nav-dropdown-toggle .dropdown-icon {
+            margin-left: auto;
+            transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            flex-shrink: 0;
+        }
+        
+        .nav-dropdown.active .nav-dropdown-toggle .dropdown-icon {
+            transform: rotate(90deg);
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            margin-top: 44px;
+            padding: 20px; /* Apple standard content padding */
+            min-height: calc(100vh - 44px);
+            transition: margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        
+        .drawer.closed ~ .main-content {
+            margin-left: 0;
+        }
+        
+        .content-header {
+            margin-bottom: 20px; /* Apple standard spacing */
+        }
+        
+        .content-header h1 {
+            font-size: 34px; /* Apple Large Title */
+            font-weight: 700;
+            letter-spacing: 0.374px;
+            line-height: 1.17647;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .content-header p {
+            color: var(--text-secondary);
+            font-size: 17px; /* Apple standard body */
+            font-weight: 400;
+            line-height: 1.47059;
+        }
+        
+        .divider {
+            height: 0.5px;
+            background: var(--divider);
+            margin: 16px 0; /* Apple standard spacing */
+        }
+        
+        /* Cards - Apple HIG Component (Enhanced with design system) */
+        .card {
+            background: var(--surface);
+            border-radius: 16px; /* Apple.com standard corner radius */
+            padding: var(--component-padding-lg); /* 24px from design system */
+            margin-bottom: var(--space-2); /* 16px from design system */
+            border: 0.5px solid var(--divider);
+            box-shadow: 
+                0 2px 8px rgba(0, 0, 0, 0.08),
+                0 1px 4px rgba(0, 0, 0, 0.04);
+            transition: all var(--duration-normal) var(--ease-apple);
+            will-change: transform, box-shadow;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.05) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity var(--duration-normal) var(--ease-apple);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 
+                0 8px 24px rgba(0, 0, 0, 0.12),
+                0 4px 12px rgba(0, 0, 0, 0.08),
+                0 2px 6px rgba(0, 0, 0, 0.04);
+            border-color: var(--primary);
+        }
+        
+        .card:hover::before {
+            opacity: 1;
+        }
+        
+        .card > * {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px; /* Apple standard spacing */
+        }
+        
+        .card-title {
+            font-size: 22px; /* Apple Title 2 */
+            font-weight: 700;
+            letter-spacing: 0.352px;
+            line-height: 1.27273;
+            color: var(--text-primary);
+        }
+        
+        /* Buttons - Apple HIG Component (Enhanced with design system) */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px; /* Apple.com standard button padding */
+            border: none;
+            border-radius: 22px; /* Apple.com standard corner radius */
+            font-size: var(--font-body-md); /* 17px from design system */
+            font-weight: 600; /* Apple button font weight */
+            letter-spacing: var(--letter-spacing-body);
+            line-height: var(--line-height-body-md);
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-apple);
+            text-decoration: none;
+            gap: var(--space-1); /* 8px from design system */
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            min-height: 44px; /* Apple minimum touch target */
+            white-space: nowrap;
+            box-sizing: border-box;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            pointer-events: auto;
+            position: relative;
+            z-index: 1;
+            will-change: transform;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: scale(0.98);
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.96);
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--apple-gray-3);
+            transform: scale(0.98);
+        }
+        
+        .btn-secondary:active {
+            transform: scale(0.96);
+        }
+        
+        .btn-outlined {
+            background: transparent;
+            border: 0.5px solid var(--divider);
+            color: var(--primary);
+        }
+        
+        .btn-outlined:hover {
+            background: var(--hover);
+            border-color: var(--primary);
+        }
+        
+        .btn-outlined:active {
+            background: var(--apple-fill-secondary);
+        }
+        
+        /* Small button variant */
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 15px;
+            min-height: 36px;
+        }
+        
+        /* Large button variant */
+        .btn-lg {
+            padding: 14px 20px;
+            font-size: 19px;
+            min-height: 52px;
+        }
+        
+        /* Button with icon */
+        .btn {
+            gap: 8px; /* Ensure spacing between icon and text in buttons */
+        }
+        
+        .btn .material-icons,
+        .btn .icon-emoji {
+            flex-shrink: 0;
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+        }
+        
+        .btn-sm .material-icons,
+        .btn-sm .icon-emoji {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+        
+        .btn-lg .material-icons,
+        .btn-lg .icon-emoji {
+            font-size: 22px;
+            width: 22px;
+            height: 22px;
+        }
+        
+        /* Tables - Apple HIG Component */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border-radius: 12px; /* Apple standard corner radius */
+            overflow: hidden;
+        }
+        
+        .table th {
+            text-align: left;
+            padding: 12px 16px; /* Apple standard table padding */
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 13px; /* Apple standard caption */
+            text-transform: uppercase;
+            letter-spacing: 0.08px;
+            border-bottom: 0.5px solid var(--divider);
+            background: var(--surface-light);
+            height: 44px; /* Apple minimum row height */
+            box-sizing: border-box;
+        }
+        
+        .table td {
+            padding: 12px 16px; /* Apple standard table padding */
+            border-bottom: 0.5px solid var(--divider);
+            color: var(--text-primary);
+            font-size: 17px; /* Apple standard body */
+            font-weight: 400;
+            line-height: 1.47059;
+            min-height: 44px; /* Apple minimum row height */
+            box-sizing: border-box;
+        }
+        
+        .table tr:hover {
+            background: var(--hover);
+        }
+        
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* Badges - Apple HIG Component */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px; /* Apple standard badge padding */
+            border-radius: 6px; /* Apple standard corner radius for badges */
+            font-size: 13px; /* Apple standard caption */
+            font-weight: 600;
+            letter-spacing: 0.08px;
+            line-height: 1.38462;
+        }
+        
+        .badge-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .badge-error {
+            background: var(--error);
+            color: white;
+        }
+        
+        .badge-warning {
+            background: var(--warning);
+            color: white;
+        }
+        
+        .badge-info {
+            background: var(--info);
+            color: white;
+        }
+        
+        /* Status Indicator */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px; /* Apple standard spacing */
+            flex-shrink: 0;
+        }
+        
+        .status-indicator.online {
+            background: var(--success);
+        }
+        
+        .status-indicator.offline {
+            background: var(--text-disabled);
+        }
+        
+        /* Material Icons - Apple Style Sizing - Hidden until converted */
+        .material-icons:not(.icon-converted) {
+            font-size: 0;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+            visibility: hidden;
+            position: absolute;
+            opacity: 0;
+        }
+        
+        /* Once converted, show the emoji */
+        .icon-emoji.icon-converted {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            min-height: 20px;
+            visibility: visible;
+            position: relative;
+            opacity: 1;
+        }
+        
+        /* Emoji Icons - Apple Style Sizing */
+        .icon-emoji {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            min-height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            line-height: 1;
+            font-style: normal;
+            font-variant: normal;
+            text-rendering: auto;
+            -webkit-font-smoothing: antialiased;
+            pointer-events: none; /* Icons don't capture clicks, parent does */
+            -webkit-user-select: none;
+            user-select: none;
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
+            isolation: isolate; /* Create new stacking context */
+            position: relative;
+            z-index: 1;
+            color: inherit;
+            text-indent: 0;
+        }
+        
+        /* Ensure icons don't merge with adjacent text */
+        .icon-emoji + *,
+        * + .icon-emoji {
+            margin-left: 4px;
+        }
+        
+        /* Prevent text duplication and overlap in buttons */
+        .btn, button, .btn-icon {
+            position: relative;
+            overflow: visible;
+        }
+        
+        .btn .material-icons:not(.icon-converted),
+        button .material-icons:not(.icon-converted),
+        .btn-icon .material-icons:not(.icon-converted) {
+            display: none !important;
+        }
+        
+        /* Ensure button text is never converted */
+        .btn > span:not(.material-icons),
+        button > span:not(.material-icons),
+        .btn > text,
+        button > text {
+            position: relative;
+            z-index: 1;
+            display: inline-block;
+        }
+        
+        /* Prevent text overlap */
+        .btn, button {
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+        
+        .btn .icon-emoji,
+        button .icon-emoji {
+            flex-shrink: 0;
+            margin-right: 6px;
+        }
+        
+        /* Ensure icon-emoji is visible when converted */
+        .icon-emoji.icon-converted {
+            display: inline-flex !important;
+        }
+        
+        /* Auth Status Boxes */
+        .auth-status {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .auth-status .material-icons,
+        .auth-status .icon-emoji {
+            font-size: 32px;
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            pointer-events: none;
+        }
+        
+        .auth-status > div {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .auth-status strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 17px;
+            font-weight: 600;
+        }
+        
+        .auth-status p {
+            margin: 0;
+            font-size: 15px;
+            opacity: 0.9;
+        }
+        
+        /* Ensure clickable elements remain clickable */
+        a .icon-emoji,
+        button .icon-emoji,
+        .btn .icon-emoji,
+        .btn-icon .icon-emoji,
+        .nav-link .icon-emoji,
+        .action-link .icon-emoji,
+        .action-button .icon-emoji {
+            pointer-events: none !important;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        /* All interactive elements must be clickable */
+        a,
+        button,
+        .btn,
+        .btn-icon,
+        .nav-link,
+        .action-link,
+        .action-button,
+        .menu-button,
+        .modal-close {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            position: relative;
+        }
+        
+        /* Ensure navigation links are always clickable */
+        .nav-link,
+        .action-link,
+        .action-button {
+            z-index: 10;
+        }
+        
+        /* Prevent icon conversion from breaking event handlers */
+        .icon-converted {
+            pointer-events: none;
+        }
+        
+        /* Ensure parent elements capture clicks when icons are inside */
+        a:has(.icon-emoji),
+        button:has(.icon-emoji),
+        .btn:has(.icon-emoji),
+        .btn-icon:has(.icon-emoji),
+        .nav-link:has(.icon-emoji) {
+            pointer-events: auto !important;
+        }
+        
+        /* Action buttons container */
+        .action-buttons {
+            display: flex;
+            gap: 8px; /* Apple standard spacing */
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        /* Icon-only buttons */
+        .btn-icon {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px; /* Apple minimum touch target */
+            height: 44px; /* Apple minimum touch target */
+            min-width: 44px;
+            min-height: 44px;
+            flex-shrink: 0;
+            white-space: nowrap;
+            box-sizing: border-box;
+        }
+        
+        .btn-icon .material-icons,
+        .btn-icon .icon-emoji {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        
+        .btn-icon:hover {
+            background: var(--hover);
+            color: var(--text-primary);
+        }
+        
+        .btn-icon:active {
+            background: var(--apple-fill-secondary);
+            transform: scale(0.96);
+        }
+        
+        .btn-icon:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        /* Edit button - doubled size as requested */
+        .btn-icon.edit {
+            color: var(--info);
+            width: 88px; /* Doubled from 44px */
+            height: 88px; /* Doubled from 44px */
+            min-width: 88px;
+            min-height: 88px;
+            padding: 16px;
+        }
+        
+        .btn-icon.edit .material-icons,
+        .btn-icon.edit .icon-emoji {
+            font-size: 40px; /* Doubled from 20px */
+            width: 40px;
+            height: 40px;
+        }
+        
+        /* Delete button */
+        .btn-icon.delete {
+            color: var(--error);
+        }
+        
+        /* Play button */
+        .btn-icon.play {
+            color: var(--success);
+        }
+        
+        /* Modal close button */
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+        }
+        
+        .modal-close:hover {
+            background: var(--hover);
+            color: var(--text-primary);
+        }
+        
+        .modal-close .material-icons,
+        .modal-close .icon-emoji {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 960px) {
+            .drawer {
+                transform: translateX(-100%);
+            }
+            
+            .drawer.open {
+                transform: translateX(0);
+                z-index: 1001;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            .app-bar .search-form {
+                display: none;
+            }
+            
+            /* Ensure mobile navigation is clickable */
+            .drawer.open * {
+                pointer-events: auto;
+            }
+            
+            /* Responsive buttons */
+            .btn {
+                font-size: 16px;
+                padding: 10px 14px;
+                min-height: 44px;
+            }
+            
+            .btn-sm {
+                font-size: 14px;
+                padding: 6px 10px;
+                min-height: 36px;
+            }
+            
+            .action-buttons {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            
+            .btn-icon {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                min-height: 40px;
+                padding: 6px;
+            }
+            
+            .btn-icon.edit {
+                width: 80px;
+                height: 80px;
+                min-width: 80px;
+                min-height: 80px;
+                padding: 14px;
+            }
+            
+            .btn-icon.edit .material-icons,
+            .btn-icon.edit .icon-emoji {
+                font-size: 36px;
+                width: 36px;
+                height: 36px;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .btn-group .btn {
+                width: 100%;
+            }
+            
+            .modal-footer {
+                flex-direction: column;
+            }
+            
+            .modal-footer .btn {
+                width: 100%;
+            }
+        }
+        
+        /* Overlay for mobile drawer */
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            top: 44px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 999;
+        }
+        
+        .drawer-overlay.active {
+            display: block;
+        }
+        
+        /* Button groups */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .btn-group .btn {
+            flex: 0 1 auto;
+        }
+        
+        /* Buttons in tables */
+        .table .action-buttons {
+            display: flex;
+            gap: 4px;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        
+        .table .btn-icon {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            min-height: 36px;
+            padding: 6px;
+        }
+        
+        .table .btn-icon .material-icons,
+        .table .btn-icon .icon-emoji {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+        
+        /* Buttons in modals */
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 16px;
+            border-top: 0.5px solid var(--divider);
+        }
+        
+        .modal-footer .btn {
+            min-width: 100px;
+        }
+        
+        /* Buttons with flex: 1 (equal width in modals) */
+        .btn[style*="flex: 1"],
+        .btn[style*="flex:1"] {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        
+        /* Ensure buttons don't overflow containers */
+        .btn,
+        .btn-icon {
+            max-width: 100%;
+        }
+        
+        /* Button text overflow handling */
+        .btn span:not(.material-icons):not(.icon-emoji):not(.icon-converted) {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* Ensure button text is not affected by icon conversion */
+        .btn > span:not(.material-icons):not(.icon-emoji):not(.icon-converted) {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            font-size: inherit;
+            font-weight: inherit;
+            color: inherit;
+            display: inline;
+            pointer-events: none;
+            white-space: normal;
+        }
+        
+        /* Prevent icon conversion from affecting button text nodes */
+        .btn .material-icons {
+            flex-shrink: 0;
+        }
+        
+        .btn .icon-emoji {
+            flex-shrink: 0;
+        }
+        
+        /* Ensure button text content is preserved */
+        .btn {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+        }
+        
+        /* Protect text nodes inside buttons */
+        .btn *:not(.material-icons):not(.icon-emoji) {
+            font-family: inherit;
+        }
+        
+        /* Segment buttons (filter buttons) */
+        .segment {
+            background: var(--surface);
+            border: 0.5px solid var(--divider);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            min-height: 36px;
+            white-space: nowrap;
+            box-sizing: border-box;
+        }
+        
+        .segment:hover {
+            background: var(--hover);
+        }
+        
+        .segment.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        /* Status button (for dashboard) */
+        .status-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            min-height: 36px;
+            white-space: nowrap;
+            box-sizing: border-box;
+        }
+        
+        .status-button:hover {
+            background: var(--primary-dark);
+            transform: scale(0.98);
+        }
+        
+        /* Forms - Apple HIG Component */
+        .form-group {
+            margin-bottom: 16px; /* Apple standard spacing */
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px; /* Apple standard spacing */
+            color: var(--text-primary);
+            font-weight: 400;
+            font-size: 17px; /* Apple standard */
+            line-height: 1.47059;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 16px; /* Apple standard input padding */
+            background: var(--surface);
+            border: 0.5px solid var(--divider);
+            border-radius: 10px; /* Apple standard corner radius */
+            color: var(--text-primary);
+            font-size: 17px; /* Apple standard */
+            font-weight: 400;
+            line-height: 1.47059;
+            transition: border-color 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            min-height: 44px; /* Apple minimum touch target */
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--surface-light);
+        }
+        
+        .form-input::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Apple standard spacing */
+        }
+        
+        .form-checkbox input[type="checkbox"] {
+            width: 20px; /* Apple standard checkbox size */
+            height: 20px; /* Apple standard checkbox size */
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+        
+        .form-checkbox label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 17px; /* Apple standard */
+            font-weight: 400;
+            line-height: 1.47059;
+        }
+        
+        /* Alerts - Apple HIG Component */
+        .alert {
+            padding: 16px; /* Apple standard padding */
+            border-radius: 12px; /* Apple standard corner radius */
+            margin-bottom: 16px; /* Apple standard spacing */
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 17px; /* Apple standard */
+            font-weight: 400;
+            line-height: 1.47059;
+        }
+        
+        .alert.hidden,
+        .alert[style*="display: none"] {
+            display: none !important;
+        }
+        
+        .alert.show {
+            display: flex;
+        }
+        
+        .alert .material-icons,
+        .alert .icon-emoji {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            pointer-events: none;
+        }
+        
+        .alert > div {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .alert strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 17px;
+            font-weight: 600;
+        }
+        
+        .alert p {
+            margin: 0 0 4px 0;
+            font-size: 15px;
+        }
+        
+        .alert small {
+            display: block;
+            font-size: 13px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+        
+        .alert-success {
+            background: rgba(52, 199, 89, 0.1);
+            border: 0.5px solid var(--success);
+            color: var(--success);
+        }
+        
+        .alert-success.alert {
+            background: var(--success);
+            color: white;
+        }
+        
+        .alert-error {
+            background: rgba(255, 59, 48, 0.1);
+            border: 0.5px solid var(--error);
+            color: var(--error);
+        }
+        
+        .alert-info {
+            background: rgba(10, 132, 255, 0.1);
+            border: 0.5px solid var(--info);
+            color: var(--info);
+        }
+        
+        /* Loading States - Apple HIG Component */
+        .loading {
+            text-align: center;
+            padding: 40px 20px; /* Apple standard padding */
+            color: var(--text-secondary);
+            font-size: 17px; /* Apple standard */
+            font-weight: 400;
+        }
+        
+        /* Empty States - Apple HIG Component */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px; /* Apple standard padding */
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            opacity: 0.5;
+            margin-bottom: 16px; /* Apple standard spacing */
+        }
+        
+        .empty-state h3 {
+            font-size: 22px; /* Apple Title 2 */
+            font-weight: 700;
+            letter-spacing: 0.352px;
+            line-height: 1.27273;
+            margin-bottom: 8px; /* Apple standard spacing */
+            color: var(--text-primary);
+        }
+        
+        .empty-state p {
+            font-size: 17px; /* Apple standard body */
+            font-weight: 400;
+            line-height: 1.47059;
+            color: var(--text-secondary);
+        }
+        
+        /* Custom Tooltip System - Enhanced visibility for icon buttons */
+        .custom-tooltip {
+            position: fixed;
+            z-index: 10000;
+            background: var(--surface);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1);
+            border: 0.5px solid var(--divider);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        
+        .custom-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .custom-tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-bottom-color: var(--surface);
+        }
+        
+        /* Tooltip position variants */
+        .custom-tooltip.tooltip-top {
+            transform: translateY(-4px);
+        }
+        
+        .custom-tooltip.tooltip-top.visible {
+            transform: translateY(0);
+        }
+        
+        .custom-tooltip.tooltip-top::before {
+            top: 100%;
+            bottom: auto;
+            border-bottom-color: transparent;
+            border-top-color: var(--surface);
+        }
+        
+        /* Style for elements with enhanced tooltips */
+        [data-tooltip] {
+            position: relative;
+        }
+        
+        {% block extra_styles %}{% endblock %}
+    </style>
+    <!-- Apple Design System CSS - Load AFTER inline styles to override them -->
+    <link rel="stylesheet" href="/static/css/apple-design-system.css" media="all">
+</head>
+<body data-theme="dark">
+    <!-- Navigation Bar - Apple HIG Component -->
+    <div class="app-bar">
+            <button class="menu-button" id="drawerToggleButton" aria-label="Toggle menu">
+            <span class="material-icons" aria-hidden="true">menu</span>
+        </button>
+        <div class="logo">
+            <a href="/" style="display: flex; align-items: center; text-decoration: none; color: var(--text-primary);">
+                <span>📺 StreamTV</span>
+            </a>
+        </div>
+        
+        <!-- Quick Access Toolbar -->
+        <div class="quick-access-toolbar" id="quickAccessToolbar" style="display: none;">
+            <div class="quick-access-dropdown">
+                <button class="quick-access-button" id="quickAccessButton" aria-label="Quick Launch Channels" aria-expanded="false" aria-haspopup="true">
+                    <span class="material-icons" aria-hidden="true">apps</span>
+                    <span>Quick Launch</span>
+                    <span class="material-icons" style="font-size: 16px; margin-left: 4px;" aria-hidden="true">arrow_drop_down</span>
+                </button>
+                <div class="quick-access-menu" id="quickAccessMenu" role="menu">
+                    <!-- Channels will be dynamically populated here -->
+                    <a href="/channels" class="quick-access-item" role="menuitem">
+                        <span class="material-icons" aria-hidden="true">tv</span>
+                        <span>All Channels</span>
+                    </a>
+                    <a href="/api/ai/channel" class="quick-access-item" role="menuitem">
+                        <span class="material-icons" aria-hidden="true">smart_toy</span>
+                        <span>AI Create Channel</span>
+                    </a>
+                    <a href="/schedules" class="quick-access-item" role="menuitem">
+                        <span class="material-icons" aria-hidden="true">schedule</span>
+                        <span>Schedules</span>
+                    </a>
+                    <a href="/import" class="quick-access-item" role="menuitem">
+                        <span class="material-icons" aria-hidden="true">file_upload</span>
+                        <span>Import</span>
+                    </a>
+                    <div class="quick-access-divider"></div>
+                    <a href="/iptv/channels.m3u" class="quick-access-item" role="menuitem" target="_blank" aria-label="Open M3U playlist in new window">
+                        <span class="material-icons" aria-hidden="true">playlist_play</span>
+                        <span>M3U Playlist</span>
+                    </a>
+                    <a href="/iptv/xmltv.xml" class="quick-access-item" role="menuitem" target="_blank" aria-label="Open XMLTV EPG in new window">
+                        <span class="material-icons" aria-hidden="true">tv</span>
+                        <span>XMLTV EPG</span>
+                    </a>
+                    <div class="quick-access-divider"></div>
+                    <a href="/settings" class="quick-access-item" role="menuitem">
+                        <span class="material-icons" aria-hidden="true">settings</span>
+                        <span>Settings</span>
+                    </a>
+                    <a href="/health-check" class="quick-access-item" role="menuitem">
+                        <span class="material-icons" aria-hidden="true">health_and_safety</span>
+                        <span>Health Check</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="search-form" style="position: relative;">
+            <span class="material-icons search-icon" aria-hidden="true">search</span>
+            <label for="searchInput" class="sr-only">Search channels and media</label>
+            <input type="text" class="search-bar" placeholder="Search channels, media..." id="searchInput" aria-label="Search channels and media">
+        </div>
+        <div class="actions">
+            <a href="/iptv/channels.m3u" class="action-link" target="_blank">M3U</a>
+            <a href="/iptv/xmltv.xml" class="action-link" target="_blank">XMLTV</a>
+            <a href="/docs" class="action-link" target="_blank" style="font-weight: 500;">API</a>
+            <button class="action-button" id="themeToggleButton" title="Toggle theme" aria-label="Toggle theme">
+                <span class="material-icons" id="themeIcon" aria-hidden="true">dark_mode</span>
+            </button>
+            <div style="display: flex; align-items: center; margin-left: 8px;">
+                <span class="status-indicator online" id="statusIndicator"></span>
+                <span style="font-size: 13px; color: var(--text-secondary);" id="statusText">Online</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Drawer Overlay (Mobile) -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    
+    <!-- Sidebar Navigation - Apple HIG Component -->
+    <nav class="drawer" id="drawer" role="navigation" aria-label="Main navigation">
+        <div class="nav-menu">
+            <!-- Top Level Navigation -->
+            <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}" aria-label="Dashboard">
+                <span class="material-icons" aria-hidden="true">dashboard</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="/player" class="nav-link {% if '/player' in request.url.path %}active{% endif %}" aria-label="Player">
+                <span class="material-icons" aria-hidden="true">play_circle</span>
+                <span>Player</span>
+            </a>
+            
+            <div class="divider"></div>
+            
+            <!-- Channels Group -->
+            <div class="nav-group">
+                <div class="nav-group-title">Channels</div>
+                <div class="nav-group-content">
+                    <a href="/channels" class="nav-link {% if '/channels' in request.url.path %}active{% endif %}" aria-label="Manage Channels">
+                        <span class="material-icons" aria-hidden="true">tv</span>
+                        <span>Manage Channels</span>
+                    </a>
+                    <a href="/api/ai/channel" class="nav-link {% if '/ai/channel' in request.url.path %}active{% endif %}" aria-label="AI Create Channel">
+                        <span class="material-icons" aria-hidden="true">smart_toy</span>
+                        <span>AI Create Channel</span>
+                    </a>
+                    <a href="/import" class="nav-link {% if '/import' in request.url.path and '/import-m3u' not in request.url.path %}active{% endif %}" aria-label="Import Channels">
+                        <span class="material-icons" aria-hidden="true">upload</span>
+                        <span>Import Channels</span>
+                    </a>
+                    <a href="/import-m3u" class="nav-link {% if '/import-m3u' in request.url.path %}active{% endif %}" aria-label="Import M3U">
+                        <span class="material-icons" aria-hidden="true">playlist_add</span>
+                        <span>Import M3U</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Content Group (renamed from Media) -->
+            <div class="nav-group">
+                <div class="nav-group-title">Content</div>
+                <div class="nav-group-content">
+                    <a href="/media" class="nav-link {% if '/media' in request.url.path %}active{% endif %}" aria-label="Media Items">
+                        <span class="material-icons" aria-hidden="true">video_library</span>
+                        <span>Media Items</span>
+                    </a>
+                    <a href="/playlists" class="nav-link {% if '/playlists' in request.url.path %}active{% endif %}" aria-label="Playlists">
+                        <span class="material-icons" aria-hidden="true">playlist_play</span>
+                        <span>Playlists</span>
+                    </a>
+                    <a href="/collections" class="nav-link {% if '/collections' in request.url.path %}active{% endif %}" aria-label="Collections">
+                        <span class="material-icons" aria-hidden="true">collections</span>
+                        <span>Collections</span>
+                    </a>
+                    <a href="/libraries" class="nav-link {% if '/libraries' in request.url.path %}active{% endif %}" aria-label="Libraries">
+                        <span class="material-icons" aria-hidden="true">local_library</span>
+                        <span>Libraries</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Scheduling Group (expanded with Filler/Deco) -->
+            <div class="nav-group">
+                <div class="nav-group-title">Scheduling</div>
+                <div class="nav-group-content">
+                    <a href="/playouts" class="nav-link {% if '/playouts' in request.url.path %}active{% endif %}" aria-label="Playouts">
+                        <span class="material-icons" aria-hidden="true">play_circle_outline</span>
+                        <span>Playouts</span>
+                    </a>
+                    <a href="/schedules" class="nav-link {% if '/schedules' in request.url.path %}active{% endif %}" aria-label="Schedules">
+                        <span class="material-icons" aria-hidden="true">schedule</span>
+                        <span>Schedules</span>
+                    </a>
+                    <a href="/blocks" class="nav-link {% if '/blocks' in request.url.path %}active{% endif %}" aria-label="Blocks">
+                        <span class="material-icons" aria-hidden="true">view_timeline</span>
+                        <span>Blocks</span>
+                    </a>
+                    <a href="/templates" class="nav-link {% if '/templates' in request.url.path %}active{% endif %}" aria-label="Templates">
+                        <span class="material-icons" aria-hidden="true">description</span>
+                        <span>Templates</span>
+                    </a>
+                    <a href="/filler-presets" class="nav-link {% if '/filler-presets' in request.url.path %}active{% endif %}" aria-label="Filler Presets">
+                        <span class="material-icons" aria-hidden="true">movie_filter</span>
+                        <span>Filler Presets</span>
+                    </a>
+                    <a href="/deco" class="nav-link {% if '/deco' in request.url.path %}active{% endif %}" aria-label="Deco">
+                        <span class="material-icons" aria-hidden="true">auto_awesome</span>
+                        <span>Deco</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Integrations Group (NEW) -->
+            <div class="nav-group">
+                <div class="nav-group-title">Integrations</div>
+                <div class="nav-group-content">
+                    <a href="/settings/plex" class="nav-link {% if '/settings/plex' in request.url.path %}active{% endif %}" aria-label="Plex API Integration">
+                        <span class="material-icons" aria-hidden="true">integration_instructions</span>
+                        <span>Plex API</span>
+                    </a>
+                    <a href="/settings/media-sources" class="nav-link {% if '/settings/media-sources' in request.url.path %}active{% endif %}" aria-label="Media Sources">
+                        <span class="material-icons" aria-hidden="true">perm_media</span>
+                        <span>Media Sources</span>
+                    </a>
+                    <a href="/api/auth/archive-org" class="nav-link {% if '/auth/archive-org' in request.url.path %}active{% endif %}" aria-label="Archive.org">
+                        <span class="material-icons" aria-hidden="true">inventory_2</span>
+                        <span>Archive.org</span>
+                    </a>
+                    <a href="/api/auth/youtube" class="nav-link {% if '/auth/youtube' in request.url.path %}active{% endif %}" aria-label="YouTube">
+                        <span class="material-icons" aria-hidden="true">smart_display</span>
+                        <span>YouTube</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- System Group (focused settings) -->
+            <div class="nav-group">
+                <div class="nav-group-title">System</div>
+                <div class="nav-group-content">
+                    <a href="/settings/ffmpeg" class="nav-link {% if '/settings/ffmpeg' in request.url.path %}active{% endif %}" aria-label="FFmpeg Settings">
+                        <span class="material-icons" aria-hidden="true">settings_applications</span>
+                        <span>FFmpeg</span>
+                    </a>
+                    <a href="/settings/hdhr" class="nav-link {% if '/settings/hdhr' in request.url.path %}active{% endif %}" aria-label="HDHomeRun Settings">
+                        <span class="material-icons" aria-hidden="true">router</span>
+                        <span>HDHomeRun</span>
+                    </a>
+                    <a href="/settings/playout" class="nav-link {% if '/settings/playout' in request.url.path %}active{% endif %}" aria-label="Playout Settings">
+                        <span class="material-icons" aria-hidden="true">tune</span>
+                        <span>Playout Settings</span>
+                    </a>
+                    <a href="/settings/quick-launch" class="nav-link {% if '/settings/quick-launch' in request.url.path %}active{% endif %}" aria-label="Quick Launch Settings">
+                        <span class="material-icons" aria-hidden="true">apps</span>
+                        <span>Quick Launch</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Help Group (consolidated) -->
+            <div class="nav-group">
+                <div class="nav-group-title">Help</div>
+                <div class="nav-group-content">
+                    <div class="nav-dropdown">
+                        <a href="#" class="nav-link nav-dropdown-toggle {% if '/docs' in request.url.path %}active{% endif %}" data-dropdown-target="docsDropdown" aria-label="Documentation">
+                            <span class="material-icons" aria-hidden="true">menu_book</span>
+                            <span>Documentation</span>
+                            <span class="material-icons dropdown-icon" aria-hidden="true">chevron_right</span>
+                        </a>
+                        <div class="nav-dropdown-menu" id="docsDropdown">
+                            <a href="/docs/quick_start" class="nav-link {% if '/docs/quick_start' in request.url.path %}active{% endif %}" aria-label="Quick Start">
+                                <span class="material-icons" aria-hidden="true">rocket_launch</span>
+                                <span>Quick Start</span>
+                            </a>
+                            <a href="/docs/beginner" class="nav-link {% if '/docs/beginner' in request.url.path %}active{% endif %}" aria-label="Beginner Guide">
+                                <span class="material-icons" aria-hidden="true">school</span>
+                                <span>Beginner Guide</span>
+                            </a>
+                            <a href="/docs/navigation" class="nav-link {% if '/docs/navigation' in request.url.path %}active{% endif %}" aria-label="Navigation Guide">
+                                <span class="material-icons" aria-hidden="true">explore</span>
+                                <span>Navigation Guide</span>
+                            </a>
+                            <a href="/docs/channel_creation" class="nav-link {% if '/docs/channel_creation' in request.url.path %}active{% endif %}" aria-label="Channel Creation Guide">
+                                <span class="material-icons" aria-hidden="true">add_to_queue</span>
+                                <span>Channel Creation</span>
+                            </a>
+                            <div class="divider" style="margin: 8px 0;"></div>
+                            <a href="/docs/installation" class="nav-link {% if '/docs/installation' in request.url.path %}active{% endif %}" aria-label="Installation Guide">
+                                <span class="material-icons" aria-hidden="true">install_mobile</span>
+                                <span>Installation Guide</span>
+                            </a>
+                            <a href="/docs/troubleshooting" class="nav-link {% if '/docs/troubleshooting' in request.url.path %}active{% endif %}" aria-label="Troubleshooting Guide">
+                                <span class="material-icons" aria-hidden="true">build</span>
+                                <span>Troubleshooting</span>
+                            </a>
+                        </div>
+                    </div>
+                    <a href="/health-check" class="nav-link {% if '/health-check' in request.url.path %}active{% endif %}" aria-label="Health Check">
+                        <span class="material-icons" aria-hidden="true">health_and_safety</span>
+                        <span>Health Check</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Diagnostics Group (renamed from Resources) -->
+            <div class="nav-group">
+                <div class="nav-group-title">Diagnostics</div>
+                <div class="nav-group-content">
+                    <a href="/logs" class="nav-link {% if '/logs' in request.url.path %}active{% endif %}" aria-label="Streaming Logs">
+                        <span class="material-icons" aria-hidden="true">terminal</span>
+                        <span>Streaming Logs</span>
+                    </a>
+                    <a href="/plex-logs" class="nav-link {% if '/plex-logs' in request.url.path %}active{% endif %}" aria-label="Plex Server Logs">
+                        <span class="material-icons" aria-hidden="true">dvr</span>
+                        <span>Plex Server Logs</span>
+                    </a>
+                    <a href="/ollama" class="nav-link {% if '/ollama' in request.url.path %}active{% endif %}" aria-label="AI Troubleshooting Assistant">
+                        <span class="material-icons" aria-hidden="true">psychology</span>
+                        <span>AI Troubleshooting</span>
+                    </a>
+                    <a href="/settings/ai" class="nav-link {% if '/settings/ai' in request.url.path %}active{% endif %}" aria-label="AI Settings">
+                        <span class="material-icons" aria-hidden="true">auto_awesome</span>
+                        <span>AI Settings</span>
+                    </a>
+                    <a href="/test-stream" class="nav-link {% if '/test-stream' in request.url.path %}active{% endif %}" aria-label="Test Stream">
+                        <span class="material-icons" aria-hidden="true">videocam</span>
+                        <span>Test Stream</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Developer Group (hidden by default) -->
+            <div class="nav-group" id="devToolsSection" style="display: none;">
+                <div class="nav-group-title">Developer</div>
+                <div class="nav-group-content">
+                    <a href="/docs" class="nav-link" target="_blank" aria-label="API Documentation">
+                        <span class="material-icons" aria-hidden="true">api</span>
+                        <span>API Documentation</span>
+                    </a>
+                    <a href="/api/redoc" class="nav-link" target="_blank" aria-label="ReDoc">
+                        <span class="material-icons" aria-hidden="true">article</span>
+                        <span>ReDoc</span>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="version-info">
+                <div>EXStreamTV</div>
+                <div style="color: var(--primary);">v1.0.0</div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+        <!-- Breadcrumbs -->
+        {% block breadcrumbs %}
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <div class="breadcrumb-item">
+                <a href="/" class="breadcrumb-link">Home</a>
+            </div>
+            {% if request.url.path != '/' %}
+            <span class="breadcrumb-separator" aria-hidden="true">/</span>
+            <div class="breadcrumb-item">
+                <span class="breadcrumb-current">{{ request.url.path.split('/')[-1]|title|replace('-', ' ') }}</span>
+            </div>
+            {% endif %}
+        </nav>
+        {% endblock %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <script nonce="{{ request.state.csp_nonce }}">
+        // Theme Management
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        document.body.setAttribute('data-theme', currentTheme);
+        updateThemeIcon();
+        
+        function toggleTheme() {
+            const current = document.body.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon();
+        }
+        
+        function updateThemeIcon() {
+            const theme = document.body.getAttribute('data-theme');
+            const icon = document.getElementById('themeIcon');
+            icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+        }
+        
+        // API authentication helpers
+        const API_KEY_STORAGE_KEY = 'streamtv_api_key';
+        
+        function getApiKey() {
+            try {
+                return localStorage.getItem(API_KEY_STORAGE_KEY) || '';
+            } catch (e) {
+                console.warn('Unable to read API key from storage', e);
+                return '';
+            }
+        }
+        
+        function setApiKey(value) {
+            try {
+                const trimmedValue = (value || '').trim();
+                if (trimmedValue) {
+                    localStorage.setItem(API_KEY_STORAGE_KEY, trimmedValue);
+                } else {
+                    localStorage.removeItem(API_KEY_STORAGE_KEY);
+                }
+                document.dispatchEvent(new CustomEvent('streamtv:api-key-changed', {
+                    detail: { hasKey: !!trimmedValue }
+                }));
+            } catch (e) {
+                console.warn('Unable to persist API key', e);
+            }
+        }
+        
+        function getCsrfToken() {
+            try {
+                return document.cookie
+                    .split('; ')
+                    .find(row => row.startsWith('csrf_token='))
+                    ?.split('=')[1] || '';
+            } catch (e) {
+                return '';
+            }
+        }
+        
+        async function authenticatedFetch(url, options = {}) {
+            
+            const opts = { ...options };
+            const method = (opts.method || 'GET').toString().toUpperCase();
+            opts.method = method;
+            
+            const headers = new Headers(opts.headers || {});
+            
+            const apiKey = getApiKey();
+            if (apiKey) {
+                headers.set('Authorization', `Bearer ${apiKey}`);
+                headers.set('X-API-Key', apiKey);
+            }
+            
+            if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+                const csrfToken = getCsrfToken();
+                if (csrfToken) {
+                    headers.set('X-CSRF-Token', csrfToken);
+                }
+            }
+            
+            headers.set('X-Requested-With', 'XMLHttpRequest');
+            
+            opts.headers = headers;
+            if (!opts.credentials) {
+                opts.credentials = 'same-origin';
+            }
+            
+            return fetch(url, opts);
+        }
+        
+        // Expose helpers globally for all pages
+        window.authenticatedFetch = authenticatedFetch;
+        window.getApiKey = getApiKey;
+        window.setApiKey = setApiKey;
+        window.getCsrfToken = getCsrfToken;
+
+        function resolveAction(actionName) {
+            if (!actionName) {
+                return null;
+            }
+            const parts = actionName.split('.');
+            let context = window;
+            for (const part of parts) {
+                context = context?.[part];
+            }
+            return typeof context === 'function' ? context : null;
+        }
+
+        function parseActionArgs(element) {
+            const rawArgs = element.dataset.args;
+            if (!rawArgs) {
+                return [];
+            }
+            try {
+                return JSON.parse(rawArgs);
+            } catch (error) {
+                console.error('Failed to parse data-args for action element:', element, error);
+                return [];
+            }
+        }
+
+        function bindActionHandlers(root = document) {
+            root.querySelectorAll('[data-action]').forEach(element => {
+                if (element.dataset.actionBound === 'true') {
+                    return;
+                }
+
+                const eventType = element.dataset.actionEvent || 'click';
+                const handler = (event) => {
+                    if (element.dataset.selfOnly === 'true' && event.target !== element) {
+                        return;
+                    }
+                    if (element.dataset.preventDefault === 'true') {
+                        event.preventDefault();
+                    }
+                    if (element.dataset.stopPropagation === 'true') {
+                        event.stopPropagation();
+                    }
+
+                    const actionFn = resolveAction(element.dataset.action);
+                    if (!actionFn) {
+                        console.warn(`Action handler "${element.dataset.action}" not found for`, element);
+                        return;
+                    }
+
+                    const args = parseActionArgs(element);
+                    const callArgs = element.dataset.passEvent === 'true'
+                        ? [...args, event]
+                        : args;
+                    actionFn.apply(element, callArgs);
+                };
+
+                element.addEventListener(eventType, handler);
+                element.dataset.actionBound = 'true';
+            });
+        }
+
+        window.bindActionHandlers = bindActionHandlers;
+        
+        // Drawer Management
+        function toggleDrawer() {
+            const drawer = document.getElementById('drawer');
+            const overlay = document.getElementById('drawerOverlay');
+            if (drawer) {
+            drawer.classList.toggle('closed');
+                if (window.innerWidth <= 960 && overlay) {
+                overlay.classList.toggle('active');
+                }
+            }
+        }
+        
+        function closeDrawer() {
+            const drawer = document.getElementById('drawer');
+            const overlay = document.getElementById('drawerOverlay');
+            if (drawer) {
+            drawer.classList.add('closed');
+            }
+            if (overlay) {
+            overlay.classList.remove('active');
+        }
+        }
+        
+        // Close drawer when clicking a nav link on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 960) {
+                const navLink = e.target.closest('.nav-link');
+                if (navLink && navLink.href && !navLink.target) {
+                    setTimeout(closeDrawer, 100);
+                }
+            }
+        });
+        
+        // Close drawer on desktop resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 960) {
+                const overlay = document.getElementById('drawerOverlay');
+                overlay.classList.remove('active');
+            }
+        });
+        
+        // Status Check
+        async function checkStatus() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                const indicator = document.getElementById('statusIndicator');
+                const text = document.getElementById('statusText');
+                
+                if (data.status === 'healthy') {
+                    indicator.className = 'status-indicator online';
+                    text.textContent = 'Online';
+                } else {
+                    indicator.className = 'status-indicator offline';
+                    text.textContent = 'Offline';
+                }
+            } catch (error) {
+                const indicator = document.getElementById('statusIndicator');
+                const text = document.getElementById('statusText');
+                indicator.className = 'status-indicator offline';
+                text.textContent = 'Offline';
+            }
+        }
+        
+        // Check status on load and every 30 seconds
+        checkStatus();
+        setInterval(checkStatus, 30000);
+        
+        // Enhanced Search functionality
+        let searchTimeout;
+        const searchInput = document.getElementById('searchInput');
+        let searchResults = [];
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+                
+                if (query.length < 2) {
+                    hideSearchResults();
+                    return;
+                }
+                
+                searchTimeout = setTimeout(() => {
+                    performSearch(query);
+                }, 300);
+            });
+            
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const query = e.target.value.trim();
+                    if (query && searchResults.length > 0) {
+                        navigateToResult(searchResults[0]);
+                    } else if (query) {
+                        window.location.href = `/channels?search=${encodeURIComponent(query)}`;
+                    }
+                }
+            });
+        } else {
+            console.warn('Search input not found; search functionality disabled on this page.');
+        }
+        
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-form') && !e.target.closest('.search-results')) {
+                hideSearchResults();
+            }
+        });
+        
+        async function performSearch(query) {
+            try {
+                const results = [];
+                
+                const channelsRes = await fetch('/api/channels');
+                const channels = await channelsRes.json();
+                const channelMatches = channels.filter(c => 
+                    c.name.toLowerCase().includes(query.toLowerCase()) ||
+                    c.number.includes(query) ||
+                    (c.group && c.group.toLowerCase().includes(query.toLowerCase()))
+                );
+                channelMatches.forEach(ch => {
+                    results.push({
+                        type: 'channel',
+                        title: ch.name,
+                        subtitle: `Channel ${ch.number}`,
+                        url: `/channels`,
+                        icon: 'tv'
+                    });
+                });
+                
+                try {
+                    const mediaRes = await fetch('/api/media');
+                    const media = await mediaRes.json();
+                    const mediaMatches = media.filter(m => 
+                        m.title.toLowerCase().includes(query.toLowerCase()) ||
+                        (m.description && m.description.toLowerCase().includes(query.toLowerCase()))
+                    ).slice(0, 5);
+                    mediaMatches.forEach(m => {
+                        results.push({
+                            type: 'media',
+                            title: m.title,
+                            subtitle: m.source,
+                            url: `/api/media/${m.id}`,
+                            icon: 'video_library'
+                        });
+                    });
+                } catch (e) {
+                    // Media search failed, continue
+                }
+                
+                searchResults = results;
+                displaySearchResults(results);
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+        
+        function displaySearchResults(results) {
+            hideSearchResults();
+            
+            if (results.length === 0) {
+                return;
+            }
+            
+            const searchForm = document.querySelector('.search-form');
+            if (!searchForm) {
+                return;
+            }
+            const resultsDiv = document.createElement('div');
+            resultsDiv.className = 'search-results';
+            resultsDiv.style.cssText = `
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--surface);
+                border: 0.5px solid var(--divider);
+                border-radius: 12px;
+                margin-top: 8px;
+                max-height: 400px;
+                overflow-y: auto;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+                z-index: 1000;
+            `;
+            
+            results.forEach(result => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.dataset.action = 'navigateToResult';
+                item.dataset.args = JSON.stringify([result]);
+
+                const iconSpan = document.createElement('span');
+                iconSpan.className = 'material-icons';
+                iconSpan.style.color = 'var(--text-secondary)';
+                iconSpan.style.flexShrink = '0';
+                iconSpan.textContent = result.icon;
+
+                const textWrapper = document.createElement('div');
+                textWrapper.style.flex = '1';
+                textWrapper.style.minWidth = '0';
+
+                const title = document.createElement('div');
+                title.style.cssText = 'color: var(--text-primary); font-weight: 500; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+                title.textContent = result.title;
+
+                const subtitle = document.createElement('div');
+                subtitle.style.cssText = 'color: var(--text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+                subtitle.textContent = result.subtitle;
+
+                textWrapper.appendChild(title);
+                textWrapper.appendChild(subtitle);
+
+                item.appendChild(iconSpan);
+                item.appendChild(textWrapper);
+
+                resultsDiv.appendChild(item);
+            });
+
+            searchForm.style.position = 'relative';
+            searchForm.appendChild(resultsDiv);
+            bindActionHandlers(resultsDiv);
+        }
+        
+        function hideSearchResults() {
+            const existing = document.querySelector('.search-results');
+            if (existing) {
+                existing.remove();
+            }
+        }
+        
+        function navigateToResult(result) {
+            hideSearchResults();
+            if (result.url) {
+                window.location.href = result.url;
+            }
+        }
+        
+        // Dropdown Management
+        function toggleDropdown(event, dropdownId) {
+            event.preventDefault();
+            event.stopPropagation();
+            const dropdown = document.getElementById(dropdownId);
+            const parent = dropdown.closest('.nav-dropdown');
+            if (parent) {
+                parent.classList.toggle('active');
+            }
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav-dropdown')) {
+                document.querySelectorAll('.nav-dropdown').forEach(dropdown => {
+                    dropdown.classList.remove('active');
+                });
+            }
+        });
+
+        // Initialize declarative handlers after DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            const drawerToggleButton = document.getElementById('drawerToggleButton');
+            if (drawerToggleButton) {
+                drawerToggleButton.addEventListener('click', toggleDrawer);
+            }
+            const drawerOverlay = document.getElementById('drawerOverlay');
+            if (drawerOverlay) {
+                drawerOverlay.addEventListener('click', closeDrawer);
+            }
+
+            document.querySelectorAll('[data-dropdown-target]').forEach(link => {
+                const target = link.getAttribute('data-dropdown-target');
+                link.addEventListener('click', (event) => toggleDropdown(event, target));
+            });
+
+            bindActionHandlers();
+            
+            // Developer Tools Toggle - Show/hide dev section based on localStorage
+            const showDevTools = localStorage.getItem('showDevTools') === 'true';
+            const devSection = document.getElementById('devToolsSection');
+            if (devSection) {
+                devSection.style.display = showDevTools ? 'block' : 'none';
+            }
+        });
+        
+        // Global function to toggle developer tools visibility
+        window.toggleDevTools = function(enable) {
+            const devSection = document.getElementById('devToolsSection');
+            if (enable === undefined) {
+                enable = localStorage.getItem('showDevTools') !== 'true';
+            }
+            localStorage.setItem('showDevTools', enable ? 'true' : 'false');
+            if (devSection) {
+                devSection.style.display = enable ? 'block' : 'none';
+            }
+            return enable;
+        };
+
+        const actionObserver = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) {
+                        bindActionHandlers(node);
+                    }
+                });
+            });
+        });
+        actionObserver.observe(document.documentElement, { childList: true, subtree: true });
+        
+        // Enhanced Tooltip System - Shows descriptive tooltips for icon buttons
+        (function initTooltipSystem() {
+            // Create tooltip element
+            const tooltip = document.createElement('div');
+            tooltip.className = 'custom-tooltip';
+            tooltip.setAttribute('role', 'tooltip');
+            tooltip.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(tooltip);
+            
+            let hideTimeout = null;
+            let currentElement = null;
+            
+            function showTooltip(element, text) {
+                if (!text || text.trim() === '') return;
+                
+                clearTimeout(hideTimeout);
+                currentElement = element;
+                tooltip.textContent = text;
+                tooltip.classList.remove('tooltip-top');
+                
+                // Position the tooltip
+                const rect = element.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                
+                // Default: show below the element
+                let top = rect.bottom + 8;
+                let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
+                
+                // Adjust if tooltip would go off-screen
+                if (top + tooltip.offsetHeight > window.innerHeight) {
+                    // Show above instead
+                    top = rect.top - tooltip.offsetHeight - 8;
+                    tooltip.classList.add('tooltip-top');
+                }
+                
+                // Keep tooltip within horizontal bounds
+                if (left < 8) left = 8;
+                if (left + tooltip.offsetWidth > window.innerWidth - 8) {
+                    left = window.innerWidth - tooltip.offsetWidth - 8;
+                }
+                
+                tooltip.style.top = `${top}px`;
+                tooltip.style.left = `${left}px`;
+                tooltip.classList.add('visible');
+                tooltip.setAttribute('aria-hidden', 'false');
+            }
+            
+            function hideTooltip() {
+                hideTimeout = setTimeout(() => {
+                    tooltip.classList.remove('visible');
+                    tooltip.setAttribute('aria-hidden', 'true');
+                    currentElement = null;
+                }, 100);
+            }
+            
+            // Event delegation for tooltip triggers
+            document.addEventListener('mouseenter', (e) => {
+                const target = e.target.closest('[data-tooltip], .btn-icon[title], button[title], a[title]');
+                if (!target) return;
+                
+                // Get tooltip text from data-tooltip or title attribute
+                const text = target.getAttribute('data-tooltip') || target.getAttribute('title');
+                if (text) {
+                    // Temporarily remove title to prevent native tooltip
+                    if (target.hasAttribute('title')) {
+                        target.setAttribute('data-original-title', target.getAttribute('title'));
+                        target.removeAttribute('title');
+                    }
+                    showTooltip(target, text);
+                }
+            }, true);
+            
+            document.addEventListener('mouseleave', (e) => {
+                const target = e.target.closest('[data-tooltip], .btn-icon[title], .btn-icon[data-original-title], button[title], button[data-original-title], a[title], a[data-original-title]');
+                if (!target) return;
+                
+                // Restore title attribute
+                if (target.hasAttribute('data-original-title')) {
+                    target.setAttribute('title', target.getAttribute('data-original-title'));
+                    target.removeAttribute('data-original-title');
+                }
+                hideTooltip();
+            }, true);
+            
+            // Hide tooltip on scroll or resize
+            window.addEventListener('scroll', hideTooltip, { passive: true });
+            window.addEventListener('resize', hideTooltip, { passive: true });
+        })();
+        
+        // Icon Mapping System - Convert Material Icons to Unicode/Emoji
+        window.iconMap = {
+            // Navigation & UI
+            'menu': '☰',
+            'search': '🔍',
+            'dark_mode': '🌙',
+            'light_mode': '☀️',
+            'chevron_right': '▶',
+            'apps': '📱',
+            'arrow_drop_down': '▼',
+            
+            // Main Navigation
+            'dashboard': '📊',
+            'play_circle': '▶️',
+            'tv': '📺',
+            'upload': '⬆️',
+            'video_library': '📹',
+            'playlist_play': '📋',
+            'collections': '🗂️',
+            'play_circle_outline': '⏯️',
+            'schedule': '⏰',
+            'smart_toy': '🤖',
+            'local_library': '📚',
+            'inventory_2': '📦',
+            'smart_display': '📺',
+            'router': '📡',
+            'tune': '🎛️',
+            'videocam': '📹',
+            'api': '🔌',
+            'explore': '🧭',
+            'add_to_queue': '➕',
+            
+            // Settings & Integrations
+            'settings_applications': '⚙️',
+            'integration_instructions': '🔗',
+            'account_circle': '👤',
+            'live_tv': '📡',
+            'perm_media': '🖼️',
+            
+            // Documentation
+            'menu_book': '📚',
+            'rocket_launch': '🚀',
+            'school': '🎓',
+            'install_mobile': '📱',
+            'folder_open': '📂',
+            'desktop_windows': '🖥️',
+            'phone_iphone': '📱',
+            'book': '📖',
+            'flash_on': '⚡',
+            'build': '🔧',
+            'help_outline': '❓',
+            'health_and_safety': '🏥',
+            'bug_report': '🐛',
+            
+            // Resources
+            'terminal': '💻',
+            'dvr': '📺',
+            'psychology': '🧠',
+            'description': '📄',
+            'article': '📰',
+            
+            // Common actions (for dynamic content)
+            'edit': '✏️',
+            'delete': '🗑️',
+            'add': '➕',
+            'close': '✖️',
+            'check': '✓',
+            'cancel': '✕',
+            'arrow_back': '←',
+            'arrow_forward': '→',
+            'refresh': '🔄',
+            'download': '⬇️',
+            'save': '💾',
+            'settings': '⚙️',
+            'info': 'ℹ️',
+            'warning': '⚠️',
+            'error': '❌',
+            'success': '✅',
+            'play': '▶️',
+            'pause': '⏸️',
+            'stop': '⏹️',
+            
+            // Additional icons
+            'dns': '🌐',
+            'videocam': '📹',
+            'storage': '💿',
+            'wifi': '📶',
+            'assessment': '📊',
+            'check_circle': '✅',
+            'logout': '🚪',
+            'login': '🔑',
+            'upload_file': '📤',
+            'fingerprint': '👆',
+            
+            // Toggle and state icons
+            'toggle_on': '🔛',
+            'toggle_off': '⭕',
+            'code': '💻',
+            'merge_type': '🔀',
+            'update': '🔄',
+            'api': '🔌',
+            
+            // AI and filter icons
+            'auto_awesome': '✨',
+            'tune': '🎛️',
+            'filter_list': '🔽',
+            'filter_alt': '🎛️'
+        };
+        
+        // Ensure decorative Material Icons are hidden from screen readers by default.
+        // We rely on aria-label/title on the parent controls when meaning is needed.
+        function ensureIconAccessibility(root = document) {
+            root.querySelectorAll('.material-icons:not([aria-hidden]):not([aria-label]):not([role])').forEach(icon => {
+                icon.setAttribute('aria-hidden', 'true');
+            });
+        }
+        window.ensureIconAccessibility = ensureIconAccessibility;
+        
+        // Convert Material Icons to Unicode/Emoji (safe conversion that preserves functionality)
+        function convertMaterialIcons() {
+            ensureIconAccessibility();
+            document.querySelectorAll('.material-icons:not(.icon-converted)').forEach(icon => {
+                // Skip if already converted
+                if (icon.classList.contains('icon-converted')) return;
+                
+                // CRITICAL: Only convert if this is clearly an icon element, not button text
+                // Check if parent is a button/link and has other text content
+                const parent = icon.parentElement;
+                const isInButton = parent && (parent.tagName === 'BUTTON' || parent.tagName === 'A' || parent.classList.contains('btn'));
+                
+                if (isInButton) {
+                    // Check if button has text nodes or other text content besides this icon
+                    const allText = parent.textContent || '';
+                    const iconText = icon.textContent.trim();
+                    const otherText = allText.replace(iconText, '').trim();
+                    
+                    // If there's other text in the button, this might be button text, not an icon
+                    // Only convert if the icon text is a single word and matches an icon name exactly
+                    if (otherText.length > 0) {
+                        // Very strict check: only convert if it's a known icon name AND no other text
+                        if (!window.iconMap[iconText] || iconText.includes(' ') || iconText.length > 25) {
+                            icon.classList.add('icon-converted');
+                            return;
+                        }
+                    }
+                    // If icon-only button (no other text), proceed with conversion if it's a known icon
+                    // This handles icon-only buttons like AI toggle and filter toggle
+                }
+                
+                // Only convert if it's actually an icon element, not button text
+                const iconName = icon.textContent.trim();
+                
+                // STRICT validation: Skip if this looks like button text
+                // Check for common button words, spaces, or too long
+                const buttonWords = ['check', 'run', 'save', 'cancel', 'remove', 'authentication', 'response', 'update', 'collections', 'api', 'changes'];
+                const hasButtonWord = buttonWords.some(word => iconName.toLowerCase().includes(word));
+                
+                if (iconName.includes(' ') || 
+                    iconName.length > 25 || 
+                    hasButtonWord ||
+                    iconName.toLowerCase().startsWith('code') ||
+                    iconName.toLowerCase().startsWith('merge')) {
+                    // If it contains button words but is a known icon, still convert
+                    if (!window.iconMap[iconName]) {
+                        icon.classList.add('icon-converted');
+                        return;
+                    }
+                }
+                
+                // Only convert if it's a known icon name (single word, no spaces)
+                if (window.iconMap[iconName] && !iconName.includes(' ')) {
+                    // Store original icon name as data attribute
+                    icon.setAttribute('data-icon', iconName);
+                    
+                    // Get emoji from map
+                    const emoji = window.iconMap[iconName];
+                    
+                    // Clear all child nodes and text completely - CRITICAL to prevent duplication
+                    while (icon.firstChild) {
+                        icon.removeChild(icon.firstChild);
+                    }
+                    icon.innerHTML = '';
+                    icon.textContent = '';
+                    
+                    // Create a new text node with only the emoji
+                    const emojiNode = document.createTextNode(emoji);
+                    
+                    // Convert the icon classes FIRST
+                    icon.classList.remove('material-icons');
+                    icon.classList.add('icon-emoji', 'icon-converted');
+                    
+                    // Then add ONLY the emoji
+                    icon.appendChild(emojiNode);
+                    
+                    // Final check: ensure the icon only contains the emoji (no duplication)
+                    if (icon.textContent.trim() !== emoji) {
+                        icon.textContent = '';
+                        icon.appendChild(document.createTextNode(emoji));
+                    }
+                    
+                    // Force reflow to ensure display
+                    icon.offsetHeight;
+                    
+                    // Ensure parent remains clickable
+                    if (isInButton && parent) {
+                        parent.style.pointerEvents = 'auto';
+                        parent.style.cursor = 'pointer';
+                    }
+                } else {
+                    // Mark as processed even if no mapping found to prevent re-processing
+                    icon.classList.add('icon-converted');
+                }
+            });
+        }
+        
+        // Convert icons immediately and on DOM ready
+        function initIconConversion() {
+            // Run conversion multiple times to catch all icons
+            for (let i = 0; i < 5; i++) {
+                convertMaterialIcons();
+            }
+            
+            // Re-enable all interactive elements after conversion
+            document.querySelectorAll('a, button, .btn, .btn-icon, .nav-link').forEach(el => {
+                el.style.pointerEvents = 'auto';
+                el.style.cursor = 'pointer';
+            });
+        }
+        
+        // Run conversion immediately - use IIFE to execute right away
+        (function() {
+            // Run synchronously if body exists
+            if (document.body) {
+                convertMaterialIcons();
+            }
+            
+            // Run on DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    initIconConversion();
+                    setTimeout(() => initIconConversion(), 10);
+                    setTimeout(() => initIconConversion(), 50);
+                    setTimeout(() => initIconConversion(), 200);
+                    setTimeout(() => initIconConversion(), 500);
+                });
+            } else {
+                initIconConversion();
+                setTimeout(() => initIconConversion(), 10);
+                setTimeout(() => initIconConversion(), 50);
+                setTimeout(() => initIconConversion(), 200);
+                setTimeout(() => initIconConversion(), 500);
+            }
+        })();
+        
+        // Make convertMaterialIcons available globally for other scripts
+        window.convertMaterialIcons = convertMaterialIcons;
+        
+        // Also expose init function
+        window.initIconConversion = initIconConversion;
+        
+        // Use MutationObserver to convert dynamically added icons (with debouncing)
+        let conversionTimeout;
+        const observer = new MutationObserver((mutations) => {
+            // Debounce conversions to avoid performance issues
+            clearTimeout(conversionTimeout);
+            conversionTimeout = setTimeout(() => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1) { // Element node
+                            // Check if node itself is an icon
+                            if (node.classList && node.classList.contains('material-icons') && !node.classList.contains('icon-converted')) {
+                                const iconName = node.textContent.trim();
+                                const parent = node.parentElement;
+                                const isInButton = parent && (parent.tagName === 'BUTTON' || parent.tagName === 'A' || parent.classList.contains('btn'));
+                                
+                                // STRICT: Skip if this looks like button text
+                                const buttonWords = ['check', 'run', 'save', 'cancel', 'remove', 'authentication', 'response', 'update', 'collections', 'api', 'changes', 'code', 'merge'];
+                                const hasButtonWord = buttonWords.some(word => iconName.toLowerCase().includes(word));
+                                
+                                const isButtonText = iconName.includes(' ') || 
+                                    iconName.length > 25 || 
+                                    iconName.length === 0 ||
+                                    (hasButtonWord && !window.iconMap[iconName]);
+                                
+                                // If in a button with other text, be very careful
+                                if (isInButton && parent.textContent) {
+                                    const allText = parent.textContent.trim();
+                                    const otherText = allText.replace(iconName, '').trim();
+                                    if (otherText.length > 0 && !window.iconMap[iconName]) {
+                                        node.classList.add('icon-converted');
+                                        return;
+                                    }
+                                }
+                                
+                                if (!isButtonText && window.iconMap && window.iconMap[iconName]) {
+                                    try {
+                                        node.setAttribute('data-icon', iconName);
+                                        const emoji = window.iconMap[iconName];
+                                        // Clear all content first - prevent duplication
+                                        while (node.firstChild) {
+                                            node.removeChild(node.firstChild);
+                                        }
+                                        node.innerHTML = '';
+                                        node.textContent = '';
+                                        // Set only emoji
+                                        const emojiNode = document.createTextNode(emoji);
+                                        node.appendChild(emojiNode);
+                                        node.classList.remove('material-icons');
+                                        node.classList.add('icon-emoji', 'icon-converted');
+                                        // Final check
+                                        if (node.textContent !== emoji) {
+                                            node.textContent = '';
+                                            node.appendChild(document.createTextNode(emoji));
+                                        }
+                                    } catch (e) {
+                                        node.classList.add('icon-converted');
+                                    }
+                                } else {
+                                    node.classList.add('icon-converted');
+                                }
+                            }
+                            // Check child elements
+                            if (node.querySelectorAll) {
+                                const materialIcons = node.querySelectorAll('.material-icons:not(.icon-converted)');
+                                materialIcons.forEach(icon => {
+                                    const iconName = icon.textContent.trim();
+                                    const parent = icon.parentElement;
+                                    const isInButton = parent && (parent.tagName === 'BUTTON' || parent.tagName === 'A' || parent.classList.contains('btn'));
+                                    
+                                    // STRICT: Skip if this looks like button text
+                                    const buttonWords = ['check', 'run', 'save', 'cancel', 'remove', 'authentication', 'response', 'update', 'collections', 'api', 'changes', 'code', 'merge'];
+                                    const hasButtonWord = buttonWords.some(word => iconName.toLowerCase().includes(word));
+                                    
+                                    const isButtonText = iconName.includes(' ') || 
+                                        iconName.length > 25 || 
+                                        iconName.length === 0 ||
+                                        (hasButtonWord && !window.iconMap[iconName]);
+                                    
+                                    // If in a button with other text, be very careful
+                                    if (isInButton && parent.textContent) {
+                                        const allText = parent.textContent.trim();
+                                        const otherText = allText.replace(iconName, '').trim();
+                                        if (otherText.length > 0 && !window.iconMap[iconName]) {
+                                            icon.classList.add('icon-converted');
+                                            return;
+                                        }
+                                    }
+                                    
+                                    if (!isButtonText && window.iconMap && window.iconMap[iconName]) {
+                                        try {
+                                            icon.setAttribute('data-icon', iconName);
+                                            const emoji = window.iconMap[iconName];
+                                            // Clear all content first - prevent duplication
+                                            while (icon.firstChild) {
+                                                icon.removeChild(icon.firstChild);
+                                            }
+                                            icon.innerHTML = '';
+                                            icon.textContent = '';
+                                            
+                                            // Convert classes FIRST
+                                            icon.classList.remove('material-icons');
+                                            icon.classList.add('icon-emoji', 'icon-converted');
+                                            
+                                            // Then add ONLY emoji
+                                            const emojiNode = document.createTextNode(emoji);
+                                            icon.appendChild(emojiNode);
+                                            
+                                            // Double-check - prevent duplication
+                                            if (icon.textContent.trim() !== emoji) {
+                                                icon.textContent = '';
+                                                icon.appendChild(document.createTextNode(emoji));
+                                            }
+                                            
+                                            // Force reflow
+                                            icon.offsetHeight;
+                                        } catch (e) {
+                                            icon.classList.add('icon-converted');
+                                        }
+                                    } else {
+                                        icon.classList.add('icon-converted');
+                                    }
+                                });
+                            }
+                        }
+                    });
+                });
+            }, 50);
+        });
+        
+        // Start observing with limited scope to avoid performance issues
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        // Ensure all interactive elements remain clickable after icon conversion
+        function ensureClickability() {
+            document.querySelectorAll('a, button, .btn, .btn-icon, .nav-link, .action-link, .action-button').forEach(el => {
+                // Skip if element is disabled
+                if (el.disabled || el.classList.contains('disabled')) return;
+                
+                // Ensure element is clickable
+                el.style.pointerEvents = 'auto';
+                el.style.cursor = 'pointer';
+                
+                // Ensure icons inside don't block clicks
+                const icons = el.querySelectorAll('.icon-emoji, .material-icons');
+                icons.forEach(icon => {
+                    icon.style.pointerEvents = 'none';
+                    // Ensure icon only contains emoji, no text
+                    if (icon.classList.contains('icon-emoji')) {
+                        const iconName = icon.getAttribute('data-icon');
+                        if (iconName && window.iconMap && window.iconMap[iconName]) {
+                            const emoji = window.iconMap[iconName];
+                            // Clear and set only emoji
+                            icon.innerHTML = '';
+                            icon.textContent = '';
+                            const emojiNode = document.createTextNode(emoji);
+                            icon.appendChild(emojiNode);
+                            if (icon.textContent !== emoji) {
+                                icon.textContent = emoji;
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Also run icon conversion again to catch any missed icons
+            convertMaterialIcons();
+        }
+        
+        // Run on load and after icon conversion
+        ensureClickability();
+        setTimeout(ensureClickability, 200);
+        setTimeout(ensureClickability, 500);
+        setTimeout(ensureClickability, 1000);
+        
+        // Re-check periodically for dynamically added content
+        setInterval(ensureClickability, 2000);
+        
+        // Make convertMaterialIcons available globally for other scripts
+        window.convertMaterialIcons = convertMaterialIcons;
+        
+        // Quick Launch Toolbar - Global initialization for all pages
+        const QUICK_LAUNCH_PREFS_KEY = 'streamtv_quick_launch_preferences';
+        
+        // Navigation items mapping (must match settings_quick_launch.html)
+        const NAV_ITEMS_MAP = {
+            'dashboard': { url: '/', label: 'Dashboard', icon: 'dashboard' },
+            'player': { url: '/player', label: 'Player', icon: 'play_circle' },
+            'channels': { url: '/channels', label: 'Manage Channels', icon: 'tv' },
+            'ai_channel': { url: '/api/ai/channel', label: 'AI Create Channel', icon: 'smart_toy' },
+            'import': { url: '/import', label: 'Import Channels', icon: 'upload' },
+            'import_m3u': { url: '/import/m3u', label: 'Import M3U', icon: 'playlist_add' },
+            'media': { url: '/media', label: 'Media Items', icon: 'video_library' },
+            'playlists': { url: '/playlists', label: 'Playlists', icon: 'playlist_play' },
+            'collections': { url: '/collections', label: 'Collections', icon: 'collections' },
+            'libraries': { url: '/libraries', label: 'Libraries', icon: 'local_library' },
+            'playouts': { url: '/playouts', label: 'Playouts', icon: 'play_circle_outline' },
+            'schedules': { url: '/schedules', label: 'Schedules', icon: 'schedule' },
+            'blocks': { url: '/blocks', label: 'Blocks', icon: 'view_timeline' },
+            'templates': { url: '/templates', label: 'Templates', icon: 'description' },
+            'filler_presets': { url: '/filler-presets', label: 'Filler Presets', icon: 'movie_filter' },
+            'deco': { url: '/deco', label: 'Deco', icon: 'auto_awesome' },
+            'settings_ffmpeg': { url: '/settings/ffmpeg', label: 'FFmpeg', icon: 'settings_applications' },
+            'settings_hdhr': { url: '/settings/hdhr', label: 'HDHomeRun', icon: 'router' },
+            'settings_playout': { url: '/settings/playout', label: 'Playout Settings', icon: 'tune' },
+            'settings_quick_launch': { url: '/settings/quick-launch', label: 'Quick Launch', icon: 'apps' },
+            'settings_plex': { url: '/settings/plex', label: 'Plex API', icon: 'integration_instructions' },
+            'settings_media_sources': { url: '/settings/media-sources', label: 'Media Sources', icon: 'perm_media' },
+            'archive_org': { url: '/api/auth/archive-org', label: 'Archive.org', icon: 'inventory_2' },
+            'youtube': { url: '/api/auth/youtube', label: 'YouTube', icon: 'smart_display' },
+            'logs': { url: '/logs', label: 'Streaming Logs', icon: 'terminal' },
+            'plex_logs': { url: '/plex-logs', label: 'Plex Server Logs', icon: 'dvr' },
+            'ollama': { url: '/ollama', label: 'AI Troubleshooting', icon: 'psychology' },
+            'test_stream': { url: '/test-stream', label: 'Test Stream', icon: 'videocam' },
+            'health_check': { url: '/health-check', label: 'Health Check', icon: 'health_and_safety' },
+            'm3u_playlist': { url: '/iptv/channels.m3u', label: 'M3U Playlist', icon: 'playlist_play', target: '_blank' },
+            'xmltv_epg': { url: '/iptv/xmltv.xml', label: 'XMLTV EPG', icon: 'tv', target: '_blank' },
+            'api_docs': { url: '/docs', label: 'API Documentation', icon: 'api', target: '_blank' },
+            'redoc': { url: '/redoc', label: 'ReDoc', icon: 'article', target: '_blank' }
+        };
+        
+        // Default preferences
+        const DEFAULT_QUICK_LAUNCH_PREFS = {
+            enabledItems: ['dashboard', 'player', 'channels', 'media', 'schedules'],
+            showChannels: true,
+            channelLimit: 20
+        };
+        
+        // Load preferences
+        function getQuickLaunchPreferences() {
+            try {
+                const stored = localStorage.getItem(QUICK_LAUNCH_PREFS_KEY);
+                if (stored) {
+                    return JSON.parse(stored);
+                }
+            } catch (e) {
+                console.warn('Failed to load quick launch preferences:', e);
+            }
+            return { ...DEFAULT_QUICK_LAUNCH_PREFS };
+        }
+        
+        // Initialize Quick Launch Toolbar
+        async function initializeQuickLaunchToolbar() {
+            const toolbar = document.getElementById('quickAccessToolbar');
+            const menu = document.getElementById('quickAccessMenu');
+            const button = document.getElementById('quickAccessButton');
+            
+            if (!toolbar || !menu || !button) {
+                return; // Toolbar not present on this page
+            }
+            
+            const prefs = getQuickLaunchPreferences();
+            
+            // Show toolbar on all pages (if there are enabled items or channels)
+            if (prefs.enabledItems.length > 0 || prefs.showChannels) {
+                toolbar.style.display = 'flex';
+            } else {
+                toolbar.style.display = 'none';
+                return;
+            }
+            
+            // Clear existing dynamic content
+            const existingItems = menu.querySelectorAll('.quick-access-item[data-quick-launch-id], .quick-access-channels-header, .quick-access-channels-divider');
+            existingItems.forEach(item => item.remove());
+            
+            // Add configured navigation items
+            if (prefs.enabledItems.length > 0) {
+                const firstStaticItem = menu.querySelector('.quick-access-item:not([data-quick-launch-id])');
+                
+                prefs.enabledItems.forEach((itemId, index) => {
+                    const itemConfig = NAV_ITEMS_MAP[itemId];
+                    if (!itemConfig) return;
+                    
+                    const item = document.createElement('a');
+                    item.className = 'quick-access-item';
+                    item.dataset.quickLaunchId = itemId;
+                    item.href = itemConfig.url;
+                    item.role = 'menuitem';
+                    if (itemConfig.target) {
+                        item.target = itemConfig.target;
+                    }
+                    
+                    item.innerHTML = `
+                        <span class="material-icons" aria-hidden="true">${itemConfig.icon}</span>
+                        <span>${itemConfig.label}</span>
+                    `;
+                    
+                    if (firstStaticItem) {
+                        menu.insertBefore(item, firstStaticItem);
+                    } else {
+                        menu.appendChild(item);
+                    }
+                });
+                
+                // Add divider if we have channels too
+                if (prefs.showChannels) {
+                    const divider = document.createElement('div');
+                    divider.className = 'quick-access-divider';
+                    const firstStaticItem = menu.querySelector('.quick-access-item:not([data-quick-launch-id])');
+                    if (firstStaticItem) {
+                        menu.insertBefore(divider, firstStaticItem);
+                    } else {
+                        menu.appendChild(divider);
+                    }
+                }
+            }
+            
+            // Add channels if enabled
+            if (prefs.showChannels) {
+                try {
+                    const response = await fetch('/api/channels');
+                    const channels = await response.json();
+                    
+                    const enabledChannels = channels
+                        .filter(c => c.enabled)
+                        .sort((a, b) => {
+                            const numA = parseInt(a.number) || 0;
+                            const numB = parseInt(b.number) || 0;
+                            return numA - numB;
+                        })
+                        .slice(0, prefs.channelLimit || 20);
+                    
+                    if (enabledChannels.length > 0) {
+                        const firstStaticItem = menu.querySelector('.quick-access-item:not([data-quick-launch-id])');
+                        
+                        // Add header
+                        const header = document.createElement('div');
+                        header.className = 'quick-access-channels-header';
+                        header.style.cssText = 'padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08px;';
+                        header.textContent = 'Channels';
+                        
+                        // Add divider
+                        const divider = document.createElement('div');
+                        divider.className = 'quick-access-divider quick-access-channels-divider';
+                        
+                        if (firstStaticItem) {
+                            menu.insertBefore(header, firstStaticItem);
+                            menu.insertBefore(divider, firstStaticItem);
+                        } else {
+                            menu.appendChild(header);
+                            menu.appendChild(divider);
+                        }
+                        
+                        // Add channel items
+                        enabledChannels.forEach(channel => {
+                            const item = document.createElement('a');
+                            item.className = 'quick-access-item';
+                            item.dataset.channel = channel.number;
+                            item.dataset.quickLaunchId = `channel_${channel.number}`;
+                            
+                            // Check if we're on player page - use loadChannel action
+                            if (window.loadChannel && window.location.pathname === '/player') {
+                                item.dataset.action = 'loadChannel';
+                                item.dataset.args = JSON.stringify([channel.number, channel.name]);
+                                item.dataset.preventDefault = 'true';
+                                item.href = '#';
+                            } else {
+                                // On other pages, navigate to player with channel
+                                item.href = `/player?channel=${channel.number}`;
+                            }
+                            
+                            item.role = 'menuitem';
+                            
+                            item.innerHTML = `
+                                <span class="icon-emoji">📺</span>
+                                <span style="flex: 1; min-width: 0;">
+                                    <div style="font-weight: 500; color: var(--text-primary);">${channel.number} - ${channel.name}</div>
+                                    ${channel.group ? `<div style="font-size: 13px; color: var(--text-secondary);">${channel.group}</div>` : ''}
+                                </span>
+                            `;
+                            
+                            if (firstStaticItem) {
+                                menu.insertBefore(item, firstStaticItem);
+                            } else {
+                                menu.appendChild(item);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading channels for toolbar:', error);
+                }
+            }
+            
+            // Bind action handlers for channel items
+            if (window.bindActionHandlers) {
+                bindActionHandlers(menu);
+            }
+            
+            // Toggle dropdown on button click
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                menu.classList.toggle('active');
+                button.setAttribute('aria-expanded', menu.classList.contains('active') ? 'true' : 'false');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!toolbar.contains(e.target)) {
+                    menu.classList.remove('active');
+                    button.setAttribute('aria-expanded', 'false');
+                }
+            });
+            
+            // Close dropdown when selecting an item
+            menu.addEventListener('click', (e) => {
+                const item = e.target.closest('.quick-access-item');
+                if (item && !item.target) { // Don't close for external links
+                    setTimeout(() => {
+                        menu.classList.remove('active');
+                        button.setAttribute('aria-expanded', 'false');
+                    }, 100);
+                }
+            });
+        }
+        
+        // Expose function globally
+        window.initializeQuickLaunchToolbar = initializeQuickLaunchToolbar;
+        window.getQuickLaunchPreferences = getQuickLaunchPreferences;
+        
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeQuickLaunchToolbar();
+        });
+        
+        // Listen for preference changes
+        document.addEventListener('streamtv:quick-launch-prefs-changed', () => {
+            initializeQuickLaunchToolbar();
+        });
+    </script>
+    
+    <!-- Apple Animation Library -->
+    <script src="/static/js/apple-animations.js" defer></script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,550 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - StreamTV{% endblock %}
+
+{% block extra_styles %}
+    .dashboard-container {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+    
+    .status-frame {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: var(--component-padding-lg);
+        border: 0.5px solid var(--divider);
+        box-shadow: 
+            0 2px 8px rgba(0, 0, 0, 0.08),
+            0 1px 4px rgba(0, 0, 0, 0.04);
+        transition: all var(--duration-normal) var(--ease-apple);
+    }
+    
+    .status-frame:hover {
+        box-shadow: 
+            0 8px 24px rgba(0, 0, 0, 0.12),
+            0 4px 12px rgba(0, 0, 0, 0.08);
+        transform: translateY(-2px);
+    }
+    
+    .status-frame-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: var(--text-primary);
+        letter-spacing: 0.352px;
+        line-height: 1.27273;
+    }
+    
+    .status-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 16px;
+        border-bottom: 0.5px solid var(--divider);
+        min-height: 60px;
+        gap: 12px;
+    }
+    
+    .status-item:last-child {
+        border-bottom: none;
+    }
+    
+    .status-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 4px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+    }
+    
+    .status-dot.green {
+        background: #34C759;
+        box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.2), 0 0 12px rgba(52, 199, 89, 0.4);
+    }
+    
+    .status-dot.yellow {
+        background: #FF9500;
+        box-shadow: 0 0 0 2px rgba(255, 149, 0, 0.2), 0 0 12px rgba(255, 149, 0, 0.4);
+    }
+    
+    .status-dot.red {
+        background: #FF3B30;
+        box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.2), 0 0 12px rgba(255, 59, 48, 0.4);
+    }
+    
+    .status-content {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .status-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .status-name {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-primary);
+        line-height: 1.47059;
+    }
+    
+    .status-details {
+        font-size: 15px;
+        color: var(--text-secondary);
+        line-height: 1.47059;
+        margin-bottom: 8px;
+    }
+    
+    .status-errors {
+        margin-top: 12px;
+        padding: 12px;
+        background: rgba(255, 59, 48, 0.1);
+        border-left: 3px solid var(--error);
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--error);
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    .status-errors.yellow {
+        background: rgba(255, 149, 0, 0.1);
+        border-left-color: var(--warning);
+        color: var(--warning);
+    }
+    
+    .status-errors pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+    
+    .status-troubleshooting {
+        margin-top: 12px;
+        padding: 12px;
+        background: rgba(10, 132, 255, 0.1);
+        border-left: 3px solid var(--info);
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--info);
+    }
+    
+    .status-troubleshooting ul {
+        margin: 8px 0 0 0;
+        padding-left: 20px;
+    }
+    
+    .status-troubleshooting li {
+        margin: 4px 0;
+        line-height: 1.5;
+    }
+    
+    .status-button {
+        margin-top: 12px;
+        padding: 10px 20px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+    
+    .status-button:hover {
+        background: var(--primary-dark);
+        transform: scale(0.98);
+    }
+    
+    .status-button:active {
+        transform: scale(0.96);
+    }
+    
+    .status-loading {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+        font-size: 17px;
+    }
+    
+    .status-error-message {
+        color: var(--text-secondary);
+        font-size: 13px;
+        margin-top: 4px;
+    }
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <div class="breadcrumb-item">
+        <a href="/" class="breadcrumb-link">Home</a>
+    </div>
+    <span class="breadcrumb-separator" aria-hidden="true">/</span>
+    <div class="breadcrumb-item">
+        <span class="breadcrumb-current">Dashboard</span>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+    <!-- Hero Section - Apple.com Style -->
+    <div class="hero-section-apple animate-on-scroll">
+        <div class="hero-content-apple">
+            <h1 class="hero-title-apple">Welcome to StreamTV</h1>
+            <p class="hero-subtitle-apple">Your comprehensive media streaming platform. Manage channels, schedules, and stream content from YouTube, Archive.org, and Plex.</p>
+            <div class="hero-actions-apple">
+                <a href="/channels" class="btn-apple btn-apple-primary btn-apple-lg" aria-label="Go to channels management page">
+                    <span class="material-icons" aria-hidden="true">tv</span>
+                    <span>Manage Channels</span>
+                </a>
+                <a href="/import" class="btn-apple btn-apple-secondary btn-apple-lg" aria-label="Go to import content page">
+                    <span class="material-icons" aria-hidden="true">file_upload</span>
+                    <span>Import Content</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-container">
+        <!-- Authentication Status Frame -->
+        <div class="status-frame">
+            <div class="status-frame-title">Authentication & Services Status</div>
+            <div id="authStatus" role="status" aria-live="polite">
+                <div class="status-loading">Loading authentication status...</div>
+            </div>
+        </div>
+        
+        <!-- API Status Frame -->
+        <div class="status-frame">
+            <div class="status-frame-title">API Status</div>
+            <div id="apiStatus" role="status" aria-live="polite">
+                <div class="status-loading">Loading API status...</div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script nonce="{{ request.state.csp_nonce }}">
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function getTroubleshootingSteps(statusName, statusColor) {
+            const steps = {
+                "youtube": {
+                    "yellow": [
+                        "Check your internet connection",
+                        "Verify YouTube cookies file exists and is valid",
+                        "Re-export cookies from your browser after logging into YouTube",
+                        "Check logs for specific authentication errors"
+                    ],
+                    "red": [
+                        "Visit YouTube authentication page to sign in",
+                        "Export fresh cookies from your browser",
+                        "Upload cookies file via Settings",
+                        "Check network connectivity to youtube.com"
+                    ]
+                },
+                "archive_org": {
+                    "yellow": [
+                        "Check your internet connection",
+                        "Verify Archive.org cookies file exists",
+                        "Re-export cookies from your browser",
+                        "Check logs for authentication errors"
+                    ],
+                    "red": [
+                        "Visit Archive.org authentication page to sign in",
+                        "Export fresh cookies from your browser after logging in",
+                        "Upload cookies file via Settings",
+                        "Check network connectivity to archive.org"
+                    ]
+                },
+                "ffmpeg": {
+                    "yellow": [
+                        "Check FFmpeg installation path in settings",
+                        "Verify FFmpeg version compatibility",
+                        "Review logs for codec or encoding errors",
+                        "Reinstall FFmpeg if necessary"
+                    ],
+                    "red": [
+                        "Install FFmpeg: brew install ffmpeg (macOS) or apt-get install ffmpeg (Linux)",
+                        "Verify FFmpeg is in your system PATH",
+                        "Check Settings > FFmpeg for correct path",
+                        "Restart StreamTV after installation"
+                    ]
+                },
+                "plex_api": {
+                    "yellow": [
+                        "Verify Plex server is running",
+                        "Check Plex token is valid and not expired",
+                        "Review logs for connection errors",
+                        "Test Plex server URL in browser"
+                    ],
+                    "red": [
+                        "Configure Plex settings: Settings > Plex API",
+                        "Enter correct Plex server URL and port",
+                        "Generate new Plex token from Plex server",
+                        "Verify Plex server is accessible on your network"
+                    ]
+                },
+                "streamtv_api": {
+                    "yellow": [
+                        "Check server logs for errors",
+                        "Verify server is running on port 8411",
+                        "Review recent error messages",
+                        "Restart StreamTV server if needed"
+                    ],
+                    "red": [
+                        "Check if StreamTV server is running",
+                        "Review server logs for startup errors",
+                        "Verify port 8411 is not in use by another application",
+                        "Restart the StreamTV service"
+                    ]
+                },
+                "auth_apis": {
+                    "yellow": [
+                        "Check authentication endpoint logs",
+                        "Verify authentication configuration",
+                        "Review recent authentication errors",
+                        "Test authentication endpoints"
+                    ],
+                    "red": [
+                        "Check authentication API configuration",
+                        "Verify authentication endpoints are accessible",
+                        "Review server logs for API errors",
+                        "Restart StreamTV server"
+                    ]
+                }
+            };
+            
+            return steps[statusName.toLowerCase()]?.[statusColor] || [];
+        }
+        
+        function renderStatusItem(name, statusColor, details, errors, buttonText, buttonLink, troubleshootingSteps) {
+            const statusClass = statusColor === 'green' ? 'green' : (statusColor === 'yellow' ? 'yellow' : 'red');
+            let html = `
+                <div class="status-item">
+                    <div class="status-dot ${statusClass}"></div>
+                    <div class="status-content">
+                        <div class="status-header">
+                            <div class="status-name">${escapeHtml(name)}</div>
+                        </div>
+                        <div class="status-details">${escapeHtml(details)}</div>
+            `;
+            
+            if (errors && errors.length > 0) {
+                html += `
+                    <div class="status-errors ${statusColor === 'yellow' ? 'yellow' : ''}">
+                        <strong>Recent Errors:</strong>
+                        <pre>${escapeHtml(errors.slice(0, 5).join('\n'))}</pre>
+                    </div>
+                `;
+            }
+            
+            if (troubleshootingSteps && troubleshootingSteps.length > 0) {
+                html += `
+                    <div class="status-troubleshooting">
+                        <strong>Troubleshooting Steps:</strong>
+                        <ul>
+                            ${troubleshootingSteps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            if (buttonText && buttonLink) {
+                html += `
+                    <a href="${escapeHtml(buttonLink)}" class="status-button">${escapeHtml(buttonText)}</a>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+        
+        async function loadDashboardStatus() {
+            try {
+                const response = await fetch('/api/dashboard/status');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const status = await response.json();
+                
+                // Render Authentication Status Frame
+                const authStatusDiv = document.getElementById('authStatus');
+                let authHtml = '';
+                
+                // YouTube
+                const youtubeStatus = status.youtube || {};
+                const youtubeDetails = youtubeStatus.authenticated 
+                    ? `Signed in. ${youtubeStatus.connection_ok ? 'Website accessible.' : 'Website connection issues detected.'}`
+                    : `Not signed in. ${youtubeStatus.connection_ok ? 'Website accessible.' : 'Website connection failed.'}`;
+                const youtubeTroubleshooting = getTroubleshootingSteps('youtube', youtubeStatus.status);
+                authHtml += renderStatusItem(
+                    'YouTube.com',
+                    youtubeStatus.status || 'red',
+                    youtubeDetails,
+                    youtubeStatus.errors || [],
+                    !youtubeStatus.authenticated ? 'Sign In' : null,
+                    !youtubeStatus.authenticated ? '/api/auth/youtube' : null,
+                    youtubeTroubleshooting
+                );
+                
+                // Archive.org
+                const archiveStatus = status.archive_org || {};
+                const archiveDetails = archiveStatus.authenticated 
+                    ? `Signed in${archiveStatus.username ? ` as ${archiveStatus.username}` : ''}. ${archiveStatus.connection_ok ? 'Website accessible.' : 'Website connection issues detected.'}`
+                    : `Not signed in. ${archiveStatus.connection_ok ? 'Website accessible.' : 'Website connection failed.'}`;
+                const archiveTroubleshooting = getTroubleshootingSteps('archive_org', archiveStatus.status);
+                authHtml += renderStatusItem(
+                    'Archive.org',
+                    archiveStatus.status || 'red',
+                    archiveDetails,
+                    archiveStatus.errors || [],
+                    !archiveStatus.authenticated ? 'Sign In' : null,
+                    !archiveStatus.authenticated ? '/api/auth/archive-org' : null,
+                    archiveTroubleshooting
+                );
+                
+                // FFmpeg
+                const ffmpegStatus = status.ffmpeg || {};
+                const ffmpegDetails = ffmpegStatus.installed
+                    ? `Installed. ${ffmpegStatus.version ? ffmpegStatus.version.split('\n')[0] : 'Version unknown.'}`
+                    : 'Not installed. Required for media transcoding.';
+                const ffmpegTroubleshooting = getTroubleshootingSteps('ffmpeg', ffmpegStatus.status);
+                authHtml += renderStatusItem(
+                    'FFmpeg',
+                    ffmpegStatus.status || 'red',
+                    ffmpegDetails,
+                    ffmpegStatus.errors || [],
+                    null,
+                    null,
+                    ffmpegTroubleshooting
+                );
+                
+                authStatusDiv.innerHTML = authHtml;
+                
+                // Render API Status Frame
+                const apiStatusDiv = document.getElementById('apiStatus');
+                let apiHtml = '';
+                
+                // Plex API
+                const plexApiStatus = status.plex_api || {};
+                const plexApiDetails = plexApiStatus.enabled
+                    ? `${plexApiStatus.configured ? 'Configured and enabled.' : 'Enabled but not fully configured.'}`
+                    : 'Not enabled. Configure in Settings > Plex API.';
+                const plexApiTroubleshooting = getTroubleshootingSteps('plex_api', plexApiStatus.status);
+                apiHtml += renderStatusItem(
+                    'Plex API',
+                    plexApiStatus.status || 'red',
+                    plexApiDetails,
+                    plexApiStatus.errors || [],
+                    null,
+                    null,
+                    plexApiTroubleshooting
+                );
+                
+                // StreamTV API
+                const streamtvApiStatus = status.streamtv_api || {};
+                const streamtvApiDetails = streamtvApiStatus.available
+                    ? 'API is responding and operational.'
+                    : 'API is not responding. Check server status.';
+                const streamtvApiTroubleshooting = getTroubleshootingSteps('streamtv_api', streamtvApiStatus.status);
+                apiHtml += renderStatusItem(
+                    'StreamTV API',
+                    streamtvApiStatus.status || 'red',
+                    streamtvApiDetails,
+                    streamtvApiStatus.errors || [],
+                    null,
+                    null,
+                    streamtvApiTroubleshooting
+                );
+                
+                // Authentication APIs
+                const authApisStatus = status.auth_apis || {};
+                const authApisDetails = authApisStatus.available
+                    ? 'Authentication endpoints are operational.'
+                    : 'Authentication endpoints have issues.';
+                const authApisTroubleshooting = getTroubleshootingSteps('auth_apis', authApisStatus.status);
+                apiHtml += renderStatusItem(
+                    'Authentication APIs',
+                    authApisStatus.status || 'green',
+                    authApisDetails,
+                    authApisStatus.errors || [],
+                    null,
+                    null,
+                    authApisTroubleshooting
+                );
+                
+                apiStatusDiv.innerHTML = apiHtml;
+                
+                // Convert icons after rendering
+                if (window.convertMaterialIcons) {
+                    setTimeout(() => {
+                        window.convertMaterialIcons();
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('Error loading dashboard status:', error);
+                // Show error but still display what we can
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="status-item">
+                        <div class="status-dot red"></div>
+                        <div class="status-content">
+                            <div class="status-name">Status Check Error</div>
+                            <div class="status-details">Unable to load status information. ${escapeHtml(error.message)}</div>
+                            <div class="status-troubleshooting">
+                                <strong>Troubleshooting Steps:</strong>
+                                <ul>
+                                    <li>Check if StreamTV server is running</li>
+                                    <li>Verify server is accessible on port 8411</li>
+                                    <li>Check server logs for errors</li>
+                                    <li>Refresh this page</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('apiStatus').innerHTML = `
+                    <div class="status-item">
+                        <div class="status-dot red"></div>
+                        <div class="status-content">
+                            <div class="status-name">Status Check Error</div>
+                            <div class="status-details">Unable to load API status information.</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardStatus();
+            
+            // Refresh status every 30 seconds
+            setInterval(loadDashboardStatus, 30000);
+        });
+    </script>
+{% endblock %}

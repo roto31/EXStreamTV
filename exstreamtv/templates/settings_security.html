@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+{% block title %}Security Settings - StreamTV{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Security Settings</div>
+            <p class="page-subtitle">Configure API key authentication for StreamTV.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-outlined" type="button" id="refreshSecuritySettingsButton" aria-label="Reload security settings">
+                <span class="material-icons" aria-hidden="true">refresh</span>
+                Reload
+            </button>
+        </div>
+    </div>
+    
+    <div class="card status-card" id="statusCard" style="display: none;">
+        <span id="statusMessage"></span>
+    </div>
+    
+    <div class="settings-grid">
+        <!-- Server Configuration Card -->
+        <div class="card settings-card">
+            <div class="card-title">Server Configuration</div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="apiKeyRequiredCheckbox" aria-label="Require API key authentication">
+                    <span>Require API Key Authentication</span>
+                </label>
+                <small>When enabled, all non-GET API requests require a valid API key or bearer token.</small>
+            </div>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="serverTokenInput">Server Access Token</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="password" id="serverTokenInput" class="form-input" 
+                           placeholder="Enter server access token (stored in config.yaml)" 
+                           value="">
+                    <button class="btn btn-outlined" type="button" id="generateServerTokenButton" 
+                            style="white-space: nowrap;" aria-label="Generate new server access token">
+                        <span class="material-icons" aria-hidden="true">autorenew</span>
+                        Generate
+                    </button>
+                    <button class="btn btn-outlined" type="button" id="toggleServerTokenButton" aria-label="Toggle server token visibility">
+                        <span class="material-icons" id="serverVisibilityIcon" aria-hidden="true">visibility</span>
+                    </button>
+                </div>
+                <small>This token is stored in <code>config.yaml</code> and used by the server to validate API requests.</small>
+            </div>
+            
+            <div class="form-actions" style="margin-top: 16px;">
+                <button class="btn btn-primary" type="button" id="saveServerSettingsButton" aria-label="Save server security settings">
+                    <span class="material-icons" aria-hidden="true">save</span>
+                    Save Server Settings
+                </button>
+            </div>
+            
+            <div id="serverStatus" style="margin-top: 16px; padding: 12px; border-radius: 8px; display: none;">
+                <span id="serverStatusMessage"></span>
+            </div>
+        </div>
+        
+        <!-- Client Configuration Card -->
+        <div class="card settings-card">
+            <div class="card-title">Client Configuration (Browser)</div>
+            <div class="form-group">
+                <label for="apiKeyInput">Client API Key</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="password" id="apiKeyInput" class="form-input" 
+                           placeholder="Enter your API key (stored in browser)" 
+                           value="">
+                    <button class="btn btn-outlined" type="button" id="toggleApiKeyButton" aria-label="Toggle client API key visibility">
+                        <span class="material-icons" id="visibilityIcon" aria-hidden="true">visibility</span>
+                    </button>
+                </div>
+                <small>This API key is stored in your browser's localStorage and automatically included in API requests. It should match the Server Access Token above.</small>
+            </div>
+            
+            <div class="form-actions" style="margin-top: 16px;">
+                <button class="btn btn-primary" type="button" id="saveApiKeyButton" aria-label="Save client API key">
+                    <span class="material-icons" aria-hidden="true">save</span>
+                    Save Client API Key
+                </button>
+                <button class="btn btn-outlined" type="button" id="clearApiKeyButton" aria-label="Clear client API key">
+                    <span class="material-icons" aria-hidden="true">clear</span>
+                    Clear
+                </button>
+                <button class="btn btn-outlined" type="button" id="copyServerTokenButton" aria-label="Copy server token to clipboard">
+                    <span class="material-icons" aria-hidden="true">content_copy</span>
+                    Copy Server Token
+                </button>
+            </div>
+            
+            <div id="apiKeyStatus" style="margin-top: 16px; padding: 12px; border-radius: 8px; display: none;">
+                <span id="apiKeyStatusMessage"></span>
+            </div>
+        </div>
+        
+        <!-- Information Card -->
+        <div class="card info-card">
+            <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+                <span class="material-icons" style="font-size: 20px;" aria-hidden="true">info</span>
+                Information
+            </div>
+            <div style="margin-top: 12px; color: var(--text-secondary); font-size: 15px; line-height: 1.5;">
+                <p><strong>How API Key Authentication Works:</strong></p>
+                <ul style="margin-top: 8px; margin-left: 20px; list-style-type: disc;">
+                    <li><strong>Server Configuration:</strong> The <code>api_key_required</code> setting controls whether authentication is enforced. The <code>access_token</code> is the secret token that must match.</li>
+                    <li><strong>Client Configuration:</strong> The browser stores an API key in localStorage. All API requests automatically include this key in the <code>Authorization: Bearer</code> header.</li>
+                    <li><strong>Matching:</strong> The client API key must match the server access token for authentication to succeed.</li>
+                    <li><strong>Dynamic Updates:</strong> Token changes take effect immediately. Changes to <code>api_key_required</code> may require a server restart.</li>
+                </ul>
+                <p style="margin-top: 12px;"><strong>Configuration File:</strong></p>
+                <p style="margin-top: 8px;">Settings are automatically saved to <code>config.yaml</code>:</p>
+                <pre style="background: var(--surface); padding: 12px; border-radius: 8px; margin-top: 8px; overflow-x: auto;"><code>security:
+  api_key_required: true
+  access_token: "your-secure-token-here"</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ request.state.csp_nonce }}">
+let serverSettings = null;
+
+async function loadSettings() {
+    try {
+        // Load server settings
+        const response = await authenticatedFetch('/api/settings/security');
+        if (response.ok) {
+            serverSettings = await response.json();
+            
+            // Update UI with server settings
+            document.getElementById('apiKeyRequiredCheckbox').checked = serverSettings.api_key_required;
+            
+            // Don't show the actual token (it's masked as "***")
+            if (serverSettings.access_token === "***") {
+                document.getElementById('serverTokenInput').placeholder = "Token is set (hidden for security)";
+                document.getElementById('serverTokenInput').value = "";
+            } else {
+                document.getElementById('serverTokenInput').value = "";
+                document.getElementById('serverTokenInput').placeholder = "No token set";
+            }
+            
+            showServerStatus('Server settings loaded', 'success');
+        } else {
+            showServerStatus('Failed to load server settings', 'error');
+        }
+        
+        // Load client API key from localStorage
+        const savedKey = getApiKey();
+        if (savedKey) {
+            document.getElementById('apiKeyInput').value = savedKey;
+            showApiKeyStatus('Client API key loaded from browser storage', 'success');
+        } else {
+            showApiKeyStatus('No client API key stored', 'info');
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showServerStatus('Error loading settings: ' + error.message, 'error');
+    }
+}
+
+async function updateApiKeyRequired() {
+    const checked = document.getElementById('apiKeyRequiredCheckbox').checked;
+    // Auto-save when checkbox changes
+    await saveServerSettings();
+}
+
+async function saveServerSettings() {
+    const apiKeyRequired = document.getElementById('apiKeyRequiredCheckbox').checked;
+    const accessToken = document.getElementById('serverTokenInput').value.trim();
+    
+    const updateData = {
+        api_key_required: apiKeyRequired
+    };
+    
+    // Only include access_token if it was changed (not empty)
+    if (accessToken) {
+        updateData.access_token = accessToken;
+    }
+    
+    try {
+        const response = await authenticatedFetch('/api/settings/security', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showServerStatus('Server settings saved successfully! Changes take effect immediately.', 'success');
+            // Clear the input field after saving
+            if (accessToken) {
+                document.getElementById('serverTokenInput').value = "";
+                document.getElementById('serverTokenInput').placeholder = "Token saved (hidden for security)";
+            }
+        } else {
+            const error = await response.json();
+            showServerStatus('Failed to save: ' + (error.detail || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Error saving server settings:', error);
+        showServerStatus('Error saving settings: ' + error.message, 'error');
+    }
+}
+
+async function generateServerToken() {
+    try {
+        const response = await authenticatedFetch('/api/settings/security/generate-token', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            document.getElementById('serverTokenInput').value = result.token;
+            document.getElementById('serverTokenInput').type = 'text'; // Show the generated token
+            showServerStatus('Token generated! Click "Save Server Settings" to apply.', 'success');
+        } else {
+            const error = await response.json();
+            showServerStatus('Failed to generate token: ' + (error.detail || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Error generating token:', error);
+        showServerStatus('Error generating token: ' + error.message, 'error');
+    }
+}
+
+function copyServerTokenToClient() {
+    const serverToken = document.getElementById('serverTokenInput').value.trim();
+    if (serverToken) {
+        document.getElementById('apiKeyInput').value = serverToken;
+        setApiKey(serverToken);
+        showApiKeyStatus('Server token copied to client API key and saved!', 'success');
+    } else {
+        showApiKeyStatus('No server token to copy. Generate or enter a token first.', 'error');
+    }
+}
+
+function toggleServerTokenVisibility() {
+    const input = document.getElementById('serverTokenInput');
+    const icon = document.getElementById('serverVisibilityIcon');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.textContent = 'visibility_off';
+    } else {
+        input.type = 'password';
+        icon.textContent = 'visibility';
+    }
+}
+
+function saveApiKey() {
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    if (apiKey) {
+        setApiKey(apiKey);
+        showApiKeyStatus('Client API key saved successfully! It will be used for all API requests.', 'success');
+    } else {
+        showApiKeyStatus('Please enter an API key', 'error');
+    }
+}
+
+function clearApiKey() {
+    setApiKey('');
+    document.getElementById('apiKeyInput').value = '';
+    showApiKeyStatus('Client API key cleared', 'success');
+}
+
+function toggleApiKeyVisibility() {
+    const input = document.getElementById('apiKeyInput');
+    const icon = document.getElementById('visibilityIcon');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.textContent = 'visibility_off';
+    } else {
+        input.type = 'password';
+        icon.textContent = 'visibility';
+    }
+}
+
+function showServerStatus(message, type) {
+    const statusDiv = document.getElementById('serverStatus');
+    const statusMessage = document.getElementById('serverStatusMessage');
+    
+    statusDiv.style.display = 'block';
+    statusDiv.className = `card status-card ${type === 'success' ? 'alert-success' : type === 'error' ? 'alert-error' : 'alert-info'}`;
+    statusMessage.textContent = message;
+    
+    // Auto-hide after 5 seconds for success/info messages
+    if (type !== 'error') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+function showApiKeyStatus(message, type) {
+    const statusDiv = document.getElementById('apiKeyStatus');
+    const statusMessage = document.getElementById('apiKeyStatusMessage');
+    
+    statusDiv.style.display = 'block';
+    statusDiv.className = `card status-card ${type === 'success' ? 'alert-success' : type === 'error' ? 'alert-error' : 'alert-info'}`;
+    statusMessage.textContent = message;
+    
+    // Auto-hide after 5 seconds for success/info messages
+    if (type !== 'error') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+// Load settings on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const refreshButton = document.getElementById('refreshSecuritySettingsButton');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', () => loadSettings(true));
+    }
+
+    const apiKeyCheckbox = document.getElementById('apiKeyRequiredCheckbox');
+    if (apiKeyCheckbox) {
+        apiKeyCheckbox.addEventListener('change', updateApiKeyRequired);
+    }
+
+    const generateTokenButton = document.getElementById('generateServerTokenButton');
+    if (generateTokenButton) {
+        generateTokenButton.addEventListener('click', generateServerToken);
+    }
+
+    const toggleServerTokenButton = document.getElementById('toggleServerTokenButton');
+    if (toggleServerTokenButton) {
+        toggleServerTokenButton.addEventListener('click', toggleServerTokenVisibility);
+    }
+
+    const saveServerButton = document.getElementById('saveServerSettingsButton');
+    if (saveServerButton) {
+        saveServerButton.addEventListener('click', saveServerSettings);
+    }
+
+    const toggleApiKeyButton = document.getElementById('toggleApiKeyButton');
+    if (toggleApiKeyButton) {
+        toggleApiKeyButton.addEventListener('click', toggleApiKeyVisibility);
+    }
+
+    const saveApiKeyButton = document.getElementById('saveApiKeyButton');
+    if (saveApiKeyButton) {
+        saveApiKeyButton.addEventListener('click', saveApiKey);
+    }
+
+    const clearApiKeyButton = document.getElementById('clearApiKeyButton');
+    if (clearApiKeyButton) {
+        clearApiKeyButton.addEventListener('click', clearApiKey);
+    }
+
+    const copyServerTokenButton = document.getElementById('copyServerTokenButton');
+    if (copyServerTokenButton) {
+        copyServerTokenButton.addEventListener('click', copyServerTokenToClient);
+    }
+
+    loadSettings();
+});
+</script>
+{% endblock %}

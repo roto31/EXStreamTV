@@ -1,0 +1,933 @@
+{% extends "base.html" %}
+
+{% block title %}Player - StreamTV{% endblock %}
+
+{% block extra_styles %}
+    .player-container {
+        background: var(--surface);
+        border-radius: 12px; /* Apple HIG standard */
+        padding: 20px; /* Apple HIG standard */
+        margin-bottom: 16px; /* Apple 8pt grid */
+        border: 0.5px solid var(--divider);
+    }
+    
+    .player-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        background: #000;
+        border-radius: 12px; /* Apple HIG standard */
+        overflow: hidden;
+    }
+    
+    #videoPlayer {
+        width: 100%;
+        display: block;
+    }
+    
+    .player-info {
+        background: var(--hover);
+        padding: 16px; /* Apple HIG standard */
+        border-radius: 12px; /* Apple HIG standard */
+        margin-bottom: 16px; /* Apple 8pt grid */
+        border: 0.5px solid var(--divider);
+    }
+    
+    .player-info h3 {
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        font-size: 16px;
+    }
+    
+    .player-info .metadata {
+        font-size: 12px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+    
+    .player-info .metadata strong {
+        color: var(--text-primary);
+    }
+    
+    .player-info .metadata-scroll {
+        max-height: 200px;
+        overflow-y: auto;
+        margin-top: 12px;
+        padding: 12px;
+        background: var(--background);
+        border-radius: 4px;
+    }
+    
+    .alert {
+        padding: 16px; /* Apple HIG standard */
+        border-radius: 12px; /* Apple HIG standard */
+        margin-bottom: 16px; /* Apple 8pt grid */
+        display: none;
+        font-size: 17px; /* Apple HIG standard */
+        font-weight: 400;
+        line-height: 1.47059;
+    }
+    
+    .alert.show {
+        display: block;
+    }
+    
+    .alert-info {
+        background: rgba(0, 192, 192, 0.1);
+        border: 1px solid var(--info);
+        color: var(--info);
+    }
+    
+    .alert-error {
+        background: rgba(244, 67, 54, 0.1);
+        border: 1px solid var(--error);
+        color: var(--error);
+    }
+    
+    .channels-section {
+        background: var(--surface);
+        border-radius: 12px; /* Apple HIG standard */
+        padding: 20px; /* Apple HIG standard */
+        border: 0.5px solid var(--divider);
+    }
+    
+    .channels-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+    
+    .channel-card {
+        background: var(--background);
+        border: 1px solid var(--divider);
+        border-radius: 4px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .channel-card:hover {
+        background: var(--hover);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+    
+    .channel-card.active {
+        background: var(--hover);
+        border-color: var(--primary);
+        border-width: 2px;
+    }
+    
+    .channel-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+    
+    .channel-number {
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--primary);
+    }
+    
+    .channel-name {
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+    
+    .channel-group {
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .channel-status {
+        margin-top: 8px;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state-icon {
+        font-size: 64px;
+        opacity: 0.5;
+        margin-bottom: 16px;
+    }
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Player</h1>
+        <p>Stream your channels directly in the browser</p>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <!-- Player Container -->
+    <div class="player-container">
+        <div id="info" class="player-info" style="display: none;"></div>
+        <div id="error" class="alert alert-error"></div>
+        <div id="browser-warning" class="alert alert-info" style="display: none;">
+            <strong>⚠️ Browser Playback Limitation:</strong><br>
+            <small>YouTube streams may not play directly in browsers due to codec compatibility. 
+            For best results, use <a href="/iptv/channels.m3u" download style="color: var(--info);">VLC Media Player</a> or another IPTV client with the M3U playlist.</small>
+        </div>
+        <div class="player-wrapper">
+            <div id="reacttv-player-root" style="display: none; width: 100%; min-height: 400px; position: relative;"></div>
+            <video id="videoPlayer" controls preload="metadata" style="width: 100%;" aria-label="Video player">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+    
+    <!-- Channels Section -->
+    <div class="channels-section">
+        <div class="card-header">
+            <div class="card-title">Available Channels</div>
+        </div>
+        <div id="loading" class="loading">Loading channels...</div>
+        <div id="channels-container" class="channels-grid" style="display: none;"></div>
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">📺</div>
+            <h3 style="margin-bottom: 8px;">No channels available</h3>
+            <p>Create channels to start streaming</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <!-- React and ReactDOM for React Player -->
+    <script nonce="{{ request.state.csp_nonce }}" crossorigin="anonymous" src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script nonce="{{ request.state.csp_nonce }}" crossorigin="anonymous" src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <!-- React Player (cookpete/react-player) - UMD build for browser use -->
+    <script nonce="{{ request.state.csp_nonce }}" crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/react-player@2.16.0/dist/ReactPlayer.min.js"></script>
+    <!-- HLS.js library for MPEG-TS stream support (fallback) -->
+    <script nonce="{{ request.state.csp_nonce }}" crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/hls.js@1.4.14/dist/hls.min.js"></script>
+    <script nonce="{{ request.state.csp_nonce }}">
+        // Check if React Player is available - will be rechecked after scripts load
+        let ReactPlayerAvailable = typeof ReactPlayer !== 'undefined' && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined';
+        
+        let currentChannel = null;
+        let currentChannelMetadata = null;
+        let metadataUpdateInterval = null;
+        let isPlaying = false;
+        let hlsPlayer = null;
+        let reactPlayerInstance = null;
+        let videoPlayer = null;
+        let reactPlayerRoot = null;
+        
+        // StreamTV API base URL
+        const API_BASE = window.location.origin;
+        
+        // Helper for logging (fallback if console not available)
+        const logger = {
+            info: (msg) => console.log ? console.log(msg) : null,
+            error: (msg) => console.error ? console.error(msg) : null
+        };
+        
+        // Wait for external scripts to load with retry
+        async function waitForReactPlayer(maxAttempts = 50, interval = 100) {
+            for (let i = 0; i < maxAttempts; i++) {
+                if (typeof ReactPlayer !== 'undefined' && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
+                    return true;
+                }
+                await new Promise(resolve => setTimeout(resolve, interval));
+            }
+            return false;
+        }
+        
+        // Initialize player after DOM and scripts are ready
+        async function initializePage() {
+            console.log('[Player] Initializing player page...');
+            
+            // Get DOM elements
+            videoPlayer = document.getElementById('videoPlayer');
+            reactPlayerRoot = document.getElementById('reacttv-player-root');
+            
+            // Load channels (can happen while waiting for React Player)
+            loadChannels();
+            
+            // Re-initialize quick launch toolbar
+            if (window.initializeQuickLaunchToolbar) {
+                window.initializeQuickLaunchToolbar();
+            }
+            
+            // Wait for React Player to load
+            ReactPlayerAvailable = await waitForReactPlayer();
+            
+            // Debug logging
+            console.log('[React Player] Availability check:', {
+                ReactPlayer: typeof ReactPlayer !== 'undefined',
+                React: typeof React !== 'undefined',
+                ReactDOM: typeof ReactDOM !== 'undefined',
+                ReactPlayerAvailable: ReactPlayerAvailable
+            });
+            
+            if (ReactPlayerAvailable) {
+                console.log('[Player] React Player available, initializing...');
+                initializeReactPlayer();
+            } else {
+                console.warn('[Player] React Player not available after waiting, using HTML5 fallback');
+                setupVideoPlayer();
+            }
+            
+            // Debug: Check DOM elements after initialization
+            setTimeout(() => {
+                console.log('[Player] DOM Elements check:', {
+                    reactPlayerRoot: {
+                        exists: !!reactPlayerRoot,
+                        display: reactPlayerRoot ? window.getComputedStyle(reactPlayerRoot).display : 'N/A',
+                        visible: reactPlayerRoot ? reactPlayerRoot.offsetParent !== null : false
+                    },
+                    videoPlayer: {
+                        exists: !!videoPlayer,
+                        display: videoPlayer ? window.getComputedStyle(videoPlayer).display : 'N/A',
+                        visible: videoPlayer ? videoPlayer.offsetParent !== null : false
+                    },
+                    streamtvPlayer: typeof window.streamtvPlayer !== 'undefined'
+                });
+            }, 1000);
+            
+            // Check for channel parameter in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const channelParam = urlParams.get('channel');
+            if (channelParam) {
+                // Wait a bit for the player to initialize, then load channel
+                setTimeout(async () => {
+                    try {
+                        const response = await fetch('/api/channels');
+                        const channels = await response.json();
+                        const channel = channels.find(c => c.number === channelParam);
+                        if (channel) {
+                            loadChannel(channel.number, channel.name);
+                        }
+                    } catch (err) {
+                        console.error('Error loading channel from URL:', err);
+                    }
+                }, 500);
+            }
+        }
+        
+        // Load channels on page load
+        document.addEventListener('DOMContentLoaded', initializePage);
+        
+        // Initialize React Player component
+        function initializeReactPlayer() {
+            if (!ReactPlayerAvailable) {
+                console.warn('React Player not available, falling back to HTML5 player');
+                setupVideoPlayer();
+                return;
+            }
+            
+            // Create React Player component
+            const PlayerComponent = () => {
+                const [url, setUrl] = React.useState(null);
+                const [playing, setPlaying] = React.useState(false);
+                const [controls, setControls] = React.useState(true);
+                const [volume, setVolume] = React.useState(1.0);
+                const [muted, setMuted] = React.useState(false);
+                const [title, setTitle] = React.useState('');
+                const [subTitle, setSubTitle] = React.useState('');
+                const playerRef = React.useRef(null);
+                
+                // Expose methods to global scope for channel switching
+                React.useEffect(() => {
+                    window.streamtvPlayer = {
+                        setUrl: setUrl,
+                        setPlaying: setPlaying,
+                        setTitle: setTitle,
+                        setSubTitle: setSubTitle,
+                        setVolume: setVolume,
+                        setMuted: setMuted,
+                        getPlaying: () => playing,
+                        getUrl: () => url,
+                        getPlayer: () => playerRef.current,
+                        seek: (seconds) => {
+                            if (playerRef.current && playerRef.current.seekTo) {
+                                playerRef.current.seekTo(seconds);
+                            }
+                        },
+                        getCurrentTime: () => {
+                            if (playerRef.current && playerRef.current.getCurrentTime) {
+                                return playerRef.current.getCurrentTime();
+                            }
+                            return 0;
+                        },
+                        getDuration: () => {
+                            if (playerRef.current && playerRef.current.getDuration) {
+                                return playerRef.current.getDuration();
+                            }
+                            return 0;
+                        }
+                    };
+                    console.log('[React Player] window.streamtvPlayer initialized');
+                }, [playing, url]);
+                
+                return React.createElement('div', {
+                    key: 'player-container',
+                    style: { 
+                        width: '100%', 
+                        height: '100%',
+                        position: 'relative', 
+                        paddingTop: '56.25%', 
+                        backgroundColor: '#000',
+                        minHeight: '400px'
+                    }
+                }, [
+                    React.createElement(ReactPlayer, {
+                        key: 'react-player',
+                        ref: playerRef,
+                        url: url,
+                        playing: playing,
+                        controls: controls,
+                        volume: volume,
+                        muted: muted,
+                        width: '100%',
+                        height: '100%',
+                        style: { 
+                            position: 'absolute', 
+                            top: 0, 
+                            left: 0,
+                            width: '100%',
+                            height: '100%'
+                        },
+                        config: {
+                            file: {
+                                attributes: {
+                                    controlsList: 'nodownload',
+                                    playsInline: true
+                                },
+                                hlsOptions: {
+                                    enableWorker: true,
+                                    lowLatencyMode: false,
+                                    backBufferLength: 90,
+                                    maxBufferLength: 30,
+                                    maxMaxBufferLength: 60
+                                },
+                                // Force HLS.js for better compatibility
+                                forceHLS: true
+                            },
+                            // YouTube config for better playback
+                            youtube: {
+                                playerVars: {
+                                    showinfo: 0,
+                                    modestbranding: 1,
+                                    rel: 0
+                                }
+                            }
+                        },
+                        onReady: () => {
+                            console.log('[React Player] Player ready');
+                        },
+                        onStart: () => {
+                            console.log('[React Player] Playback started');
+                            updateChannelMetadata();
+                        },
+                        onPlay: () => {
+                            setPlaying(true);
+                        },
+                        onPause: () => {
+                            setPlaying(false);
+                        },
+                        onBuffer: () => {
+                            console.log('[React Player] Buffering...');
+                        },
+                        onBufferEnd: () => {
+                            console.log('[React Player] Buffer ready');
+                        },
+                        onEnded: () => {
+                            console.log('[React Player] Playback ended');
+                            setPlaying(false);
+                            if (window.handleVideoEnded) {
+                                window.handleVideoEnded();
+                            }
+                        },
+                        onError: (error, data, hlsInstance, hlsGlobal) => {
+                            console.error('[React Player] Error:', error, data);
+                            if (window.handleVideoError) {
+                                window.handleVideoError(error);
+                            }
+                        },
+                        onProgress: (state) => {
+                            // Update metadata periodically during playback (every ~10 seconds)
+                            if (state.playedSeconds > 0 && Math.floor(state.playedSeconds) % 10 === 0) {
+                                updateChannelMetadata();
+                            }
+                        }
+                    }),
+                    // Title overlay
+                    title ? React.createElement('div', {
+                        key: 'title-overlay',
+                        style: {
+                            position: 'absolute',
+                            bottom: '60px',
+                            left: '20px',
+                            right: '20px',
+                            color: 'white',
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            padding: '10px 15px',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            fontWeight: '500',
+                            pointerEvents: 'none',
+                            zIndex: 10
+                        }
+                    }, [
+                        React.createElement('div', { key: 'title' }, title),
+                        subTitle ? React.createElement('div', {
+                            key: 'subtitle',
+                            style: { fontSize: '14px', opacity: 0.9, marginTop: '4px' }
+                        }, subTitle) : null
+                    ]) : null
+                ]);
+            };
+            
+            // Render React Player
+            try {
+                reactPlayerInstance = ReactDOM.createRoot(reactPlayerRoot);
+                reactPlayerInstance.render(React.createElement(PlayerComponent));
+                
+                // Hide HTML5 player, show React Player
+                videoPlayer.style.display = 'none';
+                reactPlayerRoot.style.display = 'block';
+                
+                console.log('[React Player] Initialized successfully for StreamTV');
+                console.log('[React Player] ReactPlayerAvailable:', ReactPlayerAvailable);
+                console.log('[React Player] React version:', React.version);
+                console.log('[React Player] ReactDOM version:', ReactDOM.version);
+            } catch (error) {
+                console.error('[React Player] Initialization error:', error);
+                console.warn('[React Player] Falling back to HTML5 player');
+                videoPlayer.style.display = 'block';
+                reactPlayerRoot.style.display = 'none';
+            }
+        }
+        
+        // Quick Launch Toolbar is now initialized globally in base.html
+        // This function is kept for backward compatibility but will be overridden by base.html
+        // On player page, we just ensure loadChannel is available
+        
+        async function loadChannels() {
+            try {
+                const response = await fetch('/api/channels');
+                const channels = await response.json();
+                
+                document.getElementById('loading').style.display = 'none';
+                const container = document.getElementById('channels-container');
+                const emptyState = document.getElementById('empty-state');
+                
+                if (channels.length === 0) {
+                    container.style.display = 'none';
+                    emptyState.style.display = 'block';
+                } else {
+                    container.style.display = 'grid';
+                    emptyState.style.display = 'none';
+                    container.innerHTML = channels
+                        .filter(c => c.enabled)
+                        .map(channel => `
+                            <div class="channel-card" data-action="loadChannel" data-args='[${JSON.stringify(channel.number)}, ${JSON.stringify(channel.name)}]'>
+                                <div class="channel-card-header">
+                                    <div class="channel-number">${channel.number}</div>
+                                    <span class="badge ${channel.enabled ? 'badge-success' : 'badge-error'}">
+                                        ${channel.enabled ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                </div>
+                                <div class="channel-name">${channel.name}</div>
+                                ${channel.group ? `<div class="channel-group">${channel.group}</div>` : ''}
+                            </div>
+                        `).join('');
+                    if (window.bindActionHandlers) {
+                        bindActionHandlers(container);
+                    }
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                showError('Error loading channels: ' + error.message);
+            }
+        }
+        
+        function setupVideoPlayer() {
+            videoPlayer.addEventListener('ended', handleVideoEnded);
+            videoPlayer.addEventListener('error', handleVideoError);
+        }
+        
+        async function loadChannel(channelNumber, name, ev) {
+            currentChannel = channelNumber;
+            
+            // Clean up previous metadata updates
+            if (metadataUpdateInterval) {
+                clearInterval(metadataUpdateInterval);
+                metadataUpdateInterval = null;
+            }
+            
+            // Clean up previous HLS.js instance (for fallback)
+            if (hlsPlayer) {
+                hlsPlayer.destroy();
+                hlsPlayer = null;
+            }
+            
+            // Update active channel card
+            document.querySelectorAll('.channel-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            const origin = ev?.currentTarget || ev?.target || this;
+            const activeCard = origin?.closest ? origin.closest('.channel-card') : null;
+            if (activeCard) {
+                activeCard.classList.add('active');
+            }
+            
+            try {
+                // Get channel details (streamtv_get_channel equivalent)
+                const channelResponse = await fetch(`${API_BASE}/api/channels/number/${channelNumber}`);
+                if (!channelResponse.ok) {
+                    throw new Error(`Channel not found: ${channelResponse.statusText}`);
+                }
+                        const channelData = await channelResponse.json();
+                
+                // Get stream URL using StreamTV player API (streamtv_get_playlist equivalent)
+                const streamUrl = `${API_BASE}/api/player/channel/${channelNumber}/stream`;
+                console.log(`[Player] Fetching stream URL from: ${streamUrl}`);
+                const streamResponse = await fetch(streamUrl);
+                if (!streamResponse.ok) {
+                    const errorText = await streamResponse.text().catch(() => streamResponse.statusText);
+                    console.error(`[Player] Stream URL fetch failed: ${streamResponse.status} ${streamResponse.statusText}`, errorText);
+                    throw new Error(`Failed to get stream URL: ${streamResponse.status} ${streamResponse.statusText}. ${errorText.substring(0, 200)}`);
+                }
+                const streamData = await streamResponse.json();
+                console.log(`[Player] Stream data received:`, streamData);
+                
+                // Get initial metadata (streamtv_get_epg equivalent)
+                await updateChannelMetadata();
+                
+                // Use React Player if available
+                if (ReactPlayerAvailable && window.streamtvPlayer) {
+                    const hlsUrl = streamData.stream_url || `${API_BASE}/iptv/channel/${channelNumber}.m3u8`;
+                    
+                    console.log(`[React Player] Setting URL: ${hlsUrl}`);
+                    window.streamtvPlayer.setUrl(hlsUrl);
+                    window.streamtvPlayer.setTitle(name);
+                    window.streamtvPlayer.setSubTitle('Live Stream');
+                    window.streamtvPlayer.setPlaying(true);
+                    
+                    // Ensure React Player root is visible
+                    if (reactPlayerRoot) {
+                        reactPlayerRoot.style.display = 'block';
+                    }
+                    if (videoPlayer) {
+                        videoPlayer.style.display = 'none';
+                    }
+                    
+                    const infoDiv = document.getElementById('info');
+                    infoDiv.innerHTML = `<h3>${name}</h3><div class="metadata">Streaming via React Player (HLS)</div>`;
+                    infoDiv.style.display = 'block';
+                    
+                    // Hide browser warning
+                    const browserWarning = document.getElementById('browser-warning');
+                    if (browserWarning) {
+                        browserWarning.style.display = 'none';
+                    }
+                    
+                    // Start metadata updates every 30 seconds
+                    metadataUpdateInterval = setInterval(updateChannelMetadata, 30000);
+                    
+                    console.log(`[React Player] Channel ${channelNumber} loaded: ${hlsUrl}`);
+                    return;
+                } else if (ReactPlayerAvailable && !window.streamtvPlayer) {
+                    // React Player libs loaded but component not yet initialized - wait a bit
+                    console.log('[React Player] Waiting for streamtvPlayer to initialize...');
+                    await new Promise((resolve) => {
+                        let retries = 0;
+                        const maxRetries = 30; // 3 seconds max wait
+                        const checkPlayer = setInterval(() => {
+                            retries++;
+                            if (window.streamtvPlayer) {
+                                clearInterval(checkPlayer);
+                                resolve(true);
+                            } else if (retries >= maxRetries) {
+                                clearInterval(checkPlayer);
+                                console.warn('[React Player] Timeout waiting for streamtvPlayer');
+                                resolve(false);
+                            }
+                        }, 100);
+                    });
+                    
+                    // Try again after waiting
+                    if (window.streamtvPlayer) {
+                        const hlsUrl = streamData.stream_url || `${API_BASE}/iptv/channel/${channelNumber}.m3u8`;
+                        
+                        console.log(`[React Player] Setting URL (after wait): ${hlsUrl}`);
+                        window.streamtvPlayer.setUrl(hlsUrl);
+                        window.streamtvPlayer.setTitle(name);
+                        window.streamtvPlayer.setSubTitle('Live Stream');
+                        window.streamtvPlayer.setPlaying(true);
+                        
+                        // Ensure React Player root is visible
+                        if (reactPlayerRoot) {
+                            reactPlayerRoot.style.display = 'block';
+                        }
+                        if (videoPlayer) {
+                            videoPlayer.style.display = 'none';
+                        }
+                        
+                        const infoDiv = document.getElementById('info');
+                        infoDiv.innerHTML = `<h3>${name}</h3><div class="metadata">Streaming via React Player (HLS)</div>`;
+                        infoDiv.style.display = 'block';
+                        
+                        // Hide browser warning
+                        const browserWarning = document.getElementById('browser-warning');
+                        if (browserWarning) {
+                            browserWarning.style.display = 'none';
+                        }
+                        
+                        // Start metadata updates every 30 seconds
+                        metadataUpdateInterval = setInterval(updateChannelMetadata, 30000);
+                        
+                        console.log(`[React Player] Channel ${channelNumber} loaded: ${hlsUrl}`);
+                        return;
+                    }
+                    // If still not available, fall through to HLS.js fallback
+                    console.warn('[React Player] Falling back to HLS.js player');
+                }
+                
+                // Fallback to HTML5 player with HLS.js (existing code)
+                console.log(`Loading channel ${channelNumber} via HLS for browser compatibility (fallback)`);
+                
+                // Always use HLS endpoint for browser compatibility
+                const hlsUrl = `${API_BASE}/iptv/channel/${channelNumber}.m3u8`;
+                console.log(`Loading HLS playlist for channel ${channelNumber}: ${hlsUrl}`);
+                
+                const response = await fetch(hlsUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to load HLS playlist: ${response.statusText}`);
+                }
+                
+                const playlistText = await response.text();
+                console.log('HLS playlist loaded, parsing...');
+                
+                // Use HLS.js to play the HLS stream (browser-compatible)
+                if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                    const infoDiv = document.getElementById('info');
+                    infoDiv.innerHTML = `<h3>${name}</h3><div class="metadata">Loading HLS stream...</div>`;
+                    infoDiv.style.display = 'block';
+                    
+                    // Hide browser warning
+                    const browserWarning = document.getElementById('browser-warning');
+                    if (browserWarning) {
+                        browserWarning.style.display = 'none';
+                    }
+                    
+                    hlsPlayer = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: false,
+                        backBufferLength: 90,
+                        maxBufferLength: 30,
+                        maxMaxBufferLength: 60,
+                    });
+                    
+                    hlsPlayer.loadSource(hlsUrl);
+                    hlsPlayer.attachMedia(videoPlayer);
+                    
+                    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+                        console.log('HLS manifest parsed, starting playback');
+                        videoPlayer.play().then(() => {
+                            isPlaying = true;
+                            infoDiv.innerHTML = `<h3>${name}</h3><div class="metadata">Streaming HLS (Live channel)</div>`;
+                        }).catch(e => {
+                            console.error('HLS playback failed:', e);
+                            showError('Failed to play HLS stream: ' + e.message);
+                        });
+                    });
+                    
+                    hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+                        console.error('HLS.js error:', data);
+                        if (data.fatal) {
+                            switch (data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    console.log('Fatal network error, trying to recover...');
+                                    hlsPlayer.startLoad();
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    console.log('Fatal media error, trying to recover...');
+                                    hlsPlayer.recoverMediaError();
+                                    break;
+                                default:
+                                    console.log('Fatal error, destroying HLS player');
+                                    hlsPlayer.destroy();
+                                    showError('Cannot play HLS stream. Please try using <a href="/iptv/channels.m3u" download>VLC Media Player</a> or Plex.');
+                                    break;
+                            }
+                        }
+                    });
+                } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Native HLS support (Safari, some browsers)
+                    console.log('Using native HLS playback');
+                    videoPlayer.src = hlsUrl;
+                    videoPlayer.type = 'application/vnd.apple.mpegurl';
+                    
+                    const infoDiv = document.getElementById('info');
+                    infoDiv.innerHTML = `<h3>${name}</h3><div class="metadata">Streaming HLS (Live channel)</div>`;
+                    infoDiv.style.display = 'block';
+                    
+                    videoPlayer.play().then(() => {
+                        isPlaying = true;
+                    }).catch(e => {
+                        console.error('Native HLS playback failed:', e);
+                        showError('Failed to play HLS stream. Please install HLS.js or use VLC Media Player.');
+                    });
+                } else {
+                    showError('HLS playback not supported in this browser. Please use <a href="/iptv/channels.m3u" download>VLC Media Player</a> or install HLS.js.');
+                }
+            } catch (error) {
+                console.error('Error loading channel:', error);
+                showError('Error loading channel: ' + error.message);
+                // Show browser warning for MPEG-TS streams (browsers have limited support)
+                const browserWarning = document.getElementById('browser-warning');
+                if (browserWarning) {
+                    browserWarning.style.display = 'block';
+                    // Try to determine if it's DRM-protected or just MPEG-TS
+                    const isDrmStream = error.message && (error.message.includes('DRM') || error.message.includes('HLS'));
+                    if (isDrmStream) {
+                        browserWarning.innerHTML = `
+                            <strong>⚠️ Browser Playback Limitation:</strong><br>
+                            <small>This channel uses HLS/DRM-protected streams that may not play directly in browsers. 
+                            For best results, use <a href="/iptv/channels.m3u" download style="color: var(--info);">VLC Media Player</a> 
+                            or another IPTV client with the M3U playlist, or try the <a href="/iptv/channel/${channelNumber}.ts" style="color: var(--info);">MPEG-TS stream</a>.</small>
+                        `;
+                    } else {
+                        browserWarning.innerHTML = `
+                            <strong>⚠️ Browser Playback Limitation:</strong><br>
+                            <small>This channel uses MPEG-TS streams that may not play directly in browsers. 
+                            For best results, use <a href="/iptv/channels.m3u" download style="color: var(--info);">VLC Media Player</a> 
+                            or another IPTV client with the M3U playlist. You can also try the <a href="/iptv/channel/${channelNumber}.ts" target="_blank" style="color: var(--info);">direct MPEG-TS stream</a>.</small>
+                        `;
+                    }
+                }
+            }
+        }
+        
+        
+        // Update channel metadata using StreamTV player API (streamtv_get_epg equivalent)
+        async function updateChannelMetadata() {
+            if (!currentChannel) return;
+            
+            try {
+                const metadataResponse = await fetch(`${API_BASE}/api/player/channel/${currentChannel}/metadata`);
+                if (!metadataResponse.ok) {
+                    return; // Silently fail - metadata is optional
+                }
+                
+                const metadata = await metadataResponse.json();
+                currentChannelMetadata = metadata;
+                
+                // Update player title/subtitle if React Player is active
+                if (ReactPlayerAvailable && window.streamtvPlayer && metadata.title) {
+                    const title = metadata.series_title || metadata.title;
+                    const subtitle = metadata.episode_title 
+                        ? `S${metadata.season_number || '?'}E${metadata.episode_number || '?'} - ${metadata.episode_title}`
+                        : metadata.description 
+                            ? metadata.description.substring(0, 100) + (metadata.description.length > 100 ? '...' : '')
+                            : 'Live Stream';
+                    
+                    window.streamtvPlayer.setTitle(title);
+                    window.streamtvPlayer.setSubTitle(subtitle);
+                }
+                
+                // Update info div
+                const infoDiv = document.getElementById('info');
+                if (infoDiv && metadata.title) {
+                    let infoHTML = `<h3>${metadata.channel_name || currentChannel}</h3>`;
+                    infoHTML += `<div class="metadata">`;
+                    
+                    if (metadata.series_title) {
+                        infoHTML += `<strong>Series:</strong> ${metadata.series_title}<br>`;
+                    }
+                    if (metadata.episode_title) {
+                        infoHTML += `<strong>Episode:</strong> S${metadata.season_number || '?'}E${metadata.episode_number || '?'} - ${metadata.episode_title}<br>`;
+                    } else if (metadata.title) {
+                        infoHTML += `<strong>Now Playing:</strong> ${metadata.title}<br>`;
+                    }
+                    if (metadata.description) {
+                        infoHTML += `<strong>Description:</strong> ${metadata.description.substring(0, 200)}${metadata.description.length > 200 ? '...' : ''}<br>`;
+                    }
+                    if (metadata.duration) {
+                        const elapsed = metadata.elapsed_seconds_in_item || 0;
+                        const remaining = Math.max(0, metadata.duration - elapsed);
+                        infoHTML += `<strong>Time:</strong> ${formatTime(elapsed)} / ${formatTime(metadata.duration)} (${formatTime(remaining)} remaining)<br>`;
+                    }
+                    
+                    infoHTML += `</div>`;
+                    infoDiv.innerHTML = infoHTML;
+                    infoDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.debug('Error updating metadata:', error);
+                // Silently fail - metadata updates are optional
+            }
+        }
+        
+        // Helper function to format time
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) {
+                return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            }
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+        
+        // Expose loadChannel globally for quick launch toolbar
+        window.loadChannel = loadChannel;
+        
+        // Expose handlers to global scope for React Player
+        window.handleVideoEnded = async function() {
+            // For continuous channels, this shouldn't happen, but handle gracefully
+            console.log('Video ended - channel should be continuous');
+        };
+        
+        window.handleVideoError = function(e) {
+            console.error('Video error:', e);
+                showError('Error playing video. Please try another channel.');
+        };
+        
+        async function handleVideoEnded() {
+            return window.handleVideoEnded();
+        }
+        
+        function handleVideoError(e) {
+            return window.handleVideoError(e);
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            // Use innerHTML to allow HTML content (like links to VLC download)
+            errorDiv.innerHTML = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 8000);
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (metadataUpdateInterval) {
+                clearInterval(metadataUpdateInterval);
+            }
+            if (hlsPlayer) {
+                hlsPlayer.destroy();
+            }
+        });
+    </script>
+{% endblock %}

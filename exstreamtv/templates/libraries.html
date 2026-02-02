@@ -1,0 +1,978 @@
+{% extends "base.html" %}
+
+{% block title %}Libraries - EXStreamTV{% endblock %}
+
+{% block extra_styles %}
+    .libraries-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 24px;
+        margin-top: 24px;
+    }
+    
+    .library-card {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 24px;
+        border: 0.5px solid var(--divider);
+        transition: all 0.2s ease;
+    }
+    
+    .library-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+    
+    .library-card-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .library-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        background: var(--apple-fill);
+    }
+    
+    .library-icon.local { background: linear-gradient(135deg, #5856D6, #AF52DE); }
+    .library-icon.plex { background: linear-gradient(135deg, #E5A00D, #CC7B19); }
+    .library-icon.jellyfin { background: linear-gradient(135deg, #00A4DC, #0086B3); }
+    .library-icon.emby { background: linear-gradient(135deg, #52B54B, #3F8F39); }
+    
+    .library-info {
+        flex: 1;
+    }
+    
+    .library-name {
+        font-weight: 600;
+        font-size: 17px;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+    
+    .library-type {
+        font-size: 13px;
+        color: var(--text-secondary);
+        text-transform: capitalize;
+    }
+    
+    .library-status {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .library-status.idle { background: var(--apple-fill); color: var(--text-secondary); }
+    .library-status.scanning { background: rgba(0, 164, 255, 0.2); color: var(--info); }
+    .library-status.error { background: rgba(255, 59, 48, 0.2); color: var(--error); }
+    .library-status.disabled { background: var(--apple-fill); color: var(--text-disabled); }
+    
+    .library-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 16px;
+        background: var(--apple-fill);
+        border-radius: 8px;
+    }
+    
+    .library-stat {
+        text-align: center;
+    }
+    
+    .library-stat-value {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+    
+    .library-stat-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .library-path {
+        font-size: 13px;
+        color: var(--text-secondary);
+        padding: 12px;
+        background: var(--apple-fill);
+        border-radius: 6px;
+        margin-bottom: 16px;
+        word-break: break-all;
+        font-family: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    
+    .library-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .library-last-scan {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 12px;
+    }
+    
+    .scan-progress {
+        margin-top: 12px;
+    }
+    
+    .scan-progress-bar {
+        height: 4px;
+        background: var(--apple-fill);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+    
+    .scan-progress-fill {
+        height: 100%;
+        background: var(--primary);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+    
+    .scan-progress-text {
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .add-library-section {
+        margin-top: 32px;
+    }
+    
+    .add-library-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+    
+    .add-library-btn {
+        background: var(--surface);
+        border: 2px dashed var(--divider);
+        border-radius: 12px;
+        padding: 32px 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .add-library-btn:hover {
+        border-color: var(--primary);
+        background: var(--apple-fill);
+    }
+    
+    .add-library-btn .icon {
+        font-size: 32px;
+        margin-bottom: 12px;
+        display: block;
+    }
+    
+    .add-library-btn .label {
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+    
+    .add-library-btn .sublabel {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+    }
+    
+    /* Modal form styles */
+    .form-section {
+        margin-bottom: 24px;
+    }
+    
+    .form-section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 12px;
+    }
+    
+    .discover-btn {
+        margin-top: 8px;
+    }
+    
+    .discovered-libraries {
+        margin-top: 16px;
+    }
+    
+    .discovered-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: var(--apple-fill);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .discovered-item:hover {
+        background: var(--apple-fill-secondary);
+    }
+    
+    .discovered-item.selected {
+        border: 2px solid var(--primary);
+    }
+    
+    .discovered-item-name {
+        flex: 1;
+        font-weight: 500;
+    }
+    
+    .discovered-item-type {
+        font-size: 12px;
+        color: var(--text-secondary);
+        text-transform: capitalize;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">Libraries</h1>
+            <p class="page-subtitle">Manage your media libraries from local folders and media servers.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-primary" onclick="openModal('addLocalModal')">
+                <span class="btn-icon">+</span>
+                Add Library
+            </button>
+            <button class="btn btn-secondary" onclick="scanAllLibraries()">
+                <span class="btn-icon">↻</span>
+                Scan All
+            </button>
+        </div>
+    </div>
+    
+    <!-- Stats Summary -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value" id="totalItems">0</div>
+            <div class="stat-label">Total Items</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="totalMovies">0</div>
+            <div class="stat-label">Movies</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="totalShows">0</div>
+            <div class="stat-label">TV Shows</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="totalLibraries">0</div>
+            <div class="stat-label">Libraries</div>
+        </div>
+    </div>
+    
+    <!-- Libraries Grid -->
+    <div class="libraries-grid" id="librariesGrid">
+        <!-- Libraries will be loaded here -->
+    </div>
+    
+    <!-- Add Library Options -->
+    <div class="add-library-section">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">Add a Library</h2>
+        <p style="color: var(--text-secondary); font-size: 15px;">Connect to your media sources</p>
+        
+        <div class="add-library-grid">
+            <div class="add-library-btn" onclick="openModal('addLocalModal')">
+                <span class="icon">📁</span>
+                <div class="label">Local Folder</div>
+                <div class="sublabel">Scan files from your computer</div>
+            </div>
+            <div class="add-library-btn" onclick="openModal('addPlexModal')">
+                <span class="icon">🎬</span>
+                <div class="label">Plex</div>
+                <div class="sublabel">Connect to Plex Media Server</div>
+            </div>
+            <div class="add-library-btn" onclick="openModal('addJellyfinModal')">
+                <span class="icon">🔮</span>
+                <div class="label">Jellyfin</div>
+                <div class="sublabel">Connect to Jellyfin server</div>
+            </div>
+            <div class="add-library-btn" onclick="openModal('addEmbyModal')">
+                <span class="icon">📺</span>
+                <div class="label">Emby</div>
+                <div class="sublabel">Connect to Emby server</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Local Library Modal -->
+<div class="modal" id="addLocalModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Local Library</h2>
+            <button class="modal-close" onclick="closeModal('addLocalModal')">×</button>
+        </div>
+        <form id="addLocalForm" onsubmit="submitLocalLibrary(event)">
+            <div class="form-group">
+                <label>Library Name</label>
+                <input type="text" name="name" required placeholder="My Movies">
+            </div>
+            <div class="form-group">
+                <label>Folder Path</label>
+                <input type="text" name="path" required placeholder="/path/to/media">
+            </div>
+            <div class="form-group">
+                <label>Content Type</label>
+                <select name="library_type">
+                    <option value="movie">Movies</option>
+                    <option value="show">TV Shows</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>File Extensions</label>
+                <input type="text" name="file_extensions" 
+                       value=".mp4,.mkv,.avi,.mov,.wmv,.flv,.webm,.m4v,.ts,.m2ts"
+                       placeholder="Comma-separated extensions">
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" name="recursive" checked>
+                    Scan subdirectories
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addLocalModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Library</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Plex Library Modal -->
+<div class="modal" id="addPlexModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Plex Library</h2>
+            <button class="modal-close" onclick="closeModal('addPlexModal')">×</button>
+        </div>
+        <form id="addPlexForm" onsubmit="submitPlexLibrary(event)">
+            <div class="form-section">
+                <div class="form-section-title">Server Connection</div>
+                <div class="form-group">
+                    <label>Plex Server URL</label>
+                    <input type="text" name="server_url" id="plexServerUrl" required 
+                           placeholder="http://localhost:32400">
+                </div>
+                <div class="form-group">
+                    <label>X-Plex-Token</label>
+                    <input type="password" name="token" id="plexToken" required 
+                           placeholder="Your Plex token">
+                </div>
+                <button type="button" class="btn btn-secondary discover-btn" 
+                        onclick="discoverPlexLibraries()">
+                    Discover Libraries
+                </button>
+            </div>
+            
+            <div class="discovered-libraries" id="plexDiscoveredLibraries" style="display: none;">
+                <div class="form-section-title">Select Library</div>
+                <div id="plexLibraryList"></div>
+            </div>
+            
+            <div class="form-group" style="display: none;" id="plexLibraryFields">
+                <label>Library Name (Display)</label>
+                <input type="text" name="name" id="plexLibraryName" placeholder="Auto-filled from selection">
+                <input type="hidden" name="plex_library_key" id="plexLibraryKey">
+                <input type="hidden" name="plex_library_name" id="plexLibraryDisplayName">
+                <input type="hidden" name="library_type" id="plexLibraryType">
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addPlexModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Library</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Jellyfin Library Modal -->
+<div class="modal" id="addJellyfinModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Jellyfin Library</h2>
+            <button class="modal-close" onclick="closeModal('addJellyfinModal')">×</button>
+        </div>
+        <form id="addJellyfinForm" onsubmit="submitJellyfinLibrary(event)">
+            <div class="form-section">
+                <div class="form-section-title">Server Connection</div>
+                <div class="form-group">
+                    <label>Jellyfin Server URL</label>
+                    <input type="text" name="server_url" id="jellyfinServerUrl" required 
+                           placeholder="http://localhost:8096">
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" name="api_key" id="jellyfinApiKey" required 
+                           placeholder="Your Jellyfin API key">
+                </div>
+                <button type="button" class="btn btn-secondary discover-btn" 
+                        onclick="discoverJellyfinLibraries()">
+                    Discover Libraries
+                </button>
+            </div>
+            
+            <div class="discovered-libraries" id="jellyfinDiscoveredLibraries" style="display: none;">
+                <div class="form-section-title">Select Library</div>
+                <div id="jellyfinLibraryList"></div>
+            </div>
+            
+            <div class="form-group" style="display: none;" id="jellyfinLibraryFields">
+                <label>Library Name (Display)</label>
+                <input type="text" name="name" id="jellyfinLibraryName">
+                <input type="hidden" name="jellyfin_library_id" id="jellyfinLibraryId">
+                <input type="hidden" name="jellyfin_library_name" id="jellyfinLibraryDisplayName">
+                <input type="hidden" name="library_type" id="jellyfinLibraryType">
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addJellyfinModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Library</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Emby Library Modal -->
+<div class="modal" id="addEmbyModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Emby Library</h2>
+            <button class="modal-close" onclick="closeModal('addEmbyModal')">×</button>
+        </div>
+        <form id="addEmbyForm" onsubmit="submitEmbyLibrary(event)">
+            <div class="form-section">
+                <div class="form-section-title">Server Connection</div>
+                <div class="form-group">
+                    <label>Emby Server URL</label>
+                    <input type="text" name="server_url" id="embyServerUrl" required 
+                           placeholder="http://localhost:8096">
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" name="api_key" id="embyApiKey" required 
+                           placeholder="Your Emby API key">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Library Name</label>
+                <input type="text" name="name" required placeholder="My Emby Movies">
+            </div>
+            <div class="form-group">
+                <label>Emby Library ID</label>
+                <input type="text" name="emby_library_id" required placeholder="Library GUID">
+            </div>
+            <div class="form-group">
+                <label>Content Type</label>
+                <select name="library_type">
+                    <option value="movie">Movies</option>
+                    <option value="show">TV Shows</option>
+                </select>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addEmbyModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Library</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let libraries = [];
+    let scanPollingIntervals = {};
+    
+    // Load libraries on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadLibraries();
+        loadStats();
+    });
+    
+    async function loadLibraries() {
+        try {
+            const response = await fetch('/api/libraries');
+            libraries = await response.json();
+            renderLibraries();
+        } catch (error) {
+            console.error('Failed to load libraries:', error);
+        }
+    }
+    
+    async function loadStats() {
+        try {
+            const response = await fetch('/api/libraries/stats');
+            const stats = await response.json();
+            
+            document.getElementById('totalItems').textContent = stats.total_items.toLocaleString();
+            document.getElementById('totalMovies').textContent = stats.movies.toLocaleString();
+            document.getElementById('totalShows').textContent = stats.shows.toLocaleString();
+            document.getElementById('totalLibraries').textContent = libraries.length;
+        } catch (error) {
+            console.error('Failed to load stats:', error);
+        }
+    }
+    
+    function renderLibraries() {
+        const grid = document.getElementById('librariesGrid');
+        document.getElementById('totalLibraries').textContent = libraries.length;
+        
+        if (libraries.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1; padding: 60px 20px; text-align: center;">
+                    <div style="font-size: 48px; opacity: 0.5; margin-bottom: 16px;">📚</div>
+                    <h3 style="color: var(--text-primary); margin-bottom: 8px;">No Libraries</h3>
+                    <p style="color: var(--text-secondary);">Add a local folder or connect to a media server to get started.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        grid.innerHTML = libraries.map(lib => `
+            <div class="library-card" data-id="${lib.id}" data-type="${lib.source_type}">
+                <div class="library-card-header">
+                    <div class="library-icon ${lib.source_type}">
+                        ${getLibraryIcon(lib.source_type)}
+                    </div>
+                    <div class="library-info">
+                        <div class="library-name">${escapeHtml(lib.name)}</div>
+                        <div class="library-type">${lib.source_type} · ${lib.library_type}</div>
+                    </div>
+                    <div class="library-status ${lib.status}">${lib.status}</div>
+                </div>
+                
+                ${lib.path ? `<div class="library-path">${escapeHtml(lib.path)}</div>` : ''}
+                ${lib.server_url ? `<div class="library-path">${escapeHtml(lib.server_url)}</div>` : ''}
+                
+                <div class="library-stats">
+                    <div class="library-stat">
+                        <div class="library-stat-value">${lib.item_count.toLocaleString()}</div>
+                        <div class="library-stat-label">Items</div>
+                    </div>
+                    <div class="library-stat">
+                        <div class="library-stat-value">${lib.is_enabled ? '✓' : '✗'}</div>
+                        <div class="library-stat-label">Enabled</div>
+                    </div>
+                </div>
+                
+                <div id="scanProgress-${lib.source_type}-${lib.id}" style="display: none;" class="scan-progress">
+                    <div class="scan-progress-bar">
+                        <div class="scan-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="scan-progress-text">Scanning...</div>
+                </div>
+                
+                <div class="library-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="scanLibrary('${lib.source_type}', ${lib.id})">
+                        Scan
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="deleteLibrary('${lib.source_type}', ${lib.id})">
+                        Delete
+                    </button>
+                </div>
+                
+                ${lib.last_scan ? `
+                    <div class="library-last-scan">
+                        Last scanned: ${new Date(lib.last_scan).toLocaleString()}
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+    }
+    
+    function getLibraryIcon(type) {
+        const icons = {
+            'local': '📁',
+            'plex': '🎬',
+            'jellyfin': '🔮',
+            'emby': '📺'
+        };
+        return icons[type] || '📚';
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+    
+    // Close modal when clicking outside
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    });
+    
+    // Form submissions
+    async function submitLocalLibrary(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+            name: form.name.value,
+            path: form.path.value,
+            library_type: form.library_type.value,
+            file_extensions: form.file_extensions.value,
+            recursive: form.recursive.checked
+        };
+        
+        try {
+            const response = await fetch('/api/libraries/local', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                closeModal('addLocalModal');
+                form.reset();
+                loadLibraries();
+                loadStats();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.detail || 'Failed to add library'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+    
+    async function submitPlexLibrary(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+            name: form.name.value || document.getElementById('plexLibraryDisplayName').value,
+            server_url: form.server_url.value,
+            token: form.token.value,
+            plex_library_key: document.getElementById('plexLibraryKey').value,
+            plex_library_name: document.getElementById('plexLibraryDisplayName').value,
+            library_type: document.getElementById('plexLibraryType').value || 'movie'
+        };
+        
+        try {
+            const response = await fetch('/api/libraries/plex', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                closeModal('addPlexModal');
+                form.reset();
+                loadLibraries();
+                loadStats();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.detail || 'Failed to add library'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+    
+    async function submitJellyfinLibrary(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+            name: form.name.value || document.getElementById('jellyfinLibraryDisplayName').value,
+            server_url: form.server_url.value,
+            api_key: form.api_key.value,
+            jellyfin_library_id: document.getElementById('jellyfinLibraryId').value,
+            jellyfin_library_name: document.getElementById('jellyfinLibraryDisplayName').value,
+            library_type: document.getElementById('jellyfinLibraryType').value || 'movie'
+        };
+        
+        try {
+            const response = await fetch('/api/libraries/jellyfin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                closeModal('addJellyfinModal');
+                form.reset();
+                loadLibraries();
+                loadStats();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.detail || 'Failed to add library'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+    
+    async function submitEmbyLibrary(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = Object.fromEntries(new FormData(form));
+        
+        try {
+            const response = await fetch('/api/libraries/emby', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                closeModal('addEmbyModal');
+                form.reset();
+                loadLibraries();
+                loadStats();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.detail || 'Failed to add library'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+    
+    // Discovery
+    async function discoverPlexLibraries() {
+        const serverUrl = document.getElementById('plexServerUrl').value;
+        const token = document.getElementById('plexToken').value;
+        
+        if (!serverUrl || !token) {
+            alert('Please enter server URL and token first');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/libraries/plex/discover?server_url=${encodeURIComponent(serverUrl)}&token=${encodeURIComponent(token)}`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                const libraries = await response.json();
+                const container = document.getElementById('plexDiscoveredLibraries');
+                const list = document.getElementById('plexLibraryList');
+                
+                list.innerHTML = libraries.map(lib => `
+                    <div class="discovered-item" onclick="selectPlexLibrary('${lib.key}', '${escapeHtml(lib.name)}', '${lib.type}')">
+                        <span class="discovered-item-name">${escapeHtml(lib.name)}</span>
+                        <span class="discovered-item-type">${lib.type}</span>
+                    </div>
+                `).join('');
+                
+                container.style.display = 'block';
+            } else {
+                alert('Failed to discover libraries. Check your credentials.');
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+    
+    function selectPlexLibrary(key, name, type) {
+        document.getElementById('plexLibraryKey').value = key;
+        document.getElementById('plexLibraryName').value = name;
+        document.getElementById('plexLibraryDisplayName').value = name;
+        document.getElementById('plexLibraryType').value = type;
+        document.getElementById('plexLibraryFields').style.display = 'block';
+        
+        // Highlight selected
+        document.querySelectorAll('#plexLibraryList .discovered-item').forEach(el => {
+            el.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+    }
+    
+    async function discoverJellyfinLibraries() {
+        const serverUrl = document.getElementById('jellyfinServerUrl').value;
+        const apiKey = document.getElementById('jellyfinApiKey').value;
+        
+        if (!serverUrl || !apiKey) {
+            alert('Please enter server URL and API key first');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/libraries/jellyfin/discover?server_url=${encodeURIComponent(serverUrl)}&api_key=${encodeURIComponent(apiKey)}`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                const libraries = await response.json();
+                const container = document.getElementById('jellyfinDiscoveredLibraries');
+                const list = document.getElementById('jellyfinLibraryList');
+                
+                list.innerHTML = libraries.map(lib => `
+                    <div class="discovered-item" onclick="selectJellyfinLibrary('${lib.key}', '${escapeHtml(lib.name)}', '${lib.type}')">
+                        <span class="discovered-item-name">${escapeHtml(lib.name)}</span>
+                        <span class="discovered-item-type">${lib.type}</span>
+                    </div>
+                `).join('');
+                
+                container.style.display = 'block';
+            } else {
+                alert('Failed to discover libraries. Check your credentials.');
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+    
+    function selectJellyfinLibrary(id, name, type) {
+        document.getElementById('jellyfinLibraryId').value = id;
+        document.getElementById('jellyfinLibraryName').value = name;
+        document.getElementById('jellyfinLibraryDisplayName').value = name;
+        document.getElementById('jellyfinLibraryType').value = type === 'movies' ? 'movie' : 'show';
+        document.getElementById('jellyfinLibraryFields').style.display = 'block';
+        
+        document.querySelectorAll('#jellyfinLibraryList .discovered-item').forEach(el => {
+            el.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+    }
+    
+    // Scan operations
+    async function scanLibrary(type, id) {
+        try {
+            const response = await fetch(`/api/libraries/${type}/${id}/scan`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                startScanPolling(type, id);
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.detail || 'Failed to start scan'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+    
+    function startScanPolling(type, id) {
+        const key = `${type}-${id}`;
+        const progressEl = document.getElementById(`scanProgress-${key}`);
+        
+        if (progressEl) {
+            progressEl.style.display = 'block';
+        }
+        
+        // Poll for progress
+        scanPollingIntervals[key] = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/libraries/scan-progress/${id}`);
+                
+                if (response.ok) {
+                    const progress = await response.json();
+                    updateScanProgress(key, progress);
+                    
+                    if (progress.status === 'completed' || progress.status === 'failed') {
+                        clearInterval(scanPollingIntervals[key]);
+                        delete scanPollingIntervals[key];
+                        
+                        setTimeout(() => {
+                            if (progressEl) progressEl.style.display = 'none';
+                            loadLibraries();
+                            loadStats();
+                        }, 2000);
+                    }
+                } else {
+                    clearInterval(scanPollingIntervals[key]);
+                    delete scanPollingIntervals[key];
+                    if (progressEl) progressEl.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }, 1000);
+    }
+    
+    function updateScanProgress(key, progress) {
+        const progressEl = document.getElementById(`scanProgress-${key}`);
+        if (!progressEl) return;
+        
+        const fillEl = progressEl.querySelector('.scan-progress-fill');
+        const textEl = progressEl.querySelector('.scan-progress-text');
+        
+        if (fillEl) {
+            fillEl.style.width = `${progress.percent_complete}%`;
+        }
+        
+        if (textEl) {
+            textEl.textContent = `Scanning: ${progress.scanned_files}/${progress.total_files} files (${progress.new_items} new)`;
+        }
+    }
+    
+    async function scanAllLibraries() {
+        try {
+            const response = await fetch('/api/libraries/scan-all', {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                alert(result.message);
+                
+                // Start polling for each library
+                result.libraries.forEach(lib => {
+                    startScanPolling(lib.type, lib.id);
+                });
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+    
+    async function deleteLibrary(type, id) {
+        if (!confirm('Are you sure you want to delete this library?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/libraries/${type}/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadLibraries();
+                loadStats();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.detail || 'Failed to delete library'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}

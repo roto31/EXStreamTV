@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block title %}Health Check - StreamTV{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1>
+        <span class="material-icons" aria-hidden="true">health_and_safety</span>
+        Platform Health Check
+    </h1>
+    <p>Comprehensive health check of all StreamTV platform components</p>
+</div>
+
+<div class="divider"></div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Quick Health Check</h2>
+        <button class="btn btn-primary" data-action="runQuickHealthCheck" id="quickCheckBtn" aria-label="Run quick health check">
+            <span class="material-icons" aria-hidden="true">refresh</span>
+            Run Quick Check
+        </button>
+    </div>
+    <div id="quickCheckResults" style="display: none;">
+        <div id="quickCheckStatus" style="margin-top: 16px;"></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Detailed Health Check</h2>
+        <div class="action-buttons">
+            <label class="form-checkbox" style="margin-right: 16px;">
+                <input type="checkbox" id="analyzeLogs" checked aria-label="Analyze logs during health check">
+                <span>Analyze Logs</span>
+            </label>
+            <button class="btn btn-primary" data-action="runDetailedHealthCheck" id="detailedCheckBtn" aria-label="Run detailed health check">
+                <span class="material-icons" aria-hidden="true">assessment</span>
+                Run Detailed Check
+            </button>
+        </div>
+    </div>
+    <div id="detailedCheckResults" style="display: none;">
+        <div id="detailedCheckStatus" style="margin-top: 16px;"></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Individual Component Checks</h2>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-top: 16px;">
+        <div class="card" style="margin: 0;">
+            <h3 style="font-size: 17px; margin-bottom: 8px;">Server Status</h3>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">Check if server is running</p>
+            <button class="btn btn-outlined" data-action="runComponentCheck" data-args='["server"]' style="width: 100%;" aria-label="Check server status">
+                <span class="material-icons" aria-hidden="true">dns</span>
+                Check Server
+            </button>
+            <div id="serverCheckResult" style="margin-top: 8px; font-size: 13px;"></div>
+        </div>
+        
+        <div class="card" style="margin: 0;">
+            <h3 style="font-size: 17px; margin-bottom: 8px;">FFmpeg</h3>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">Verify FFmpeg installation</p>
+            <button class="btn btn-outlined" data-action="runComponentCheck" data-args='["ffmpeg"]' style="width: 100%;" aria-label="Check FFmpeg status">
+                <span class="material-icons" aria-hidden="true">videocam</span>
+                Check FFmpeg
+            </button>
+            <div id="ffmpegCheckResult" style="margin-top: 8px; font-size: 13px;"></div>
+        </div>
+        
+        <div class="card" style="margin: 0;">
+            <h3 style="font-size: 17px; margin-bottom: 8px;">Database</h3>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">Check database connectivity</p>
+            <button class="btn btn-outlined" data-action="runComponentCheck" data-args='["database"]' style="width: 100%;" aria-label="Check database status">
+                <span class="material-icons" aria-hidden="true">storage</span>
+                Check Database
+            </button>
+            <div id="databaseCheckResult" style="margin-top: 8px; font-size: 13px;"></div>
+        </div>
+        
+        <div class="card" style="margin: 0;">
+            <h3 style="font-size: 17px; margin-bottom: 8px;">Network</h3>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">Test network connectivity</p>
+            <button class="btn btn-outlined" data-action="runComponentCheck" data-args='["network"]' style="width: 100%;">
+                <span class="material-icons">wifi</span>
+                Check Network
+            </button>
+            <div id="networkCheckResult" style="margin-top: 8px; font-size: 13px;"></div>
+        </div>
+        
+        <div class="card" style="margin: 0;">
+            <h3 style="font-size: 17px; margin-bottom: 8px;">Channels</h3>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">Verify channel status</p>
+            <button class="btn btn-outlined" data-action="runComponentCheck" data-args='["channels"]' style="width: 100%;">
+                <span class="material-icons">tv</span>
+                Check Channels
+            </button>
+            <div id="channelsCheckResult" style="margin-top: 8px; font-size: 13px;"></div>
+        </div>
+        
+        <div class="card" style="margin: 0;">
+            <h3 style="font-size: 17px; margin-bottom: 8px;">Logs</h3>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">Analyze error logs</p>
+            <button class="btn btn-outlined" data-action="runComponentCheck" data-args='["logs"]' style="width: 100%;">
+                <span class="material-icons">description</span>
+                Analyze Logs
+            </button>
+            <div id="logsCheckResult" style="margin-top: 8px; font-size: 13px;"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.status-healthy {
+    background: var(--success);
+    color: white;
+}
+
+.status-warning {
+    background: var(--warning);
+    color: white;
+}
+
+.status-error {
+    background: var(--error);
+    color: white;
+}
+
+.status-info {
+    background: var(--info);
+    color: white;
+}
+
+.check-item {
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 0.5px solid var(--divider);
+}
+
+.check-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.check-item-title {
+    font-weight: 600;
+    font-size: 17px;
+}
+
+.check-item-message {
+    color: var(--text-secondary);
+    font-size: 15px;
+    margin-top: 4px;
+}
+
+.check-item-details {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 0.5px solid var(--divider);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--divider);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script nonce="{{ request.state.csp_nonce }}">
+async function runQuickHealthCheck() {
+    const btn = document.getElementById('quickCheckBtn');
+    const resultsDiv = document.getElementById('quickCheckResults');
+    const statusDiv = document.getElementById('quickCheckStatus');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span>Running...';
+    resultsDiv.style.display = 'block';
+    statusDiv.innerHTML = '<p style="color: var(--text-secondary);">Checking platform health...</p>';
+    
+    try {
+        const response = await fetch('/api/health/detailed?analyze_logs=false');
+        const data = await response.json();
+        
+        const overallStatus = data.overall_status || 'unknown';
+        const summary = data.summary || {};
+        
+        let statusClass = 'status-healthy';
+        let statusIcon = '✓';
+        if (overallStatus === 'error') {
+            statusClass = 'status-error';
+            statusIcon = '✗';
+        } else if (overallStatus === 'warning') {
+            statusClass = 'status-warning';
+            statusIcon = '⚠';
+        }
+        
+        statusDiv.innerHTML = `
+            <div class="check-item">
+                <div class="check-item-header">
+                    <span class="check-item-title">Overall Status</span>
+                    <span class="status-badge ${statusClass}">${statusIcon} ${overallStatus.toUpperCase()}</span>
+                </div>
+                <div class="check-item-message">
+                    Healthy: ${summary.healthy || 0} | 
+                    Warnings: ${summary.warnings || 0} | 
+                    Errors: ${summary.errors || 0}
+                </div>
+                <div class="check-item-details">
+                    Total Checks: ${summary.total_checks || 0}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        statusDiv.innerHTML = `
+            <div class="alert alert-error show">
+                Error running health check: ${error.message}
+            </div>
+        `;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons" aria-hidden="true">refresh</span>Run Quick Check';
+        if (window.convertMaterialIcons) setTimeout(window.convertMaterialIcons, 50);
+    }
+}
+
+async function runDetailedHealthCheck() {
+    const btn = document.getElementById('detailedCheckBtn');
+    const resultsDiv = document.getElementById('detailedCheckResults');
+    const statusDiv = document.getElementById('detailedCheckStatus');
+    const analyzeLogs = document.getElementById('analyzeLogs').checked;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span>Running...';
+    resultsDiv.style.display = 'block';
+    statusDiv.innerHTML = '<p style="color: var(--text-secondary);">Running comprehensive health check...</p>';
+    
+    try {
+        const response = await fetch(`/api/health/detailed?analyze_logs=${analyzeLogs}`);
+        const data = await response.json();
+        
+        const checks = data.checks || {};
+        const overallStatus = data.overall_status || 'unknown';
+        const summary = data.summary || {};
+        
+        let html = `
+            <div class="check-item">
+                <div class="check-item-header">
+                    <span class="check-item-title">Overall Status</span>
+                    <span class="status-badge ${getStatusClass(overallStatus)}">${getStatusIcon(overallStatus)} ${overallStatus.toUpperCase()}</span>
+                </div>
+                <div class="check-item-message">
+                    Summary: ${summary.healthy || 0} healthy, ${summary.warnings || 0} warnings, ${summary.errors || 0} errors
+                </div>
+            </div>
+        `;
+        
+        for (const [checkName, checkData] of Object.entries(checks)) {
+            const status = checkData.status || 'unknown';
+            const message = checkData.message || 'No message';
+            
+            html += `
+                <div class="check-item">
+                    <div class="check-item-header">
+                        <span class="check-item-title">${checkName.charAt(0).toUpperCase() + checkName.slice(1)}</span>
+                        <span class="status-badge ${getStatusClass(status)}">${getStatusIcon(status)} ${status}</span>
+                    </div>
+                    <div class="check-item-message">${escapeHtml(message)}</div>
+                    ${formatCheckDetails(checkData)}
+                </div>
+            `;
+        }
+        
+        statusDiv.innerHTML = html;
+    } catch (error) {
+        statusDiv.innerHTML = `
+            <div class="alert alert-error show">
+                Error running detailed health check: ${error.message}
+            </div>
+        `;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons" aria-hidden="true">assessment</span>Run Detailed Check';
+        if (window.convertMaterialIcons) setTimeout(window.convertMaterialIcons, 50);
+    }
+}
+
+async function runComponentCheck(component) {
+    const resultDiv = document.getElementById(`${component}CheckResult`);
+    resultDiv.innerHTML = '<span class="loading-spinner"></span>Checking...';
+    
+    try {
+        const response = await fetch('/api/health/detailed?analyze_logs=false');
+        const data = await response.json();
+        const checks = data.checks || {};
+        const checkData = checks[component] || {};
+        
+        const status = checkData.status || 'unknown';
+        const message = checkData.message || 'No data available';
+        
+        resultDiv.innerHTML = `
+            <span class="status-badge ${getStatusClass(status)}" style="margin: 0;">
+                ${getStatusIcon(status)} ${status}
+            </span>
+            <div style="margin-top: 4px; font-size: 12px; color: var(--text-secondary);">
+                ${escapeHtml(message.substring(0, 100))}
+            </div>
+        `;
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <span class="status-badge status-error">✗ Error</span>
+            <div style="margin-top: 4px; font-size: 12px; color: var(--error);">
+                ${error.message}
+            </div>
+        `;
+    }
+}
+
+function getStatusClass(status) {
+    if (status === 'healthy') return 'status-healthy';
+    if (status === 'warning') return 'status-warning';
+    if (status === 'error') return 'status-error';
+    return 'status-info';
+}
+
+function getStatusIcon(status) {
+    if (status === 'healthy') return '✓';
+    if (status === 'warning') return '⚠';
+    if (status === 'error') return '✗';
+    return 'ℹ';
+}
+
+function formatCheckDetails(checkData) {
+    let details = '';
+    
+    if (checkData.channels !== undefined) {
+        details += `<div class="check-item-details">Channels: ${checkData.channels}</div>`;
+    }
+    if (checkData.enabled_channels !== undefined) {
+        details += `<div class="check-item-details">Enabled: ${checkData.enabled_channels}</div>`;
+    }
+    if (checkData.media_items !== undefined) {
+        details += `<div class="check-item-details">Media Items: ${checkData.media_items}</div>`;
+    }
+    if (checkData.database_size_mb !== undefined) {
+        details += `<div class="check-item-details">Database Size: ${checkData.database_size_mb} MB</div>`;
+    }
+    if (checkData.version) {
+        details += `<div class="check-item-details">Version: ${escapeHtml(checkData.version)}</div>`;
+    }
+    if (checkData.path) {
+        details += `<div class="check-item-details">Path: ${escapeHtml(checkData.path)}</div>`;
+    }
+    if (checkData.error_counts && Object.keys(checkData.error_counts).length > 0) {
+        details += `<div class="check-item-details">Error Types: ${Object.keys(checkData.error_counts).join(', ')}</div>`;
+        details += `<div class="check-item-details">Total Errors: ${checkData.total_errors || 0}</div>`;
+    }
+    if (checkData.issues && checkData.issues.length > 0) {
+        details += `<div class="check-item-details">Issues: ${checkData.issues.map(i => escapeHtml(i)).join('; ')}</div>`;
+    }
+    
+    return details;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Run quick check on page load
+window.addEventListener('DOMContentLoaded', () => {
+    runQuickHealthCheck();
+});
+</script>
+{% endblock %}
+

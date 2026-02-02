@@ -1,0 +1,90 @@
+================================================================================
+EXSTREAMTV EXTENDED OVERNIGHT RELIABILITY TEST SUMMARY
+================================================================================
+
+Test Run ID: 20260128_082553
+Start Time: 2026-01-28T08:25:53.571185
+End Time: 2026-01-28T10:27:29.273375
+
+OVERALL RESULTS
+----------------------------------------
+Total Cycles: 3
+Channels Tested: 36
+Total Tests: 96
+Success Rate: 35.4%
+Passed: 34
+Failed: 31
+Timeouts: 31
+Errors: 0
+
+PERFORMANCE METRICS
+----------------------------------------
+Avg TTFB: 1.23s
+Min TTFB: 0.01s
+Max TTFB: 22.45s
+
+CHANNEL RELIABILITY
+----------------------------------------
+Reliable Channels (≥80%): 0
+Unreliable Channels (<80%): 36
+
+UNRELIABLE CHANNELS:
+      80 | Magnum P.I. Complete Series    | 0.0%
+     100 | Disney Afternoon               | 0.0%
+     101 | Bluey                          | 0.0%
+     122 | All Apple                      | 0.0%
+     123 | Sesame Street                  | 0.0%
+     143 | IPOY 143                       | 0.0%
+    1929 | Disney Classics                | 0.0%
+    1980 | 1980 Lake Placid Winter Olympi | 0.0%
+    1984 | 1984 Sarajevo Winter Olympics  | 0.0%
+    1985 | 1985 Country Music             | 0.0%
+    1988 | 1988 Calgary Winter Olympics   | 0.0%
+    1991 | 1980s-1990s Country            | 0.0%
+    1992 | 1992 Albertville Winter Olympi | 0.0%
+    1994 | 1994 Lillehammer Winter Olympi | 0.0%
+    2000 | 2000's Movies                  | 0.0%
+  1984.1 | Computer Chronicles            | 0.0%
+     105 | Disney                         | 33.3%
+     106 | Westerns                       | 33.3%
+     113 | Comedy Movies                  | 33.3%
+     114 | Big City Greens                | 33.3%
+     115 | AppleTV                        | 33.3%
+     119 | Coen Brothers                  | 33.3%
+     102 | Ashley                         | 66.7%
+     103 | 1980s TV                       | 66.7%
+     104 | The X-Files and Califormicatio | 66.7%
+     107 | Taylor Swift                   | 66.7%
+     108 | ABC Sitcoms                    | 66.7%
+     109 | PBS Afternoon                  | 66.7%
+     110 | PBS Evening                    | 66.7%
+     111 | Ken Burns                      | 66.7%
+     112 | Kids Movies                    | 66.7%
+     116 | Classic TV                     | 66.7%
+     117 | CSI                            | 66.7%
+     118 | Marvel                         | 66.7%
+     120 | Superman and Batman            | 66.7%
+     121 | Christmas                      | 66.7%
+
+ERROR LOG (last 20):
+----------------------------------------
+  [2026-01-28T10:15:09.929411] Ch 112: Timeout after 30.0s
+  [2026-01-28T10:15:40.490258] Ch 113: No stream data received
+  [2026-01-28T10:16:10.622238] Ch 114: No stream data received
+  [2026-01-28T10:16:50.637705] Ch 115: Timeout after 30.0s
+  [2026-01-28T10:17:34.967187] Ch 115: No stream data received
+  [2026-01-28T10:18:05.015988] Ch 116: No stream data received
+  [2026-01-28T10:18:35.039356] Ch 117: No stream data received
+  [2026-01-28T10:19:15.056920] Ch 118: Timeout after 30.0s
+  [2026-01-28T10:19:58.690224] Ch 118: No stream data received
+  [2026-01-28T10:20:38.703827] Ch 119: Timeout after 30.0s
+  [2026-01-28T10:21:23.753725] Ch 119: Timeout after 30.0s
+  [2026-01-28T10:22:01.857588] Ch 119: No stream data received
+  [2026-01-28T10:22:41.936316] Ch 120: Timeout after 30.0s
+  [2026-01-28T10:23:16.972895] Ch 120: No stream data received
+  [2026-01-28T10:23:57.143815] Ch 121: Timeout after 30.0s
+  [2026-01-28T10:24:42.166613] Ch 121: Timeout after 30.0s
+  [2026-01-28T10:25:19.081856] Ch 121: No stream data received
+  [2026-01-28T10:25:59.094034] Ch 122: Timeout after 30.0s
+  [2026-01-28T10:26:44.117136] Ch 122: Timeout after 30.0s
+  [2026-01-28T10:27:29.273060] Ch 122: Timeout after 30.0s

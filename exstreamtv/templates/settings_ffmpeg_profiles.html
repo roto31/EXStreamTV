@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+{% block title %}FFmpeg Profiles - StreamTV{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">FFmpeg Profiles</div>
+            <p class="page-subtitle">Manage transcoding profiles with hardware acceleration support.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-primary" type="button" id="addProfileButton" aria-label="Add FFmpeg profile">
+                <span class="material-icons" aria-hidden="true">add</span>
+                Add Profile
+            </button>
+        </div>
+    </div>
+    
+    <div class="card status-card" id="statusCard" style="display: none;">
+        <span id="statusMessage"></span>
+    </div>
+    
+    <div class="card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Hardware</th>
+                    <th>Video</th>
+                    <th>Audio</th>
+                    <th>Resolution</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="profilesTableBody">
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <div class="empty-state-icon">⚙️</div>
+                        <div>Loading profiles...</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Profile Modal -->
+<div class="modal" id="profileModal">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h2 id="modalTitle">Add FFmpeg Profile</h2>
+            <button class="modal-close" id="closeModal">&times;</button>
+        </div>
+        <form id="profileForm">
+            <input type="hidden" id="profileId">
+            
+            <div class="form-section">
+                <h3>Basic Settings</h3>
+                <div class="form-group">
+                    <label for="profileName">Name *</label>
+                    <input type="text" id="profileName" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileThreadCount">Thread Count</label>
+                    <input type="number" id="profileThreadCount" min="0" value="0">
+                    <small>0 = auto</small>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Hardware Acceleration</h3>
+                <div class="form-group">
+                    <label for="profileHardwareAccel">Hardware Acceleration *</label>
+                    <select id="profileHardwareAccel" required>
+                        <option value="none">None (Software)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="vaapiDriverGroup" style="display: none;">
+                    <label for="profileVaapiDriver">VAAPI Driver</label>
+                    <input type="text" id="profileVaapiDriver" placeholder="e.g., i915, radeonsi">
+                </div>
+                <div class="form-group" id="vaapiDeviceGroup" style="display: none;">
+                    <label for="profileVaapiDevice">VAAPI Device</label>
+                    <input type="text" id="profileVaapiDevice" placeholder="/dev/dri/renderD128">
+                </div>
+                <div class="form-group" id="qsvFramesGroup" style="display: none;">
+                    <label for="profileQsvFrames">QSV Extra Hardware Frames</label>
+                    <input type="number" id="profileQsvFrames" min="0">
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Resolution & Scaling</h3>
+                <div class="form-group">
+                    <label for="profileResolution">Resolution *</label>
+                    <select id="profileResolution" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="profileScalingBehavior">Scaling Behavior *</label>
+                    <select id="profileScalingBehavior" required>
+                        <option value="scale_and_pad">Scale and Pad</option>
+                        <option value="stretch">Stretch</option>
+                        <option value="crop">Crop</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Video Settings</h3>
+                <div class="form-group">
+                    <label for="profileVideoFormat">Video Format *</label>
+                    <select id="profileVideoFormat" required>
+                        <option value="h264">H.264</option>
+                        <option value="hevc">HEVC</option>
+                        <option value="mpeg2video">MPEG-2</option>
+                        <option value="av1">AV1</option>
+                        <option value="copy">Copy</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="profileVideoProfile">Video Profile</label>
+                    <input type="text" id="profileVideoProfile" placeholder="e.g., main, high">
+                </div>
+                <div class="form-group">
+                    <label for="profileVideoPreset">Video Preset</label>
+                    <input type="text" id="profileVideoPreset" placeholder="e.g., veryfast, fast, medium">
+                </div>
+                <div class="form-group">
+                    <label for="profileVideoBitrate">Video Bitrate (kbps) *</label>
+                    <input type="number" id="profileVideoBitrate" min="100" value="2000" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileVideoBufferSize">Video Buffer Size (kbps) *</label>
+                    <input type="number" id="profileVideoBufferSize" min="100" value="4000" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileBitDepth">Bit Depth *</label>
+                    <select id="profileBitDepth" required>
+                        <option value="8bit">8-bit</option>
+                        <option value="10bit">10-bit</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="profileAllowBFrames">
+                        Allow B-Frames
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Audio Settings</h3>
+                <div class="form-group">
+                    <label for="profileAudioFormat">Audio Format *</label>
+                    <select id="profileAudioFormat" required>
+                        <option value="aac">AAC</option>
+                        <option value="ac3">AC-3</option>
+                        <option value="aac_latm">AAC-LATM</option>
+                        <option value="copy">Copy</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="profileAudioBitrate">Audio Bitrate (kbps) *</label>
+                    <input type="number" id="profileAudioBitrate" min="32" value="192" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileAudioBufferSize">Audio Buffer Size (kbps) *</label>
+                    <input type="number" id="profileAudioBufferSize" min="32" value="384" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileAudioChannels">Audio Channels *</label>
+                    <input type="number" id="profileAudioChannels" min="1" max="8" value="2" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileAudioSampleRate">Audio Sample Rate (Hz) *</label>
+                    <input type="number" id="profileAudioSampleRate" min="8000" value="48000" required>
+                </div>
+                <div class="form-group">
+                    <label for="profileNormalizeLoudness">Normalize Loudness</label>
+                    <select id="profileNormalizeLoudness">
+                        <option value="off">Off</option>
+                        <option value="loudnorm">LoudNorm</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Advanced</h3>
+                <div class="form-group">
+                    <label for="profileTonemapAlgorithm">Tonemap Algorithm</label>
+                    <select id="profileTonemapAlgorithm">
+                        <option value="linear">Linear</option>
+                        <option value="clip">Clip</option>
+                        <option value="gamma">Gamma</option>
+                        <option value="reinhard">Reinhard</option>
+                        <option value="mobius">Mobius</option>
+                        <option value="hable">Hable</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="profileNormalizeFramerate">
+                        Normalize Framerate
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="profileDeinterlace">Deinterlace Video</label>
+                    <select id="profileDeinterlace">
+                        <option value="">Auto-detect</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outlined" id="cancelButton">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const API_BASE = '/api';
+let profiles = [];
+let resolutions = [];
+let availableHardware = [];
+
+async function loadData() {
+    try {
+        const [profilesRes, resolutionsRes, hardwareRes] = await Promise.all([
+            fetch(`${API_BASE}/ffmpeg-profiles`),
+            fetch(`${API_BASE}/resolutions`),
+            fetch(`${API_BASE}/ffmpeg-profiles/hardware-acceleration/available`)
+        ]);
+        
+        if (!profilesRes.ok) throw new Error('Failed to load profiles');
+        if (!resolutionsRes.ok) throw new Error('Failed to load resolutions');
+        if (!hardwareRes.ok) throw new Error('Failed to load hardware acceleration');
+        
+        profiles = await profilesRes.json();
+        resolutions = await resolutionsRes.json();
+        const hardwareData = await hardwareRes.json();
+        availableHardware = hardwareData.available || [];
+        
+        renderProfiles();
+        populateHardwareSelect();
+        populateResolutionSelect();
+    } catch (error) {
+        showStatus('error', `Failed to load data: ${error.message}`);
+    }
+}
+
+function populateHardwareSelect() {
+    const select = document.getElementById('profileHardwareAccel');
+    const currentValue = select.value;
+    select.innerHTML = '<option value="none">None (Software)</option>';
+    
+    availableHardware.forEach(hw => {
+        if (hw !== 'none') {
+            const option = document.createElement('option');
+            option.value = hw;
+            option.textContent = hw.toUpperCase();
+            select.appendChild(option);
+        }
+    });
+    
+    if (currentValue) {
+        select.value = currentValue;
+    }
+    
+    updateHardwareFields();
+}
+
+function populateResolutionSelect() {
+    const select = document.getElementById('profileResolution');
+    select.innerHTML = resolutions.map(r => 
+        `<option value="${r.id}">${r.name} (${r.width}×${r.height})</option>`
+    ).join('');
+}
+
+function updateHardwareFields() {
+    const hwaccel = document.getElementById('profileHardwareAccel').value;
+    document.getElementById('vaapiDriverGroup').style.display = hwaccel === 'vaapi' ? 'block' : 'none';
+    document.getElementById('vaapiDeviceGroup').style.display = hwaccel === 'vaapi' ? 'block' : 'none';
+    document.getElementById('qsvFramesGroup').style.display = hwaccel === 'qsv' ? 'block' : 'none';
+}
+
+function renderProfiles() {
+    const tbody = document.getElementById('profilesTableBody');
+    if (profiles.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <div class="empty-state-icon">⚙️</div>
+                    <div>No profiles found. Add one to get started.</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = profiles.map(p => {
+        const resolution = resolutions.find(r => r.id === p.resolution_id);
+        return `
+            <tr>
+                <td class="channel-name">${escapeHtml(p.name)}</td>
+                <td>${p.hardware_acceleration === 'none' ? 'Software' : p.hardware_acceleration.toUpperCase()}</td>
+                <td>${p.video_format.toUpperCase()} @ ${p.video_bitrate}k</td>
+                <td>${p.audio_format.toUpperCase()} @ ${p.audio_bitrate}k</td>
+                <td>${resolution ? resolution.name : 'N/A'}</td>
+                <td class="action-buttons">
+                    <button class="btn btn-sm btn-outlined" onclick="editProfile(${p.id})">
+                        <span class="material-icons" aria-hidden="true">edit</span>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteProfile(${p.id})">
+                        <span class="material-icons" aria-hidden="true">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function showStatus(type, message) {
+    const card = document.getElementById('statusCard');
+    const msg = document.getElementById('statusMessage');
+    card.className = `card status-card ${type}`;
+    msg.textContent = message;
+    card.style.display = 'block';
+    setTimeout(() => {
+        card.style.display = 'none';
+    }, 5000);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function openModal(profile = null) {
+    const modal = document.getElementById('profileModal');
+    const form = document.getElementById('profileForm');
+    const title = document.getElementById('modalTitle');
+    
+    if (profile) {
+        title.textContent = 'Edit FFmpeg Profile';
+        document.getElementById('profileId').value = profile.id;
+        document.getElementById('profileName').value = profile.name;
+        document.getElementById('profileThreadCount').value = profile.thread_count || 0;
+        document.getElementById('profileHardwareAccel').value = profile.hardware_acceleration || 'none';
+        document.getElementById('profileVaapiDriver').value = profile.vaapi_driver || '';
+        document.getElementById('profileVaapiDevice').value = profile.vaapi_device || '';
+        document.getElementById('profileQsvFrames').value = profile.qsv_extra_hardware_frames || '';
+        document.getElementById('profileResolution').value = profile.resolution_id;
+        document.getElementById('profileScalingBehavior').value = profile.scaling_behavior || 'scale_and_pad';
+        document.getElementById('profileVideoFormat').value = profile.video_format || 'h264';
+        document.getElementById('profileVideoProfile').value = profile.video_profile || '';
+        document.getElementById('profileVideoPreset').value = profile.video_preset || '';
+        document.getElementById('profileVideoBitrate').value = profile.video_bitrate || 2000;
+        document.getElementById('profileVideoBufferSize').value = profile.video_buffer_size || 4000;
+        document.getElementById('profileBitDepth').value = profile.bit_depth || '8bit';
+        document.getElementById('profileAllowBFrames').checked = profile.allow_b_frames || false;
+        document.getElementById('profileAudioFormat').value = profile.audio_format || 'aac';
+        document.getElementById('profileAudioBitrate').value = profile.audio_bitrate || 192;
+        document.getElementById('profileAudioBufferSize').value = profile.audio_buffer_size || 384;
+        document.getElementById('profileAudioChannels').value = profile.audio_channels || 2;
+        document.getElementById('profileAudioSampleRate').value = profile.audio_sample_rate || 48000;
+        document.getElementById('profileNormalizeLoudness').value = profile.normalize_loudness_mode || 'off';
+        document.getElementById('profileTonemapAlgorithm').value = profile.tonemap_algorithm || 'linear';
+        document.getElementById('profileNormalizeFramerate').checked = profile.normalize_framerate || false;
+        document.getElementById('profileDeinterlace').value = profile.deinterlace_video === null ? '' : (profile.deinterlace_video ? 'true' : 'false');
+    } else {
+        title.textContent = 'Add FFmpeg Profile';
+        form.reset();
+        document.getElementById('profileId').value = '';
+    }
+    
+    updateHardwareFields();
+    modal.style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('profileModal').style.display = 'none';
+}
+
+async function saveProfile(e) {
+    e.preventDefault();
+    const id = document.getElementById('profileId').value;
+    const data = {
+        name: document.getElementById('profileName').value,
+        thread_count: parseInt(document.getElementById('profileThreadCount').value) || 0,
+        hardware_acceleration: document.getElementById('profileHardwareAccel').value,
+        vaapi_driver: document.getElementById('profileVaapiDriver').value || null,
+        vaapi_device: document.getElementById('profileVaapiDevice').value || null,
+        qsv_extra_hardware_frames: parseInt(document.getElementById('profileQsvFrames').value) || null,
+        resolution_id: parseInt(document.getElementById('profileResolution').value),
+        scaling_behavior: document.getElementById('profileScalingBehavior').value,
+        video_format: document.getElementById('profileVideoFormat').value,
+        video_profile: document.getElementById('profileVideoProfile').value || null,
+        video_preset: document.getElementById('profileVideoPreset').value || null,
+        allow_b_frames: document.getElementById('profileAllowBFrames').checked,
+        bit_depth: document.getElementById('profileBitDepth').value,
+        video_bitrate: parseInt(document.getElementById('profileVideoBitrate').value),
+        video_buffer_size: parseInt(document.getElementById('profileVideoBufferSize').value),
+        tonemap_algorithm: document.getElementById('profileTonemapAlgorithm').value,
+        audio_format: document.getElementById('profileAudioFormat').value,
+        audio_bitrate: parseInt(document.getElementById('profileAudioBitrate').value),
+        audio_buffer_size: parseInt(document.getElementById('profileAudioBufferSize').value),
+        normalize_loudness_mode: document.getElementById('profileNormalizeLoudness').value,
+        audio_channels: parseInt(document.getElementById('profileAudioChannels').value),
+        audio_sample_rate: parseInt(document.getElementById('profileAudioSampleRate').value),
+        normalize_framerate: document.getElementById('profileNormalizeFramerate').checked,
+        deinterlace_video: (() => {
+            const val = document.getElementById('profileDeinterlace').value;
+            return val === '' ? null : val === 'true';
+        })()
+    };
+    
+    try {
+        const url = id ? `${API_BASE}/ffmpeg-profiles/${id}` : `${API_BASE}/ffmpeg-profiles`;
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to save profile');
+        }
+        
+        showStatus('success', `Profile ${id ? 'updated' : 'created'} successfully`);
+        closeModal();
+        loadData();
+    } catch (error) {
+        showStatus('error', error.message);
+    }
+}
+
+function editProfile(id) {
+    const profile = profiles.find(p => p.id === id);
+    if (profile) {
+        openModal(profile);
+    }
+}
+
+async function deleteProfile(id) {
+    if (!confirm('Are you sure you want to delete this profile? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/ffmpeg-profiles/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to delete profile');
+        }
+        
+        showStatus('success', 'Profile deleted successfully');
+        loadData();
+    } catch (error) {
+        showStatus('error', error.message);
+    }
+}
+
+// Event listeners
+document.getElementById('addProfileButton').addEventListener('click', () => openModal());
+document.getElementById('closeModal').addEventListener('click', closeModal);
+document.getElementById('cancelButton').addEventListener('click', closeModal);
+document.getElementById('profileForm').addEventListener('submit', saveProfile);
+document.getElementById('profileHardwareAccel').addEventListener('change', updateHardwareFields);
+
+// Close modal on outside click
+document.getElementById('profileModal').addEventListener('click', (e) => {
+    if (e.target.id === 'profileModal') {
+        closeModal();
+    }
+});
+
+// Load on page load
+loadData();
+</script>
+
+<style>
+.form-section {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--divider);
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+</style>
+{% endblock %}
+

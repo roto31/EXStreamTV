@@ -1,0 +1,14 @@
+{
+  "name": "search_documentation",
+  "description": "Search project documentation (docs/, README) for a text query. Returns matching snippets with file path and excerpt.",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Search phrase (case-insensitive)"
+      }
+    },
+    "required": ["query"]
+  }
+}

@@ -1,0 +1,44 @@
+================================================================================
+EXSTREAMTV EXTENDED OVERNIGHT RELIABILITY TEST SUMMARY
+================================================================================
+
+Test Run ID: 20260128_075931
+Start Time: 2026-01-28T07:59:31.892604
+End Time: 2026-01-28T08:05:21.983234
+
+OVERALL RESULTS
+----------------------------------------
+Total Cycles: 1
+Channels Tested: 36
+Total Tests: 4
+Success Rate: 0.0%
+Passed: 0
+Failed: 2
+Timeouts: 2
+Errors: 0
+
+PERFORMANCE METRICS
+----------------------------------------
+No TTFB data available
+
+CHANNEL RELIABILITY
+----------------------------------------
+Reliable Channels (≥80%): 0
+Unreliable Channels (<80%): 4
+
+UNRELIABLE CHANNELS:
+      80 | Magnum P.I. Complete Series    | 0.0%
+     100 | Disney Afternoon               | 0.0%
+     101 | Bluey                          | 0.0%
+     102 | Ashley                         | 0.0%
+
+ERROR LOG (last 20):
+----------------------------------------
+  [2026-01-28T08:00:26.897731] Ch 80: Timeout after 45.0s
+  [2026-01-28T08:01:26.915056] Ch 80: Timeout after 45.0s
+  [2026-01-28T08:02:26.923497] Ch 80: Timeout after 45.0s
+  [2026-01-28T08:02:26.933874] Ch 100: HTTP 404
+  [2026-01-28T08:02:26.940324] Ch 101: HTTP 404
+  [2026-01-28T08:03:21.947770] Ch 102: Timeout after 45.0s
+  [2026-01-28T08:04:21.973799] Ch 102: Timeout after 45.0s
+  [2026-01-28T08:05:21.983055] Ch 102: Timeout after 45.0s

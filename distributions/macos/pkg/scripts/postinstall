@@ -1,0 +1,219 @@
+#!/bin/bash
+#
+# EXStreamTV Post-Installation Script
+#
+
+set -e
+
+# Configuration (set by installer)
+AI_CHOICE="${AI_CHOICE:-skip}"
+AI_MODEL="${AI_MODEL:-auto}"
+INSTALL_LOG="/tmp/exstreamtv_install.log"
+
+# Logging function
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$INSTALL_LOG"
+}
+
+log "Starting EXStreamTV post-installation..."
+log "AI Choice: $AI_CHOICE"
+log "AI Model: $AI_MODEL"
+
+# Get install location
+INSTALL_DIR="/Applications/EXStreamTV.app"
+LIBRARY_DIR="/Library/EXStreamTV"
+USER_SUPPORT_DIR="$HOME/Library/Application Support/EXStreamTV"
+
+# Create directories
+mkdir -p "$LIBRARY_DIR"
+mkdir -p "$USER_SUPPORT_DIR"
+
+# Set permissions
+chmod -R 755 "$LIBRARY_DIR"
+chmod -R 755 "$USER_SUPPORT_DIR"
+
+#===============================================
+# Install Python dependencies
+#===============================================
+log "Setting up Python environment..."
+
+PYTHON_CMD=""
+
+# Check for bundled Python first
+if [[ -x "$LIBRARY_DIR/python/bin/python3" ]]; then
+    PYTHON_CMD="$LIBRARY_DIR/python/bin/python3"
+    log "Using bundled Python"
+elif command -v python3 &> /dev/null; then
+    PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+    MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+    MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+    
+    if [[ $MAJOR -ge 3 && $MINOR -ge 10 ]]; then
+        PYTHON_CMD="python3"
+        log "Using system Python $PYTHON_VERSION"
+    fi
+fi
+
+if [[ -z "$PYTHON_CMD" ]]; then
+    log "Warning: Python 3.10+ not found. Please install Python."
+fi
+
+# Create virtual environment
+if [[ -n "$PYTHON_CMD" ]] && [[ ! -d "$LIBRARY_DIR/venv" ]]; then
+    log "Creating virtual environment..."
+    $PYTHON_CMD -m venv "$LIBRARY_DIR/venv"
+    
+    # Install requirements
+    if [[ -f "$INSTALL_DIR/Contents/Resources/requirements.txt" ]]; then
+        "$LIBRARY_DIR/venv/bin/pip" install -r "$INSTALL_DIR/Contents/Resources/requirements.txt" >> "$INSTALL_LOG" 2>&1
+    fi
+fi
+
+#===============================================
+# Check FFmpeg
+#===============================================
+log "Checking FFmpeg..."
+
+if [[ -x "$LIBRARY_DIR/ffmpeg/bin/ffmpeg" ]]; then
+    log "Using bundled FFmpeg"
+elif command -v ffmpeg &> /dev/null; then
+    log "Using system FFmpeg"
+else
+    log "Warning: FFmpeg not found. Please install FFmpeg."
+fi
+
+#===============================================
+# AI Setup
+#===============================================
+log "Setting up AI features..."
+
+if [[ "$AI_CHOICE" = "local" ]]; then
+    log "Setting up Local AI..."
+    
+    # Check if Ollama is installed
+    if ! command -v ollama &> /dev/null; then
+        log "Installing Ollama..."
+        
+        # Try Homebrew first
+        if command -v brew &> /dev/null; then
+            brew install ollama >> "$INSTALL_LOG" 2>&1 || true
+        fi
+        
+        # Fallback to direct installation
+        if ! command -v ollama &> /dev/null; then
+            curl -fsSL https://ollama.com/install.sh | sh >> "$INSTALL_LOG" 2>&1 || true
+        fi
+    fi
+    
+    # Start Ollama service
+    if command -v ollama &> /dev/null; then
+        log "Starting Ollama service..."
+        ollama serve &
+        sleep 5
+        
+        # Determine model based on RAM if auto
+        if [[ "$AI_MODEL" = "auto" ]]; then
+            RAM_GB=$(sysctl -n hw.memsize | awk '{print int($1/1024/1024/1024)}')
+            log "Detected $RAM_GB GB RAM"
+            
+            if [[ $RAM_GB -lt 6 ]]; then
+                AI_MODEL="phi4-mini:3.8b-q4"
+            elif [[ $RAM_GB -lt 12 ]]; then
+                AI_MODEL="granite3.1:2b-instruct"
+            elif [[ $RAM_GB -lt 24 ]]; then
+                AI_MODEL="qwen2.5:7b"
+            else
+                AI_MODEL="qwen2.5:14b"
+            fi
+        fi
+        
+        log "Downloading AI model: $AI_MODEL"
+        ollama pull "$AI_MODEL" >> "$INSTALL_LOG" 2>&1 || log "Model download will complete on first use"
+    else
+        log "Warning: Ollama installation failed. Please install manually."
+    fi
+    
+    # Update config
+    cat >> "$USER_SUPPORT_DIR/config.yaml" << EOF
+ai_agent:
+  enabled: true
+  provider_type: local
+  local:
+    host: "http://localhost:11434"
+    model: "$AI_MODEL"
+EOF
+    log "Local AI configuration saved"
+
+elif [[ "$AI_CHOICE" = "cloud" ]]; then
+    log "Cloud AI selected - will configure on first run"
+    
+    cat >> "$USER_SUPPORT_DIR/config.yaml" << EOF
+ai_agent:
+  enabled: true
+  provider_type: cloud
+  cloud:
+    provider: groq
+    # API key will be configured during onboarding
+    model: "llama-3.3-70b-versatile"
+EOF
+    log "Cloud AI configuration saved"
+
+else
+    log "AI setup skipped - can be configured later in Settings"
+    
+    cat >> "$USER_SUPPORT_DIR/config.yaml" << EOF
+ai_agent:
+  enabled: false
+  provider_type: cloud
+  cloud:
+    provider: groq
+EOF
+fi
+
+#===============================================
+# Create default config if not exists
+#===============================================
+if [[ ! -f "$USER_SUPPORT_DIR/config.yaml" ]]; then
+    cat > "$USER_SUPPORT_DIR/config.yaml" << 'EOF'
+# EXStreamTV Configuration
+server:
+  host: "0.0.0.0"
+  port: 8411
+  debug: false
+
+database:
+  url: "sqlite:///./exstreamtv.db"
+
+ffmpeg:
+  hardware_acceleration:
+    enabled: true
+    preferred: "auto"
+
+streaming:
+  buffer_size: 2097152
+EOF
+fi
+
+#===============================================
+# Set ownership
+#===============================================
+log "Setting file permissions..."
+chown -R "$USER" "$USER_SUPPORT_DIR"
+
+#===============================================
+# Register URL scheme
+#===============================================
+log "Registering URL scheme..."
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$INSTALL_DIR" 2>/dev/null || true
+
+#===============================================
+# Complete
+#===============================================
+log "Post-installation complete!"
+
+# Open the app if this is a user-initiated install
+if [[ "$COMMAND_LINE_INSTALL" != "1" ]]; then
+    open "$INSTALL_DIR"
+fi
+
+exit 0

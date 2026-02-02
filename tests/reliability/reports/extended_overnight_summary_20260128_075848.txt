@@ -1,0 +1,88 @@
+================================================================================
+EXSTREAMTV EXTENDED OVERNIGHT RELIABILITY TEST SUMMARY
+================================================================================
+
+Test Run ID: 20260128_075848
+Start Time: 2026-01-28T07:58:48.408214
+End Time: 2026-01-28T07:58:48.559668
+
+OVERALL RESULTS
+----------------------------------------
+Total Cycles: 1
+Channels Tested: 36
+Total Tests: 36
+Success Rate: 0.0%
+Passed: 0
+Failed: 0
+Timeouts: 0
+Errors: 36
+
+PERFORMANCE METRICS
+----------------------------------------
+No TTFB data available
+
+CHANNEL RELIABILITY
+----------------------------------------
+Reliable Channels (≥80%): 0
+Unreliable Channels (<80%): 36
+
+UNRELIABLE CHANNELS:
+      80 | Magnum P.I. Complete Series    | 0.0%
+     100 | Disney Afternoon               | 0.0%
+     101 | Bluey                          | 0.0%
+     102 | Ashley                         | 0.0%
+     103 | 1980s TV                       | 0.0%
+     104 | The X-Files and Califormicatio | 0.0%
+     105 | Disney                         | 0.0%
+     106 | Westerns                       | 0.0%
+     107 | Taylor Swift                   | 0.0%
+     108 | ABC Sitcoms                    | 0.0%
+     109 | PBS Afternoon                  | 0.0%
+     110 | PBS Evening                    | 0.0%
+     111 | Ken Burns                      | 0.0%
+     112 | Kids Movies                    | 0.0%
+     113 | Comedy Movies                  | 0.0%
+     114 | Big City Greens                | 0.0%
+     115 | AppleTV                        | 0.0%
+     116 | Classic TV                     | 0.0%
+     117 | CSI                            | 0.0%
+     118 | Marvel                         | 0.0%
+     119 | Coen Brothers                  | 0.0%
+     120 | Superman and Batman            | 0.0%
+     121 | Christmas                      | 0.0%
+     122 | All Apple                      | 0.0%
+     123 | Sesame Street                  | 0.0%
+     143 | IPOY 143                       | 0.0%
+    1929 | Disney Classics                | 0.0%
+    1980 | 1980 Lake Placid Winter Olympi | 0.0%
+    1984 | 1984 Sarajevo Winter Olympics  | 0.0%
+    1985 | 1985 Country Music             | 0.0%
+    1988 | 1988 Calgary Winter Olympics   | 0.0%
+    1991 | 1980s-1990s Country            | 0.0%
+    1992 | 1992 Albertville Winter Olympi | 0.0%
+    1994 | 1994 Lillehammer Winter Olympi | 0.0%
+    2000 | 2000's Movies                  | 0.0%
+  1984.1 | Computer Chronicles            | 0.0%
+
+ERROR LOG (last 20):
+----------------------------------------
+  [2026-01-28T07:58:48.483424] Ch 115: All connection attempts failed
+  [2026-01-28T07:58:48.487259] Ch 116: All connection attempts failed
+  [2026-01-28T07:58:48.491414] Ch 117: All connection attempts failed
+  [2026-01-28T07:58:48.495173] Ch 118: All connection attempts failed
+  [2026-01-28T07:58:48.499234] Ch 119: All connection attempts failed
+  [2026-01-28T07:58:48.503145] Ch 120: All connection attempts failed
+  [2026-01-28T07:58:48.507315] Ch 121: All connection attempts failed
+  [2026-01-28T07:58:48.511444] Ch 122: All connection attempts failed
+  [2026-01-28T07:58:48.515721] Ch 123: All connection attempts failed
+  [2026-01-28T07:58:48.519419] Ch 143: All connection attempts failed
+  [2026-01-28T07:58:48.523326] Ch 1929: All connection attempts failed
+  [2026-01-28T07:58:48.527474] Ch 1980: All connection attempts failed
+  [2026-01-28T07:58:48.531335] Ch 1984: All connection attempts failed
+  [2026-01-28T07:58:48.535750] Ch 1985: All connection attempts failed
+  [2026-01-28T07:58:48.539564] Ch 1988: All connection attempts failed
+  [2026-01-28T07:58:48.543761] Ch 1991: All connection attempts failed
+  [2026-01-28T07:58:48.547679] Ch 1992: All connection attempts failed
+  [2026-01-28T07:58:48.551374] Ch 1994: All connection attempts failed
+  [2026-01-28T07:58:48.554901] Ch 2000: All connection attempts failed
+  [2026-01-28T07:58:48.559595] Ch 1984.1: All connection attempts failed

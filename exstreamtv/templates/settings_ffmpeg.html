@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}FFmpeg Settings - StreamTV{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">FFmpeg Settings</div>
+            <p class="page-subtitle">Configure transcoding paths, hardware acceleration, and runtime flags.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-outlined" type="button" id="refreshFfmpegSettingsButton" aria-label="Reload FFmpeg settings">
+                <span class="material-icons" aria-hidden="true">refresh</span>
+                Reload
+            </button>
+            <button class="btn btn-primary" type="button" id="saveFfmpegSettingsButton" aria-label="Save FFmpeg settings changes">
+                <span class="material-icons" aria-hidden="true">save</span>
+                Save Changes
+            </button>
+        </div>
+    </div>
+    
+    <div class="card status-card" id="statusCard" style="display: none;">
+        <span id="statusMessage"></span>
+    </div>
+    
+    <div class="settings-grid">
+        <div class="card settings-card">
+            <div class="card-title">Binary Paths</div>
+            <div class="form-group">
+                <label for="ffmpegPath">ffmpeg Path</label>
+                <input type="text" id="ffmpegPath" placeholder="/usr/local/bin/ffmpeg" aria-describedby="ffmpegPathHelp">
+                <small id="ffmpegPathHelp" class="sr-only">Path to FFmpeg executable</small>
+            </div>
+            <div class="form-group">
+                <label for="ffprobePath">ffprobe Path</label>
+                <input type="text" id="ffprobePath" placeholder="/usr/local/bin/ffprobe" aria-describedby="ffprobePathHelp">
+                <small id="ffprobePathHelp" class="sr-only">Path to FFprobe executable</small>
+            </div>
+        </div>
+        
+        <div class="card settings-card">
+            <div class="card-title">Performance</div>
+            <div class="form-group">
+                <label for="logLevel">Log Level</label>
+                <select id="logLevel" aria-describedby="logLevelHelp">
+                    <option value="quiet">quiet</option>
+                    <option value="panic">panic</option>
+                    <option value="fatal">fatal</option>
+                    <option value="error">error</option>
+                    <option value="warning">warning</option>
+                    <option value="info">info</option>
+                    <option value="verbose">verbose</option>
+                    <option value="debug">debug</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="threads">Threads</label>
+                <input type="number" id="threads" min="0" placeholder="0 (auto)" aria-describedby="threadsHelp">
+                <small id="threadsHelp">0 lets FFmpeg decide optimal thread count.</small>
+            </div>
+        </div>
+        
+        <div class="card settings-card">
+            <div class="card-title">Hardware Acceleration</div>
+            <div class="form-group">
+                <label for="hwaccel">HWAccel</label>
+                <select id="hwaccel" aria-describedby="hwaccelHelp">
+                    <option value="">Disabled</option>
+                    <option value="auto">auto</option>
+                    <option value="videotoolbox">videotoolbox (Apple)</option>
+                    <option value="vaapi">vaapi (Intel/AMD)</option>
+                    <option value="cuda">cuda (NVIDIA)</option>
+                    <option value="qsv">qsv (Intel QuickSync)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="hwaccelDevice">Device</label>
+                <input type="text" id="hwaccelDevice" placeholder="/dev/dri/renderD128" aria-describedby="hwaccelDeviceHelp">
+                <small id="hwaccelDeviceHelp" class="sr-only">Hardware acceleration device path</small>
+            </div>
+        </div>
+        
+        <div class="card settings-card">
+            <div class="card-title">Advanced</div>
+            <div class="form-group">
+                <label for="extraFlags">Additional Flags</label>
+                <textarea id="extraFlags" rows="4" placeholder="-max_muxing_queue_size 9999" aria-describedby="extraFlagsHelp"></textarea>
+                <small id="extraFlagsHelp" class="sr-only">Additional FFmpeg command-line flags</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.36px;
+    }
+    
+    .page-subtitle {
+        color: var(--text-secondary);
+        margin-top: 4px;
+        font-size: 17px;
+    }
+    
+    .page-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .status-card {
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 12px 16px;
+        font-size: 15px;
+    }
+    
+    .status-card.success {
+        color: var(--success);
+        border-color: rgba(52, 199, 89, 0.4);
+        background: rgba(52, 199, 89, 0.15);
+    }
+    
+    .status-card.error {
+        color: var(--error);
+        border-color: rgba(255, 59, 48, 0.4);
+        background: rgba(255, 59, 48, 0.15);
+    }
+    
+    .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+    }
+    
+    .settings-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .form-group label {
+        font-size: 15px;
+        font-weight: 600;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        background: var(--surface-light);
+        border-radius: 10px;
+        border: 0.5px solid var(--divider);
+        color: var(--text-primary);
+        font-size: 17px;
+        padding: 10px 12px;
+        font-family: inherit;
+        min-height: 44px;
+        resize: vertical;
+    }
+    
+    .form-group textarea {
+        min-height: 120px;
+    }
+    
+    .form-group small {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', () => {
+        const refreshButton = document.getElementById('refreshFfmpegSettingsButton');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', () => loadSettings(true));
+        }
+
+        const saveButton = document.getElementById('saveFfmpegSettingsButton');
+        if (saveButton) {
+            saveButton.addEventListener('click', saveSettings);
+        }
+
+        loadSettings();
+    });
+    
+    async function loadSettings(showStatus = false) {
+        try {
+            const response = await fetch('/api/settings/ffmpeg');
+            if (!response.ok) {
+                throw new Error('Failed to load settings');
+            }
+            const data = await response.json();
+            document.getElementById('ffmpegPath').value = data.ffmpeg_path || '';
+            document.getElementById('ffprobePath').value = data.ffprobe_path || '';
+            document.getElementById('logLevel').value = data.log_level || 'info';
+            document.getElementById('threads').value = data.threads ?? 0;
+            document.getElementById('hwaccel').value = data.hwaccel || '';
+            document.getElementById('hwaccelDevice').value = data.hwaccel_device || '';
+            document.getElementById('extraFlags').value = data.extra_flags || '';
+            // Optional per-source overrides
+            const perSourceFields = [
+                'youtube_hwaccel','archive_org_hwaccel','plex_hwaccel',
+                'youtube_video_encoder','archive_org_video_encoder','plex_video_encoder'
+            ];
+            for (const key of perSourceFields) {
+                const el = document.getElementById(key);
+                if (el) el.value = data[key] || '';
+            }
+            if (showStatus) {
+                showStatusMessage('Settings refreshed from disk.', 'success');
+            }
+        } catch (error) {
+            console.error(error);
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    async function saveSettings() {
+        try {
+            const payload = {
+                ffmpeg_path: document.getElementById('ffmpegPath').value,
+                ffprobe_path: document.getElementById('ffprobePath').value,
+                log_level: document.getElementById('logLevel').value,
+                threads: Number(document.getElementById('threads').value) || 0,
+                hwaccel: document.getElementById('hwaccel').value || '',
+                hwaccel_device: document.getElementById('hwaccelDevice').value || null,
+                extra_flags: document.getElementById('extraFlags').value || null,
+                // Per-source overrides (optional)
+                youtube_hwaccel: document.getElementById('youtube_hwaccel')?.value || null,
+                archive_org_hwaccel: document.getElementById('archive_org_hwaccel')?.value || null,
+                plex_hwaccel: document.getElementById('plex_hwaccel')?.value || null,
+                youtube_video_encoder: document.getElementById('youtube_video_encoder')?.value || null,
+                archive_org_video_encoder: document.getElementById('archive_org_video_encoder')?.value || null,
+                plex_video_encoder: document.getElementById('plex_video_encoder')?.value || null,
+            };
+            
+            const response = await fetch('/api/settings/ffmpeg', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errorPayload = await response.json();
+                throw new Error(errorPayload.detail || 'Failed to save settings');
+            }
+            
+            showStatusMessage('FFmpeg settings saved.', 'success');
+        } catch (error) {
+            console.error(error);
+            showStatusMessage(error.message, 'error');
+        }
+    }
+    
+    function showStatusMessage(message, status) {
+        const card = document.getElementById('statusCard');
+        const text = document.getElementById('statusMessage');
+        card.classList.remove('success', 'error');
+        card.classList.add(status);
+        text.textContent = message;
+        card.style.display = 'block';
+        setTimeout(() => {
+            card.style.display = 'none';
+        }, 4000);
+    }
+</script>
+{% endblock %}
+

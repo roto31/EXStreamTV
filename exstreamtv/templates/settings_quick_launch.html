@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}Quick Launch Settings - StreamTV{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Quick Launch Settings</div>
+            <p class="page-subtitle">Configure which items appear in the Quick Launch toolbar for quick access across the platform.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-outlined" type="button" id="resetButton" aria-label="Reset to defaults">
+                <span class="material-icons" aria-hidden="true">refresh</span>
+                Reset to Defaults
+            </button>
+            <button class="btn btn-primary" type="button" id="saveButton" aria-label="Save quick launch settings">
+                <span class="material-icons" aria-hidden="true">save</span>
+                Save Changes
+            </button>
+        </div>
+    </div>
+    
+    <div class="card status-card" id="statusCard" style="display: none;">
+        <span id="statusMessage"></span>
+    </div>
+    
+    <div class="settings-grid">
+        <div class="card settings-card">
+            <div class="card-header">
+                <div class="card-title">Navigation Items</div>
+            </div>
+            <div class="card-content">
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                    Select which sidebar navigation items should appear in the Quick Launch toolbar. 
+                    You can also include channels for quick access.
+                </p>
+                
+                <div id="navigationItemsList" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Items will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="card settings-card">
+            <div class="card-header">
+                <div class="card-title">Channels</div>
+            </div>
+            <div class="card-content">
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                    Configure channel display in Quick Launch toolbar.
+                </p>
+                
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                        <input type="checkbox" id="showChannels" style="width: 20px; height: 20px; cursor: pointer;">
+                        <span style="font-weight: 500; color: var(--text-primary);">Show Channels in Quick Launch</span>
+                    </label>
+                    
+                    <div id="channelLimitContainer" style="display: none;">
+                        <label style="display: flex; flex-direction: column; gap: 8px;">
+                            <span style="font-weight: 500; color: var(--text-primary);">Maximum Channels to Display</span>
+                            <input type="number" id="channelLimit" min="1" max="50" value="20" 
+                                   style="padding: 8px 12px; border: 0.5px solid var(--divider); border-radius: 8px; background: var(--background); color: var(--text-primary); max-width: 200px;">
+                            <span style="font-size: 13px; color: var(--text-secondary);">Limit the number of channels shown (1-50)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ request.state.csp_nonce }}">
+    // Quick Launch Preferences Storage Key
+    const QUICK_LAUNCH_PREFS_KEY = 'streamtv_quick_launch_preferences';
+    
+    // Default navigation items extracted from sidebar
+    const DEFAULT_NAV_ITEMS = [
+        { id: 'dashboard', url: '/', label: 'Dashboard', icon: 'dashboard', group: 'Main' },
+        { id: 'player', url: '/player', label: 'Player', icon: 'play_circle', group: 'Main' },
+        { id: 'channels', url: '/channels', label: 'Manage Channels', icon: 'tv', group: 'Channels' },
+        { id: 'import', url: '/import', label: 'Import Channels', icon: 'upload', group: 'Channels' },
+        { id: 'import_m3u', url: '/import/m3u', label: 'Import M3U', icon: 'playlist_add', group: 'Channels' },
+        { id: 'media', url: '/media', label: 'Media Items', icon: 'video_library', group: 'Media' },
+        { id: 'playlists', url: '/playlists', label: 'Playlists', icon: 'playlist_play', group: 'Media' },
+        { id: 'collections', url: '/collections', label: 'Collections', icon: 'collections', group: 'Media' },
+        { id: 'playouts', url: '/playouts', label: 'Playouts', icon: 'play_circle_outline', group: 'Scheduling' },
+        { id: 'schedules', url: '/schedules', label: 'Schedules', icon: 'schedule', group: 'Scheduling' },
+        { id: 'settings_ffmpeg', url: '/settings/ffmpeg', label: 'FFmpeg', icon: 'settings_applications', group: 'Settings' },
+        { id: 'settings_hdhr', url: '/settings/hdhr', label: 'HDHomeRun', icon: 'tv', group: 'Settings' },
+        { id: 'settings_playout', url: '/settings/playout', label: 'Playout', icon: 'schedule', group: 'Settings' },
+        { id: 'settings_plex', url: '/settings/plex', label: 'Plex API', icon: 'integration_instructions', group: 'Settings' },
+        { id: 'archive_org', url: '/api/auth/archive-org', label: 'Archive.org', icon: 'account_circle', group: 'Settings' },
+        { id: 'youtube', url: '/api/auth/youtube', label: 'YouTube', icon: 'video_library', group: 'Settings' },
+        { id: 'logs', url: '/logs', label: 'Streaming Logs', icon: 'terminal', group: 'Resources' },
+        { id: 'plex_logs', url: '/plex-logs', label: 'Plex Server Logs', icon: 'dvr', group: 'Resources' },
+        { id: 'ollama', url: '/ollama', label: 'AI Troubleshooting', icon: 'psychology', group: 'Resources' },
+        { id: 'test_stream', url: '/test-stream', label: 'Test Stream', icon: 'bug_report', group: 'Resources' },
+        { id: 'health_check', url: '/health-check', label: 'Health Check', icon: 'health_and_safety', group: 'Resources' },
+        { id: 'm3u_playlist', url: '/iptv/channels.m3u', label: 'M3U Playlist', icon: 'playlist_play', group: 'Resources', target: '_blank' },
+        { id: 'xmltv_epg', url: '/iptv/xmltv.xml', label: 'XMLTV EPG', icon: 'tv', group: 'Resources', target: '_blank' }
+    ];
+    
+    // Default preferences
+    const DEFAULT_PREFS = {
+        enabledItems: ['dashboard', 'player', 'channels', 'media', 'schedules'],
+        showChannels: true,
+        channelLimit: 20
+    };
+    
+    // Load preferences from localStorage
+    function loadPreferences() {
+        try {
+            const stored = localStorage.getItem(QUICK_LAUNCH_PREFS_KEY);
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (e) {
+            console.warn('Failed to load quick launch preferences:', e);
+        }
+        return { ...DEFAULT_PREFS };
+    }
+    
+    // Save preferences to localStorage
+    function savePreferences(prefs) {
+        try {
+            localStorage.setItem(QUICK_LAUNCH_PREFS_KEY, JSON.stringify(prefs));
+            // Dispatch event to notify other pages
+            document.dispatchEvent(new CustomEvent('streamtv:quick-launch-prefs-changed', { detail: prefs }));
+            return true;
+        } catch (e) {
+            console.error('Failed to save quick launch preferences:', e);
+            return false;
+        }
+    }
+    
+    // Get preferences (for use in other scripts)
+    window.getQuickLaunchPreferences = function() {
+        return loadPreferences();
+    };
+    
+    // Render navigation items
+    function renderNavigationItems(prefs) {
+        const container = document.getElementById('navigationItemsList');
+        container.innerHTML = '';
+        
+        // Group items by group
+        const grouped = {};
+        DEFAULT_NAV_ITEMS.forEach(item => {
+            if (!grouped[item.group]) {
+                grouped[item.group] = [];
+            }
+            grouped[item.group].push(item);
+        });
+        
+        // Render each group
+        Object.keys(grouped).sort().forEach(groupName => {
+            const groupDiv = document.createElement('div');
+            groupDiv.style.cssText = 'margin-bottom: 16px;';
+            
+            const groupTitle = document.createElement('div');
+            groupTitle.style.cssText = 'font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08px; margin-bottom: 8px;';
+            groupTitle.textContent = groupName;
+            groupDiv.appendChild(groupTitle);
+            
+            grouped[groupName].forEach(item => {
+                const itemDiv = document.createElement('label');
+                itemDiv.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; cursor: pointer; transition: background 0.2s;';
+                itemDiv.onmouseenter = () => itemDiv.style.background = 'var(--surface-hover)';
+                itemDiv.onmouseleave = () => itemDiv.style.background = 'transparent';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `item_${item.id}`;
+                checkbox.value = item.id;
+                checkbox.checked = prefs.enabledItems.includes(item.id);
+                checkbox.style.cssText = 'width: 20px; height: 20px; cursor: pointer;';
+                
+                const iconSpan = document.createElement('span');
+                iconSpan.className = 'material-icons';
+                iconSpan.style.cssText = 'font-size: 20px; color: var(--text-secondary);';
+                iconSpan.textContent = item.icon;
+                
+                const labelSpan = document.createElement('span');
+                labelSpan.style.cssText = 'flex: 1; font-weight: 500; color: var(--text-primary);';
+                labelSpan.textContent = item.label;
+                
+                itemDiv.appendChild(checkbox);
+                itemDiv.appendChild(iconSpan);
+                itemDiv.appendChild(labelSpan);
+                groupDiv.appendChild(itemDiv);
+            });
+            
+            container.appendChild(groupDiv);
+        });
+    }
+    
+    // Load and render settings
+    function loadSettings() {
+        const prefs = loadPreferences();
+        
+        // Render navigation items
+        renderNavigationItems(prefs);
+        
+        // Set channel settings
+        document.getElementById('showChannels').checked = prefs.showChannels;
+        document.getElementById('channelLimit').value = prefs.channelLimit || 20;
+        document.getElementById('channelLimitContainer').style.display = prefs.showChannels ? 'block' : 'none';
+    }
+    
+    // Save settings
+    function saveSettings() {
+        const enabledItems = Array.from(document.querySelectorAll('#navigationItemsList input[type="checkbox"]:checked'))
+            .map(cb => cb.value);
+        
+        const prefs = {
+            enabledItems,
+            showChannels: document.getElementById('showChannels').checked,
+            channelLimit: parseInt(document.getElementById('channelLimit').value) || 20
+        };
+        
+        if (savePreferences(prefs)) {
+            showStatus('Settings saved successfully!', 'success');
+            // Reload toolbar on all pages
+            if (window.initializeQuickLaunchToolbar) {
+                window.initializeQuickLaunchToolbar();
+            }
+        } else {
+            showStatus('Failed to save settings. Please try again.', 'error');
+        }
+    }
+    
+    // Reset to defaults
+    function resetToDefaults() {
+        if (confirm('Reset Quick Launch settings to defaults? This will clear your current configuration.')) {
+            localStorage.removeItem(QUICK_LAUNCH_PREFS_KEY);
+            loadSettings();
+            showStatus('Settings reset to defaults.', 'success');
+        }
+    }
+    
+    // Show status message
+    function showStatus(message, type = 'info') {
+        const statusCard = document.getElementById('statusCard');
+        const statusMessage = document.getElementById('statusMessage');
+        
+        statusMessage.textContent = message;
+        statusCard.className = `card status-card ${type}`;
+        statusCard.style.display = 'block';
+        
+        setTimeout(() => {
+            statusCard.style.display = 'none';
+        }, 3000);
+    }
+    
+    // Event listeners
+    document.getElementById('saveButton').addEventListener('click', saveSettings);
+    document.getElementById('resetButton').addEventListener('click', resetToDefaults);
+    document.getElementById('showChannels').addEventListener('change', (e) => {
+        document.getElementById('channelLimitContainer').style.display = e.target.checked ? 'block' : 'none';
+    });
+    
+    // Load settings on page load
+    document.addEventListener('DOMContentLoaded', loadSettings);
+</script>
+{% endblock %}
+

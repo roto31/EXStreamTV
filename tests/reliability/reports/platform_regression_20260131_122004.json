@@ -1,0 +1,343 @@
+{
+  "timestamp": "2026-01-31T12:20:04.879758",
+  "total_tests": 15,
+  "passed": 14,
+  "failed": 1,
+  "results": [
+    {
+      "test_id": "CORE-001",
+      "test_name": "Server Health",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.010951,
+      "error": null,
+      "details": {
+        "status": "healthy",
+        "version": "2.0.1",
+        "timestamp": "2026-01-31T18:17:15.993963"
+      }
+    },
+    {
+      "test_id": "CORE-002",
+      "test_name": "Database Connection",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.119834,
+      "error": null,
+      "details": {
+        "database": {
+          "status": "ok"
+        }
+      }
+    },
+    {
+      "test_id": "CORE-003",
+      "test_name": "FFmpeg Available",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.181672,
+      "error": null,
+      "details": {
+        "status": "ok",
+        "version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+        "path": "/opt/homebrew/bin/ffmpeg"
+      }
+    },
+    {
+      "test_id": "CORE-004",
+      "test_name": "FFprobe Available",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.113856,
+      "error": null,
+      "details": {
+        "status": "ok",
+        "version": "ffprobe version 8.0.1 Copyright (c) 2007-2025 the FFmpeg developers",
+        "path": "/opt/homebrew/bin/ffprobe"
+      }
+    },
+    {
+      "test_id": "CORE-005",
+      "test_name": "Config Loaded",
+      "subsystem": "core",
+      "passed": true,
+      "duration_seconds": 0.11258,
+      "error": null,
+      "details": {
+        "server_port": 8411,
+        "debug_mode": false,
+        "hdhomerun_enabled": true
+      }
+    },
+    {
+      "test_id": "API-CH-001",
+      "test_name": "List Channels",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.036059,
+      "error": null,
+      "details": {
+        "endpoint": "/api/channels",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-IP-001",
+      "test_name": "M3U Playlist",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.030005,
+      "error": null,
+      "details": {
+        "endpoint": "/iptv/channels.m3u",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-IP-002",
+      "test_name": "XMLTV EPG",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.404846,
+      "error": null,
+      "details": {
+        "endpoint": "/iptv/xmltv.xml",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "API-IP-003",
+      "test_name": "Channel Stream",
+      "subsystem": "api",
+      "passed": false,
+      "duration_seconds": 167.706594,
+      "error": "",
+      "details": {}
+    },
+    {
+      "test_id": "API-HE-001",
+      "test_name": "Health Check",
+      "subsystem": "api",
+      "passed": true,
+      "duration_seconds": 0.022215,
+      "error": null,
+      "details": {
+        "endpoint": "/api/health",
+        "status": 200
+      }
+    },
+    {
+      "test_id": "DB-001",
+      "test_name": "Channel Table",
+      "subsystem": "database",
+      "passed": true,
+      "duration_seconds": 0.00728,
+      "error": null,
+      "details": {
+        "endpoint": "/api/channels",
+        "accessible": true
+      }
+    },
+    {
+      "test_id": "DB-002",
+      "test_name": "Media Table",
+      "subsystem": "database",
+      "passed": true,
+      "duration_seconds": 0.024703,
+      "error": null,
+      "details": {
+        "endpoint": "/api/media",
+        "accessible": true
+      }
+    },
+    {
+      "test_id": "STR-001",
+      "test_name": "Channel Manager Active",
+      "subsystem": "streaming",
+      "passed": true,
+      "duration_seconds": 0.001694,
+      "error": null,
+      "details": {
+        "status": "degraded",
+        "total_channels": 30,
+        "unhealthy_channels": 2,
+        "channels": {
+          "18": {
+            "last_output_seconds_ago": 0.001102,
+            "restart_count": 3,
+            "error_count_5min": 0
+          },
+          "12": {
+            "last_output_seconds_ago": 0.002062,
+            "restart_count": 7,
+            "error_count_5min": 0
+          },
+          "3": {
+            "last_output_seconds_ago": 0.006765,
+            "restart_count": 4,
+            "error_count_5min": 0
+          },
+          "4": {
+            "last_output_seconds_ago": 0.020275,
+            "restart_count": 6,
+            "error_count_5min": 0
+          },
+          "6": {
+            "last_output_seconds_ago": 0.001253,
+            "restart_count": 5,
+            "error_count_5min": 0
+          },
+          "13": {
+            "last_output_seconds_ago": 46.39469,
+            "restart_count": 5,
+            "error_count_5min": 0
+          },
+          "14": {
+            "last_output_seconds_ago": 0.006732,
+            "restart_count": 4,
+            "error_count_5min": 0
+          },
+          "16": {
+            "last_output_seconds_ago": 0.009045,
+            "restart_count": 4,
+            "error_count_5min": 0
+          },
+          "20": {
+            "last_output_seconds_ago": 0.225123,
+            "restart_count": 3,
+            "error_count_5min": 0
+          },
+          "11": {
+            "last_output_seconds_ago": 0.012306,
+            "restart_count": 5,
+            "error_count_5min": 0
+          },
+          "8": {
+            "last_output_seconds_ago": 0.026061,
+            "restart_count": 4,
+            "error_count_5min": 0
+          },
+          "7": {
+            "last_output_seconds_ago": 0.001806,
+            "restart_count": 3,
+            "error_count_5min": 0
+          },
+          "19": {
+            "last_output_seconds_ago": 0.03634,
+            "restart_count": 3,
+            "error_count_5min": 0
+          },
+          "9": {
+            "last_output_seconds_ago": 0.023787,
+            "restart_count": 6,
+            "error_count_5min": 0
+          },
+          "21": {
+            "last_output_seconds_ago": 0.002095,
+            "restart_count": 1,
+            "error_count_5min": 0
+          },
+          "10": {
+            "last_output_seconds_ago": 72.544955,
+            "restart_count": 3,
+            "error_count_5min": 0
+          },
+          "17": {
+            "last_output_seconds_ago": 0.001118,
+            "restart_count": 6,
+            "error_count_5min": 0
+          },
+          "27": {
+            "last_output_seconds_ago": 0.083798,
+            "restart_count": 1,
+            "error_count_5min": 0
+          },
+          "26": {
+            "last_output_seconds_ago": 0.096786,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "22": {
+            "last_output_seconds_ago": 41.939233,
+            "restart_count": 3,
+            "error_count_5min": 0
+          },
+          "5": {
+            "last_output_seconds_ago": 18.480893,
+            "restart_count": 3,
+            "error_count_5min": 0
+          },
+          "15": {
+            "last_output_seconds_ago": 0.001753,
+            "restart_count": 3,
+            "error_count_5min": 0
+          },
+          "30": {
+            "last_output_seconds_ago": 0.014408,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "34": {
+            "last_output_seconds_ago": 0.044761,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "29": {
+            "last_output_seconds_ago": 0.050211,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "28": {
+            "last_output_seconds_ago": 0.014441,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "32": {
+            "last_output_seconds_ago": 0.012387,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "33": {
+            "last_output_seconds_ago": 609.941413,
+            "restart_count": 17,
+            "error_count_5min": 0
+          },
+          "1": {
+            "last_output_seconds_ago": 5.100507,
+            "restart_count": 0,
+            "error_count_5min": 0
+          },
+          "31": {
+            "last_output_seconds_ago": 0.014871,
+            "restart_count": 0,
+            "error_count_5min": 0
+          }
+        },
+        "timestamp": "2026-01-31T18:20:04.757355"
+      }
+    },
+    {
+      "test_id": "FFM-001",
+      "test_name": "FFmpeg Version",
+      "subsystem": "ffmpeg",
+      "passed": true,
+      "duration_seconds": 0.115239,
+      "error": null,
+      "details": {
+        "version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the F"
+      }
+    },
+    {
+      "test_id": "WEB-001",
+      "test_name": "Dashboard Page",
+      "subsystem": "webui",
+      "passed": true,
+      "duration_seconds": 0.005583,
+      "error": null,
+      "details": {
+        "page": "/",
+        "status": 307
+      }
+    }
+  ]
+}

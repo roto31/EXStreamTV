@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+
+{% block title %}Filler Presets - StreamTV{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .filler-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .filler-toolbar {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .filler-list {
+        background: var(--surface);
+        border-radius: 12px;
+        overflow: hidden;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .filler-row {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 0.5px solid var(--divider);
+        transition: background 0.2s;
+        cursor: pointer;
+    }
+    
+    .filler-row:hover {
+        background: var(--hover);
+    }
+    
+    .filler-row:last-child {
+        border-bottom: none;
+    }
+    
+    .filler-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .filler-name {
+        font-weight: 500;
+        color: var(--text-primary);
+        font-size: 17px;
+    }
+    
+    .filler-details {
+        font-size: 13px;
+        color: var(--text-secondary);
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .filler-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        background: var(--background);
+        border-radius: 6px;
+        font-size: 12px;
+    }
+    
+    .filler-badge.mode-duration {
+        background: rgba(10, 132, 255, 0.15);
+        color: var(--primary);
+    }
+    
+    .filler-badge.mode-count {
+        background: rgba(52, 199, 89, 0.15);
+        color: var(--success);
+    }
+    
+    .filler-badge.mode-pad {
+        background: rgba(255, 149, 0, 0.15);
+        color: var(--warning);
+    }
+    
+    .filler-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    .modal.active {
+        display: flex;
+    }
+    
+    .modal-content {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 600px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+    
+    .modal-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 15px;
+    }
+    
+    .form-label .help-text {
+        font-weight: 400;
+        font-size: 13px;
+        color: var(--text-secondary);
+        display: block;
+        margin-top: 4px;
+    }
+    
+    .form-input, .form-select {
+        width: 100%;
+        padding: 12px 16px;
+        background: var(--background);
+        border: 0.5px solid var(--divider);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 17px;
+        font-family: inherit;
+        box-sizing: border-box;
+    }
+    
+    .form-input:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 16px;
+    }
+    
+    .form-row .form-group {
+        flex: 1;
+    }
+    
+    .form-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: var(--background);
+        border-radius: 10px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .form-checkbox input {
+        width: 20px;
+        height: 20px;
+        accent-color: var(--primary);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 24px;
+    }
+    
+    .mode-fields {
+        display: none;
+    }
+    
+    .mode-fields.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Filler Presets</h1>
+        <p>Pre-roll, mid-roll, post-roll, and tail filler content for gaps between programs</p>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="filler-container">
+        <div class="filler-toolbar">
+            <button class="btn btn-primary" id="openModalButton" aria-label="Create new filler preset">
+                <span class="material-icons">add</span>
+                Add Filler Preset
+            </button>
+            <div style="flex: 1;"></div>
+            <button class="btn btn-outlined" id="refreshButton" aria-label="Refresh">
+                <span class="material-icons">refresh</span>
+                Refresh
+            </button>
+        </div>
+        
+        <div class="filler-list" id="fillerList">
+            <div class="loading" id="loading">Loading filler presets...</div>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-state-icon">
+                    <span class="material-icons" style="font-size: 48px;">movie_filter</span>
+                </div>
+                <h3>No filler presets found</h3>
+                <p>Create a filler preset to fill gaps between programs</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create/Edit Modal -->
+    <div class="modal" id="fillerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Add Filler Preset</h2>
+                <button class="btn-icon" id="closeModal" type="button" aria-label="Close">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form id="fillerForm">
+                <input type="hidden" id="presetId" name="id">
+                
+                <div class="form-group">
+                    <label class="form-label" for="presetName">Preset Name *</label>
+                    <input type="text" id="presetName" name="name" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="fillerMode">
+                        Filler Mode *
+                        <span class="help-text">How filler content is selected</span>
+                    </label>
+                    <select id="fillerMode" name="filler_mode" class="form-select" required>
+                        <option value="duration">Duration - Fill for specific time</option>
+                        <option value="count">Count - Play N items</option>
+                        <option value="pad">Pad - Pad to time boundary</option>
+                    </select>
+                </div>
+                
+                <div class="mode-fields" id="durationFields">
+                    <div class="form-group">
+                        <label class="form-label" for="durationSeconds">Duration (seconds)</label>
+                        <input type="number" id="durationSeconds" name="duration_seconds" class="form-input" min="1">
+                    </div>
+                </div>
+                
+                <div class="mode-fields" id="countFields">
+                    <div class="form-group">
+                        <label class="form-label" for="itemCount">Number of Items</label>
+                        <input type="number" id="itemCount" name="count" class="form-input" min="1">
+                    </div>
+                </div>
+                
+                <div class="mode-fields" id="padFields">
+                    <div class="form-group">
+                        <label class="form-label" for="padToMinutes">Pad to Minutes (e.g., 15 = quarter hour)</label>
+                        <input type="number" id="padToMinutes" name="pad_to_minutes" class="form-input" min="1">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="playbackOrder">Playback Order</label>
+                    <select id="playbackOrder" name="playback_order" class="form-select">
+                        <option value="shuffled">Shuffled</option>
+                        <option value="chronological">Chronological</option>
+                        <option value="random">Random</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="allowRepeats" name="allow_repeats" checked>
+                        <label for="allowRepeats">Allow repeats within same filler slot</label>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outlined" id="cancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Preset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+let presets = [];
+
+async function loadPresets() {
+    const loading = document.getElementById('loading');
+    const emptyState = document.getElementById('emptyState');
+    const list = document.getElementById('fillerList');
+    
+    loading.style.display = 'block';
+    emptyState.style.display = 'none';
+    
+    try {
+        const response = await authenticatedFetch('/api/filler-presets');
+        if (!response.ok) throw new Error('Failed to load presets');
+        presets = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (presets.length === 0) {
+            emptyState.style.display = 'block';
+            return;
+        }
+        
+        list.innerHTML = presets.map(preset => {
+            let modeClass = 'mode-' + preset.filler_mode;
+            let modeText = preset.filler_mode.charAt(0).toUpperCase() + preset.filler_mode.slice(1);
+            let modeDetail = '';
+            
+            if (preset.filler_mode === 'duration') {
+                modeDetail = preset.duration_seconds ? `${preset.duration_seconds}s` : '';
+            } else if (preset.filler_mode === 'count') {
+                modeDetail = preset.count ? `${preset.count} items` : '';
+            } else if (preset.filler_mode === 'pad') {
+                modeDetail = preset.pad_to_minutes ? `to ${preset.pad_to_minutes}min` : '';
+            }
+            
+            return `
+                <div class="filler-row" onclick="editPreset(${preset.id})">
+                    <div class="filler-info">
+                        <div class="filler-name">${escapeHtml(preset.name)}</div>
+                        <div class="filler-details">
+                            <span class="filler-badge ${modeClass}">${modeText} ${modeDetail}</span>
+                            <span>Order: ${preset.playback_order}</span>
+                            <span>${preset.items ? preset.items.length : 0} items</span>
+                        </div>
+                    </div>
+                    <div class="filler-actions">
+                        <button class="btn-icon" onclick="event.stopPropagation(); editPreset(${preset.id})" title="Edit">
+                            <span class="material-icons">edit</span>
+                        </button>
+                        <button class="btn-icon" onclick="event.stopPropagation(); deletePreset(${preset.id})" title="Delete">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading presets:', error);
+        loading.style.display = 'none';
+        showAlert('Failed to load filler presets', 'error');
+    }
+}
+
+function updateModeFields() {
+    const mode = document.getElementById('fillerMode').value;
+    document.querySelectorAll('.mode-fields').forEach(el => el.classList.remove('active'));
+    document.getElementById(mode + 'Fields').classList.add('active');
+}
+
+function openModal() {
+    document.getElementById('presetId').value = '';
+    document.getElementById('fillerForm').reset();
+    document.getElementById('modalTitle').textContent = 'Add Filler Preset';
+    updateModeFields();
+    document.getElementById('fillerModal').classList.add('active');
+}
+
+function editPreset(presetId) {
+    const preset = presets.find(p => p.id === presetId);
+    if (!preset) return;
+    
+    document.getElementById('presetId').value = preset.id;
+    document.getElementById('presetName').value = preset.name || '';
+    document.getElementById('fillerMode').value = preset.filler_mode || 'duration';
+    document.getElementById('durationSeconds').value = preset.duration_seconds || '';
+    document.getElementById('itemCount').value = preset.count || '';
+    document.getElementById('padToMinutes').value = preset.pad_to_minutes || '';
+    document.getElementById('playbackOrder').value = preset.playback_order || 'shuffled';
+    document.getElementById('allowRepeats').checked = preset.allow_repeats !== false;
+    
+    updateModeFields();
+    document.getElementById('modalTitle').textContent = 'Edit Filler Preset';
+    document.getElementById('fillerModal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('fillerModal').classList.remove('active');
+}
+
+async function savePreset(event) {
+    event.preventDefault();
+    
+    const mode = document.getElementById('fillerMode').value;
+    const formData = {
+        name: document.getElementById('presetName').value,
+        filler_mode: mode,
+        playback_order: document.getElementById('playbackOrder').value,
+        allow_repeats: document.getElementById('allowRepeats').checked
+    };
+    
+    if (mode === 'duration') {
+        formData.duration_seconds = parseInt(document.getElementById('durationSeconds').value) || null;
+    } else if (mode === 'count') {
+        formData.count = parseInt(document.getElementById('itemCount').value) || null;
+    } else if (mode === 'pad') {
+        formData.pad_to_minutes = parseInt(document.getElementById('padToMinutes').value) || null;
+    }
+    
+    const presetId = document.getElementById('presetId').value;
+    const url = presetId ? `/api/filler-presets/${presetId}` : '/api/filler-presets';
+    const method = presetId ? 'PUT' : 'POST';
+    
+    try {
+        const response = await authenticatedFetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to save preset');
+        }
+        
+        closeModal();
+        await loadPresets();
+        showAlert('Filler preset saved successfully', 'success');
+    } catch (error) {
+        console.error('Error saving preset:', error);
+        showAlert(error.message || 'Failed to save preset', 'error');
+    }
+}
+
+async function deletePreset(presetId) {
+    if (!confirm('Are you sure you want to delete this filler preset?')) return;
+    
+    try {
+        const response = await authenticatedFetch(`/api/filler-presets/${presetId}`, {method: 'DELETE'});
+        if (!response.ok) throw new Error('Failed to delete preset');
+        
+        await loadPresets();
+        showAlert('Filler preset deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting preset:', error);
+        showAlert('Failed to delete preset', 'error');
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadPresets();
+    
+    document.getElementById('openModalButton').addEventListener('click', openModal);
+    document.getElementById('refreshButton').addEventListener('click', loadPresets);
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+    document.getElementById('cancelBtn').addEventListener('click', closeModal);
+    document.getElementById('fillerForm').addEventListener('submit', savePreset);
+    document.getElementById('fillerMode').addEventListener('change', updateModeFields);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>EXStreamTV</title>
+    <organization>com.exstreamtv</organization>
+    <domains enable_anywhere="true"/>
+    
+    <options customize="allow" require-scripts="true" rootVolumeOnly="true" hostArchitectures="x86_64,arm64"/>
+    
+    <background file="background.png" alignment="bottomleft" scaling="none"/>
+    <background-darkAqua file="background.png" alignment="bottomleft" scaling="none"/>
+    
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <license file="license.html" mime-type="text/html"/>
+    <readme file="readme.html" mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+    
+    <!-- Installation Choices -->
+    <choices-outline>
+        <line choice="app"/>
+        <line choice="dependencies"/>
+        <line choice="ai">
+            <line choice="ai-cloud"/>
+            <line choice="ai-local"/>
+            <line choice="ai-skip"/>
+        </line>
+    </choices-outline>
+    
+    <!-- Main Application (always installed) -->
+    <choice id="app"
+            title="EXStreamTV Application"
+            description="The EXStreamTV menu bar application and backend server."
+            visible="true"
+            enabled="false"
+            selected="true">
+        <pkg-ref id="com.exstreamtv.app"/>
+    </choice>
+    
+    <!-- Dependencies -->
+    <choice id="dependencies"
+            title="Dependencies"
+            description="Bundled Python and FFmpeg. Uncheck if you prefer to use system versions.">
+        <pkg-ref id="com.exstreamtv.deps"/>
+    </choice>
+    
+    <!-- AI Provider Selection -->
+    <choice id="ai"
+            title="AI Assistant"
+            description="Choose how EXStreamTV's AI features will work.">
+    </choice>
+    
+    <choice id="ai-cloud"
+            title="Cloud AI (Recommended)"
+            description="Uses Groq's free cloud servers. Instant setup - just need an API key (free to get in 30 seconds). Requires internet connection for AI features."
+            start_selected="true"
+            start_enabled="true">
+        <pkg-ref id="com.exstreamtv.ai.cloud"/>
+    </choice>
+    
+    <choice id="ai-local"
+            title="Local AI (Ollama)"
+            description="Runs AI models on your Mac. Works completely offline after setup. Downloads Ollama + AI model (2-18GB based on your hardware)."
+            start_selected="false"
+            start_enabled="true">
+        <pkg-ref id="com.exstreamtv.ai.local"/>
+    </choice>
+    
+    <choice id="ai-skip"
+            title="Skip AI Setup"
+            description="Don't set up AI now. You can configure AI later from the app Settings."
+            start_selected="false"
+            start_enabled="true">
+        <pkg-ref id="com.exstreamtv.ai.skip"/>
+    </choice>
+    
+    <!-- Package References -->
+    <pkg-ref id="com.exstreamtv.app" version="1.4.0" installKBytes="50000">
+        #app.pkg
+    </pkg-ref>
+    
+    <pkg-ref id="com.exstreamtv.deps" version="1.0.0" installKBytes="150000">
+        #deps.pkg
+    </pkg-ref>
+    
+    <pkg-ref id="com.exstreamtv.ai.cloud" version="1.0.0" installKBytes="100">
+        #ai-cloud.pkg
+    </pkg-ref>
+    
+    <pkg-ref id="com.exstreamtv.ai.local" version="1.0.0" installKBytes="5000000">
+        #ai-local.pkg
+    </pkg-ref>
+    
+    <pkg-ref id="com.exstreamtv.ai.skip" version="1.0.0" installKBytes="10">
+        #ai-skip.pkg
+    </pkg-ref>
+    
+    <!-- Installation Check Script -->
+    <installation-check script="installCheck()"/>
+    <script>
+        function installCheck() {
+            // Check macOS version (require 13.0+)
+            if (system.version.ProductVersion < '13.0') {
+                my.result.message = 'EXStreamTV requires macOS 13.0 (Ventura) or later.';
+                my.result.type = 'Fatal';
+                return false;
+            }
+            
+            // Check architecture
+            if (system.sysctl('hw.machine') !== 'arm64' && system.sysctl('hw.machine') !== 'x86_64') {
+                my.result.message = 'EXStreamTV requires Apple Silicon or Intel Mac.';
+                my.result.type = 'Fatal';
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Volume check
+        function volumeCheck() {
+            return true;
+        }
+    </script>
+    
+    <!-- System Requirements -->
+    <volume-check script="volumeCheck()"/>
+    
+</installer-gui-script>

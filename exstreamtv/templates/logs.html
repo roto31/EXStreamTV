@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}Streaming Logs - StreamTV{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .logs-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 100px);
+    }
+    
+    .logs-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .logs-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+    
+    .logs-controls select,
+    .logs-controls input {
+        padding: 8px 12px;
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 15px;
+        min-height: 36px;
+    }
+    
+    .logs-viewer {
+        flex: 1;
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 12px;
+        padding: 16px;
+        overflow-y: auto;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    
+    .log-entry {
+        padding: 4px 0;
+        border-bottom: 0.5px solid transparent;
+        transition: background 0.2s;
+    }
+    
+    .log-entry:hover {
+        background: var(--hover);
+        border-bottom-color: var(--divider);
+    }
+    
+    .log-entry.error {
+        color: var(--error);
+    }
+    
+    .log-entry.warning {
+        color: var(--warning);
+    }
+    
+    .log-entry.info {
+        color: var(--text-secondary);
+    }
+    
+    .log-entry.debug {
+        color: var(--text-disabled);
+    }
+    
+    .log-timestamp {
+        color: var(--text-disabled);
+        margin-right: 8px;
+    }
+    
+    .log-level {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-right: 8px;
+        min-width: 60px;
+        text-align: center;
+    }
+    
+    .log-level.ERROR {
+        background: rgba(255, 59, 48, 0.2);
+        color: var(--error);
+    }
+    
+    .log-level.WARNING {
+        background: rgba(255, 149, 0, 0.2);
+        color: var(--warning);
+    }
+    
+    .log-level.INFO {
+        background: rgba(10, 132, 255, 0.2);
+        color: var(--info);
+    }
+    
+    .log-level.DEBUG {
+        background: rgba(142, 142, 147, 0.2);
+        color: var(--text-disabled);
+    }
+    
+    .log-message {
+        flex: 1;
+    }
+    
+    .error-link {
+        color: var(--error);
+        text-decoration: underline;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    
+    .error-link:hover {
+        color: var(--primary);
+    }
+    
+    .auto-scroll-indicator {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        color: var(--text-secondary);
+        display: none;
+    }
+    
+    .auto-scroll-indicator.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logs-container">
+    <div class="logs-header">
+        <div>
+            <h1>Streaming Logs</h1>
+            <p style="color: var(--text-secondary); margin-top: 4px;">Real-time streaming log viewer</p>
+        </div>
+        <div class="logs-controls">
+            <select id="filterLevel">
+                <option value="">All Levels</option>
+                <option value="DEBUG">DEBUG</option>
+                <option value="INFO">INFO</option>
+                <option value="WARNING">WARNING</option>
+                <option value="ERROR">ERROR</option>
+                <option value="CRITICAL">CRITICAL</option>
+            </select>
+            <input type="number" id="linesCount" value="500" min="100" max="10000" step="100" style="width: 100px;">
+            <button class="btn btn-outlined" data-action="loadLogs">Refresh</button>
+            <button class="btn btn-outlined" data-action="toggleAutoScroll" id="autoScrollBtn">Auto-scroll: ON</button>
+            <button class="btn btn-outlined" data-action="clearLogs">Clear</button>
+        </div>
+    </div>
+    
+    <div class="logs-viewer" id="logsViewer">
+        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+            Loading logs...
+        </div>
+    </div>
+</div>
+
+<div class="auto-scroll-indicator" id="autoScrollIndicator">
+    Auto-scroll paused. Click to resume.
+</div>
+
+<script nonce="{{ request.state.csp_nonce }}">
+    let autoScroll = true;
+    let logEntries = [];
+    
+    // Load initial logs
+    loadLogs();
+    
+    // Auto-refresh every 2 seconds
+    setInterval(() => {
+        if (autoScroll) {
+            loadLogs(true);
+        }
+    }, 2000);
+    
+    async function loadLogs(append = false) {
+        const filterLevel = document.getElementById('filterLevel').value;
+        const linesCount = parseInt(document.getElementById('linesCount').value);
+        
+        try {
+            const response = await fetch(`/api/logs/entries?lines=${linesCount}&filter_level=${filterLevel || ''}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                let errorMessage = data.error;
+                if (data.log_path) {
+                    errorMessage += `<br><br><small style="color: var(--text-secondary);">Expected log file location: <code>${data.log_path}</code></small><br><small style="color: var(--text-secondary);">The log file will be created automatically when the first log entry is written.</small>`;
+                }
+                document.getElementById('logsViewer').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--error);">
+                        ${errorMessage}
+                    </div>
+                `;
+                
+                // If there are entries (like the warning message), still render them
+                if (data.entries && data.entries.length > 0) {
+                    logEntries = data.entries;
+                    renderLogs();
+                }
+                return;
+            }
+            
+            if (!append) {
+                logEntries = [];
+            }
+            
+            logEntries = data.entries;
+            renderLogs();
+            
+            if (autoScroll) {
+                scrollToBottom();
+            }
+        } catch (error) {
+            console.error('Error loading logs:', error);
+            document.getElementById('logsViewer').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--error);">
+                    Error loading logs: ${error.message}
+                </div>
+            `;
+        }
+    }
+    
+    function renderLogs() {
+        const viewer = document.getElementById('logsViewer');
+        const wasAtBottom = isScrolledToBottom();
+        
+            viewer.innerHTML = logEntries.map(entry => {
+            const timestamp = entry.timestamp ? 
+                (new Date(entry.timestamp).toLocaleTimeString()) : 
+                '';
+            const level = entry.level || 'INFO';
+            const message = escapeHtml(entry.message);
+            
+            // Make errors and warnings clickable links
+            let processedMessage = message;
+            const isClickable = entry.is_error || entry.level === 'WARNING';
+            
+            if (isClickable) {
+                // Encode the raw line for the URL (handle special characters)
+                try {
+                    const encodedLine = btoa(unescape(encodeURIComponent(entry.raw)));
+                    // Make it a link to the detail page
+                    const linkColor = entry.is_error ? 'var(--error)' : 'var(--warning)';
+                    processedMessage = `<a href="/logs/${encodedLine}" class="error-link" style="color: ${linkColor}; text-decoration: underline; cursor: pointer; font-weight: 600;">${message}</a>`;
+                } catch (e) {
+                    // Fallback if encoding fails
+                    console.error('Error encoding log line:', e);
+                    processedMessage = message;
+                }
+            }
+            
+            return `
+                <div class="log-entry ${entry.is_error ? 'error' : level.toLowerCase()}" data-level="${level}">
+                    <span class="log-timestamp">${timestamp}</span>
+                    <span class="log-level ${level}">${level}</span>
+                    <span class="log-message">${processedMessage}</span>
+                </div>
+            `;
+        }).join('');
+        
+        if (wasAtBottom && autoScroll) {
+            scrollToBottom();
+        }
+    }
+    
+    function isScrolledToBottom() {
+        const viewer = document.getElementById('logsViewer');
+        return viewer.scrollHeight - viewer.scrollTop <= viewer.clientHeight + 50;
+    }
+    
+    function scrollToBottom() {
+        const viewer = document.getElementById('logsViewer');
+        viewer.scrollTop = viewer.scrollHeight;
+    }
+    
+    function toggleAutoScroll() {
+        autoScroll = !autoScroll;
+        const btn = document.getElementById('autoScrollBtn');
+        const indicator = document.getElementById('autoScrollIndicator');
+        
+        if (autoScroll) {
+            btn.textContent = 'Auto-scroll: ON';
+            indicator.classList.remove('active');
+            scrollToBottom();
+        } else {
+            btn.textContent = 'Auto-scroll: OFF';
+            indicator.classList.add('active');
+        }
+    }
+    
+    async function clearLogs() {
+        if (!confirm('Are you sure you want to clear all logs?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/logs/clear', { method: 'GET' });
+            const data = await response.json();
+            
+            if (data.success) {
+                loadLogs();
+            } else {
+                alert('Error clearing logs');
+            }
+        } catch (error) {
+            alert('Error clearing logs: ' + error.message);
+        }
+    }
+    
+    async function handleErrorClick(errorMessage, scriptIds) {
+        if (!scriptIds || scriptIds.length === 0) {
+            return;
+        }
+        
+        const scriptNames = {
+            'check_python': 'Check Python Installation',
+            'check_ffmpeg': 'Check FFmpeg Installation',
+            'check_database': 'Check Database',
+            'check_ports': 'Check Ports',
+            'test_connectivity': 'Test Connectivity',
+            'repair_database': 'Repair Database',
+            'clear_cache': 'Clear Cache'
+        };
+        
+        const scriptList = scriptIds.map(id => `• ${scriptNames[id] || id}`).join('\\n');
+        const message = `Error detected:\\n\\n${errorMessage}\\n\\n\\nRecommended troubleshooting scripts:\\n${scriptList}\\n\\nWould you like to run these scripts?`;
+        
+        if (confirm(message)) {
+            // Run all matched scripts
+            for (const scriptId of scriptIds) {
+                await runTroubleshootingScript(scriptId);
+            }
+        }
+    }
+    
+    async function runTroubleshootingScript(scriptId) {
+        try {
+            const response = await fetch(`/api/scripts/${scriptId}/run`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const result = await response.json();
+            
+            // Show result in a modal or alert
+            const resultClass = result.success ? 'success' : 'error';
+            const icon = result.success ? '✓' : '✗';
+            const output = result.stdout || result.stderr || 'No output';
+            
+            alert(`${icon} ${result.script_name}\\n\\n${output}`);
+        } catch (error) {
+            alert('Error running script: ' + error.message);
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Handle scroll to detect when user scrolls up
+    document.getElementById('logsViewer').addEventListener('scroll', () => {
+        if (!isScrolledToBottom() && autoScroll) {
+            toggleAutoScroll();
+        }
+    });
+    
+    // Click indicator to resume auto-scroll
+    document.getElementById('autoScrollIndicator').addEventListener('click', () => {
+        toggleAutoScroll();
+    });
+</script>
+{% endblock %}
+

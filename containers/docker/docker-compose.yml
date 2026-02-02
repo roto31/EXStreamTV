@@ -1,0 +1,123 @@
+#
+# EXStreamTV Docker Compose Configuration
+#
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose logs -f            # View logs
+#   docker-compose down               # Stop all services
+#
+
+version: '3.8'
+
+services:
+  # ============================================
+  # Main EXStreamTV Application
+  # ============================================
+  exstreamtv:
+    build:
+      context: ../..
+      dockerfile: containers/docker/Dockerfile
+    image: exstreamtv:latest
+    container_name: exstreamtv
+    restart: unless-stopped
+    
+    ports:
+      - "8411:8411"     # Web UI / API
+      - "5004:5004"     # HDHomeRun discovery (optional)
+    
+    environment:
+      - EXSTREAMTV_HOST=0.0.0.0
+      - EXSTREAMTV_PORT=8411
+      - EXSTREAMTV_LOG_LEVEL=INFO
+      - TZ=${TZ:-America/New_York}
+      # AI Configuration (optional)
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - SAMBANOVA_API_KEY=${SAMBANOVA_API_KEY:-}
+      # Plex Integration (optional)
+      - PLEX_URL=${PLEX_URL:-}
+      - PLEX_TOKEN=${PLEX_TOKEN:-}
+    
+    volumes:
+      - exstreamtv_data:/data
+      - exstreamtv_logs:/logs
+      - ./config.yaml:/app/config.yaml:ro
+      # Mount media directories (optional)
+      # - /path/to/movies:/media/movies:ro
+      # - /path/to/tv:/media/tv:ro
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8411/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    networks:
+      - exstreamtv_network
+
+  # ============================================
+  # Ollama for Local AI (optional)
+  # ============================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: exstreamtv_ollama
+    restart: unless-stopped
+    profiles:
+      - ai-local  # Only starts with: docker-compose --profile ai-local up
+    
+    ports:
+      - "11434:11434"
+    
+    volumes:
+      - ollama_data:/root/.ollama
+    
+    # For GPU support (NVIDIA)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    
+    networks:
+      - exstreamtv_network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # Watchtower for Auto-Updates (optional)
+  # ============================================
+  watchtower:
+    image: containrrr/watchtower
+    container_name: exstreamtv_watchtower
+    restart: unless-stopped
+    profiles:
+      - auto-update  # Only starts with: docker-compose --profile auto-update up
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    
+    command: --interval 86400 --cleanup exstreamtv  # Check daily
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  exstreamtv_network:
+    driver: bridge
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  exstreamtv_data:
+    name: exstreamtv_data
+  exstreamtv_logs:
+    name: exstreamtv_logs
+  ollama_data:
+    name: exstreamtv_ollama_data

@@ -1,0 +1,210 @@
+# EXStreamTV Configuration
+# Copy this file to config.yaml and customize as needed
+
+# Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 8411
+  debug: false
+  log_level: "INFO"
+
+# Database Configuration
+database:
+  url: "sqlite:///./exstreamtv.db"
+  echo: false  # Set true to log SQL queries
+
+# FFmpeg Configuration
+ffmpeg:
+  path: "ffmpeg"  # Path to ffmpeg binary
+  ffprobe_path: "ffprobe"  # Path to ffprobe binary
+  
+  # Hardware Acceleration
+  hardware_acceleration:
+    enabled: true
+    preferred: "auto"  # auto, nvenc, qsv, vaapi, videotoolbox, amf
+    fallback_to_software: true
+  
+  # Default Encoding Settings
+  defaults:
+    video_bitrate: "4000k"
+    audio_bitrate: "128k"
+    video_codec: "h264"
+    audio_codec: "aac"
+    resolution: "1920x1080"
+    framerate: 30
+  
+  # Timeouts (seconds)
+  timeouts:
+    connection: 30
+    read: 60
+    youtube: 120
+    archive_org: 90
+
+# Streaming Configuration
+streaming:
+  # Buffer settings
+  buffer_size: 2097152  # 2MB
+  read_size: 65536  # 64KB
+  
+  # MPEG-TS settings
+  mpegts:
+    segment_duration: 2
+    continuity_counters: true
+  
+  # HLS settings
+  hls:
+    enabled: false
+    segment_duration: 6
+    playlist_size: 5
+
+# HDHomeRun Emulation
+hdhomerun:
+  enabled: true
+  device_id: "EXSTREAMTV"
+  device_auth: "exstreamtv"
+  tuner_count: 4
+
+# Channel Configuration
+channels:
+  default_guide_hours: 24
+  auto_refresh_interval: 3600  # seconds
+  max_concurrent_streams: 10
+
+# Local Media Libraries
+libraries:
+  # Plex Integration
+  plex:
+    enabled: false
+    url: ""
+    token: ""
+  
+  # Jellyfin Integration
+  jellyfin:
+    enabled: false
+    url: ""
+    api_key: ""
+  
+  # Emby Integration
+  emby:
+    enabled: false
+    url: ""
+    api_key: ""
+  
+  # Local Folders
+  local:
+    enabled: true
+    paths: []
+    scan_interval: 3600  # seconds
+
+# Online Sources
+sources:
+  # YouTube
+  youtube:
+    enabled: true
+    cookies_file: ""  # Optional: path to cookies file for authentication
+    rate_limit: 5  # requests per minute
+    quality: "best[height<=1080]"
+  
+  # Archive.org
+  archive_org:
+    enabled: true
+    rate_limit: 10  # requests per minute
+
+# AI Agent Configuration
+ai_agent:
+  enabled: true
+  log_analysis: true
+  auto_fix: false  # Set true to allow automatic fixes
+  
+  # Provider selection: cloud, local, or hybrid
+  provider_type: "cloud"
+  
+  # Cloud provider configuration
+  cloud:
+    # Primary provider (groq recommended - free, fast)
+    provider: "groq"
+    api_key: "${GROQ_API_KEY}"  # Get free key at console.groq.com
+    model: "llama-3.3-70b-versatile"
+    
+    # Fallback providers (optional, tried in order if primary fails)
+    fallback:
+      - provider: "sambanova"
+        api_key: "${SAMBANOVA_API_KEY}"
+        model: "Meta-Llama-3.3-70B-Instruct"
+      # - provider: "openrouter"
+      #   api_key: "${OPENROUTER_API_KEY}"
+      #   model: "meta-llama/llama-3.3-70b-instruct"
+  
+  # Local provider configuration (Ollama)
+  local:
+    host: "http://localhost:11434"
+    # Auto-selected based on RAM if set to "auto"
+    model: "auto"
+    # Manual override examples:
+    # model: "phi4-mini:3.8b-q4"   # 4GB RAM
+    # model: "granite3.1:2b-instruct"  # 6-8GB RAM
+    # model: "qwen2.5:7b"          # 8-16GB RAM
+    # model: "qwen2.5:14b"         # 16GB+ RAM
+  
+  # Model settings
+  settings:
+    temperature: 0.3
+    max_tokens: 4096
+    timeout: 30
+  
+  # Legacy config (deprecated, use cloud/local sections above)
+  ollama:
+    host: "http://localhost:11434"
+    model: "llama2"
+
+# Scheduling Configuration
+scheduling:
+  # Playout modes
+  default_mode: "continuous"  # continuous, flood, duration, one
+  
+  # Filler settings
+  filler:
+    enabled: true
+    fallback_mode: "loop"  # loop, offline_image
+    offline_image: ""
+  
+  # EPG settings
+  epg:
+    refresh_interval: 3600
+    days_ahead: 7
+
+# Security
+security:
+  enabled: false
+  admin_password: ""  # Set to enable authentication
+  session_timeout: 86400  # 24 hours
+
+# Logging
+logging:
+  level: "INFO"
+  file: "logs/exstreamtv.log"
+  max_size: "10MB"
+  backup_count: 5
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # Browser logs (captured from WebUI)
+  browser_logs:
+    enabled: true
+    file: "logs/browser.log"
+  
+  # Log Lifecycle Management
+  lifecycle:
+    enabled: true
+    max_file_size_mb: 50      # Truncate logs exceeding this size
+    archive_after_days: 7     # Compress logs older than 7 days
+    delete_after_days: 30     # Delete archives older than 30 days
+    archive_directory: "logs/archive"
+
+# Auto-Healer / Troubleshooting
+auto_healer:
+  enabled: true
+  ollama_url: "http://localhost:11434"
+  ollama_model: "llama3.2:latest"
+  auto_fix: false             # Set true to auto-apply safe fixes
+  dry_run: true               # When true, only suggest (don't apply) fixes
+  learning_enabled: true      # Track fix effectiveness

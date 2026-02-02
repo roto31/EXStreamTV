@@ -1,0 +1,918 @@
+{% extends "base.html" %}
+
+{% block title %}Channels - StreamTV{% endblock %}
+
+{% block extra_styles %}
+    .channels-toolbar {
+        background: var(--surface);
+        border-radius: 12px; /* Apple HIG standard */
+        padding: 16px; /* Apple HIG standard */
+        margin-bottom: 16px; /* Apple 8pt grid */
+        display: flex;
+        align-items: center;
+        gap: 16px; /* Apple HIG standard spacing */
+        border: 0.5px solid var(--divider);
+    }
+    
+    .channels-table-wrapper {
+        background: var(--surface);
+        border-radius: 12px; /* Apple HIG standard */
+        overflow: hidden;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .table th {
+        text-align: left;
+        padding: 16px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        font-size: 12px;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--divider);
+        background: var(--surface-light);
+    }
+    
+    .table td {
+        padding: 16px;
+        border-bottom: 1px solid var(--divider);
+        color: var(--text-primary);
+    }
+    
+    .table tr:hover {
+        background: var(--hover);
+    }
+    
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .channel-logo {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+        border-radius: 4px;
+    }
+    
+    .channel-number {
+        font-weight: 500;
+        color: var(--primary);
+    }
+    
+    .channel-name {
+        font-weight: 500;
+    }
+    
+    .channel-group {
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+    
+    /* Button styles now handled by base.html */
+    /* Override only if needed for specific table context */
+    .table .action-buttons {
+        justify-content: flex-end;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state-icon {
+        font-size: 64px;
+        opacity: 0.5;
+        margin-bottom: 16px;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal.active {
+        display: flex;
+    }
+    
+    .modal-content {
+        background: var(--surface);
+        border-radius: 12px; /* Apple HIG standard */
+        padding: 20px; /* Apple HIG standard */
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+    
+    .modal-header h2 {
+        color: var(--text-primary);
+        font-size: 20px;
+        font-weight: 500;
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 24px;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+    
+    .modal-close:hover {
+        background: var(--hover);
+        color: var(--text-primary);
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 14px;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 12px;
+        background: var(--background);
+        border: 1px solid var(--divider);
+        border-radius: 4px;
+        color: var(--text-primary);
+        font-size: 14px;
+        transition: border-color 0.2s;
+    }
+    
+    .form-input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .form-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .form-checkbox input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    .form-checkbox label {
+        margin: 0;
+        cursor: pointer;
+    }
+    
+    .alert {
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    
+    .alert.show {
+        display: block;
+    }
+    
+    .alert-success {
+        background: rgba(76, 175, 80, 0.1);
+        border: 1px solid var(--success);
+        color: var(--success);
+    }
+    
+    .alert-error {
+        background: rgba(244, 67, 54, 0.1);
+        border: 1px solid var(--error);
+        color: var(--error);
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-secondary);
+    }
+    
+    .readonly-banner {
+        background: rgba(255, 149, 0, 0.1);
+        border: 1px solid var(--warning);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--warning);
+    }
+    
+    .readonly-banner .material-icons {
+        font-size: 20px;
+    }
+    
+    .readonly-banner-text {
+        flex: 1;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    
+    .readonly-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        background: rgba(255, 149, 0, 0.15);
+        border: 0.5px solid var(--warning);
+        border-radius: 4px;
+        font-size: 11px;
+        color: var(--warning);
+        font-weight: 500;
+    }
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Channels</h1>
+        <p>Manage your IPTV channels</p>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <!-- Toolbar -->
+    <div class="channels-toolbar">
+        <button class="btn btn-primary" id="addChannelButton" aria-label="Add new channel" data-tooltip="Create a new channel manually with custom settings">
+            <span class="material-icons" style="font-size: 18px;" aria-hidden="true">add</span>
+            Add Channel
+        </button>
+        <a href="/api/ai/channel" class="btn btn-secondary" aria-label="Create channel with AI" data-tooltip="Use AI to automatically create a channel based on your media libraries">
+            <span class="material-icons" style="font-size: 18px;" aria-hidden="true">smart_toy</span>
+            AI Create
+        </a>
+        <div style="flex: 1;"></div>
+        <label id="showDisabledLabel" style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease;" data-tooltip="Toggle to show disabled channels that can be re-enabled">
+            <input type="checkbox" id="showDisabled" aria-label="Show disabled channels">
+            <span>Show Disabled<span id="disabledCountIndicator" style="color: var(--warning); font-weight: 500; display: none;"></span></span>
+        </label>
+    </div>
+    
+    <!-- Channels Table -->
+    <div class="channels-table-wrapper">
+        <div id="alert" class="alert"></div>
+        <div id="loading" class="loading" role="status" aria-live="polite">Loading channels...</div>
+        <table class="table" id="channelsTable" style="display: none;" role="table" aria-label="Channels list">
+            <thead>
+                <tr role="row">
+                    <th scope="col">Number</th>
+                    <th scope="col">Logo</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Group</th>
+                    <th scope="col">Playout Mode</th>
+                    <th scope="col">Preview</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="channelsTableBody">
+            </tbody>
+        </table>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">📺</div>
+            <h3 style="margin-bottom: 8px;">No channels found</h3>
+            <p style="margin-bottom: 16px;">Create your first channel to get started</p>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-primary" id="emptyStateCreateButton" aria-label="Create your first channel">
+                    <span class="material-icons" style="font-size: 18px;" aria-hidden="true">add</span>
+                    Create Channel
+                </button>
+                <a href="/api/ai/channel" class="btn btn-secondary" aria-label="Create channel with AI assistant">
+                    <span class="material-icons" style="font-size: 18px;" aria-hidden="true">smart_toy</span>
+                    AI Create
+                </a>
+            </div>
+            <p style="margin-top: 16px; font-size: 13px; color: var(--text-tertiary);">
+                Use AI Create for guided channel setup with scheduling, commercials, and more.
+            </p>
+        </div>
+    </div>
+    
+    <!-- Create/Edit Modal -->
+    <div id="channelModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Create Channel</h2>
+                <button class="modal-close" id="channelModalCloseButton" type="button" aria-label="Close channel modal">
+                    <span class="material-icons" aria-hidden="true">close</span>
+                </button>
+            </div>
+            <form id="channelForm">
+                <div id="formAlert" class="alert"></div>
+                <div class="form-group">
+                    <label class="form-label" for="number">Channel Number *</label>
+                    <input type="text" id="number" name="number" class="form-input" required placeholder="e.g., 1, 1980, 2.1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="name">Channel Name *</label>
+                    <input type="text" id="name" name="name" class="form-input" required placeholder="e.g., StreamTV Channel 1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="group">Channel Group</label>
+                    <input type="text" id="group" name="group" class="form-input" placeholder="e.g., StreamTV, Sports">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="logo_path">Logo Path (URL)</label>
+                    <input type="text" id="logo_path" name="logo_path" class="form-input" placeholder="https://example.com/logo.png">
+                </div>
+                <div class="form-group">
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="enabled" name="enabled" checked>
+                        <label for="enabled">Channel Enabled</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="playout_mode">Playout Mode *</label>
+                    <select id="playout_mode" name="playout_mode" class="form-input" required>
+                        <option value="continuous">Continuous (ErsatzTV-style)</option>
+                        <option value="on_demand">On-Demand</option>
+                    </select>
+                    <small style="color: var(--text-secondary); font-size: 12px; margin-top: 4px; display: block;">
+                        <strong>Continuous:</strong> Maintains timeline position, starts from calculated live position.<br>
+                        <strong>On-Demand:</strong> Always starts from the beginning when a client connects.
+                    </small>
+                </div>
+                
+                <div style="border-top: 1px solid var(--divider); margin: 24px 0; padding-top: 24px;">
+                    <h3 style="font-size: 17px; font-weight: 600; margin-bottom: 16px;">Transcoding Settings</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="ffmpeg_profile_id">FFmpeg Profile</label>
+                        <select id="ffmpeg_profile_id" name="ffmpeg_profile_id" class="form-input">
+                            <option value="">None (use legacy transcode_profile)</option>
+                        </select>
+                        <small style="color: var(--text-secondary); font-size: 12px; margin-top: 4px; display: block;">
+                            Select an FFmpeg profile for hardware-accelerated transcoding.
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="watermark_id">Watermark</label>
+                        <select id="watermark_id" name="watermark_id" class="form-input">
+                            <option value="">None</option>
+                        </select>
+                        <small style="color: var(--text-secondary); font-size: 12px; margin-top: 4px; display: block;">
+                            Overlay a watermark on the video stream.
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="subtitle_mode">Subtitle Mode</label>
+                        <select id="subtitle_mode" name="subtitle_mode" class="form-input">
+                            <option value="none">None</option>
+                            <option value="forced">Forced</option>
+                            <option value="default">Default</option>
+                            <option value="any">Any</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="preferred_audio_language_code">Preferred Audio Language (ISO 639-1)</label>
+                        <input type="text" id="preferred_audio_language_code" name="preferred_audio_language_code" class="form-input" placeholder="e.g., en, es, fr" maxlength="2">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="preferred_subtitle_language_code">Preferred Subtitle Language (ISO 639-1)</label>
+                        <input type="text" id="preferred_subtitle_language_code" name="preferred_subtitle_language_code" class="form-input" placeholder="e.g., en, es, fr" maxlength="2">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-outlined" id="channelModalCancelButton" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Upload Icon Modal -->
+    <div id="iconUploadModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="iconModalTitle">Upload Channel Icon</h2>
+                <button class="modal-close" id="iconModalCloseButton" type="button" aria-label="Close icon upload modal">
+                    <span class="material-icons" aria-hidden="true">close</span>
+                </button>
+            </div>
+            <form id="iconUploadForm">
+                <div id="iconFormAlert" class="alert"></div>
+                <div class="form-group">
+                    <label class="form-label" for="iconFile">Select PNG Image *</label>
+                    <input type="file" id="iconFile" name="iconFile" accept="image/png" class="form-input" required>
+                    <small id="iconFileHelp" style="color: var(--text-secondary); font-size: 12px; margin-top: 4px; display: block;">
+                        Only PNG files are supported. Recommended size: 256x256 pixels or larger.
+                    </small>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Upload</button>
+                    <button type="button" class="btn btn-outlined" id="iconModalCancelButton" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script nonce="{{ request.state.csp_nonce }}">
+        let editingChannelId = null;
+        let uploadingIconChannelId = null;
+        
+        // Load channels and wire events on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadChannels();
+            loadProfilesAndWatermarks();
+
+            const addChannelButton = document.getElementById('addChannelButton');
+            if (addChannelButton) {
+                addChannelButton.addEventListener('click', openCreateModal);
+            }
+
+            const emptyStateButton = document.getElementById('emptyStateCreateButton');
+            if (emptyStateButton) {
+                emptyStateButton.addEventListener('click', openCreateModal);
+            }
+
+            const showDisabledCheckbox = document.getElementById('showDisabled');
+            if (showDisabledCheckbox) {
+                showDisabledCheckbox.addEventListener('change', loadChannels);
+            }
+
+            const channelModal = document.getElementById('channelModal');
+            if (channelModal) {
+                channelModal.addEventListener('click', (event) => {
+                    if (event.target === channelModal) {
+                        closeModal();
+                    }
+                });
+            }
+
+            const channelModalCloseButton = document.getElementById('channelModalCloseButton');
+            if (channelModalCloseButton) {
+                channelModalCloseButton.addEventListener('click', closeModal);
+            }
+
+            const channelModalCancelButton = document.getElementById('channelModalCancelButton');
+            if (channelModalCancelButton) {
+                channelModalCancelButton.addEventListener('click', closeModal);
+            }
+
+            const channelForm = document.getElementById('channelForm');
+            if (channelForm) {
+                channelForm.addEventListener('submit', handleSubmit);
+            }
+
+            const iconModal = document.getElementById('iconUploadModal');
+            if (iconModal) {
+                iconModal.addEventListener('click', (event) => {
+                    if (event.target === iconModal) {
+                        closeIconModal();
+                    }
+                });
+            }
+
+            const iconModalCloseButton = document.getElementById('iconModalCloseButton');
+            if (iconModalCloseButton) {
+                iconModalCloseButton.addEventListener('click', closeIconModal);
+            }
+
+            const iconModalCancelButton = document.getElementById('iconModalCancelButton');
+            if (iconModalCancelButton) {
+                iconModalCancelButton.addEventListener('click', closeIconModal);
+            }
+
+            const iconUploadForm = document.getElementById('iconUploadForm');
+            if (iconUploadForm) {
+                iconUploadForm.addEventListener('submit', handleIconUpload);
+            }
+        });
+        
+        async function loadChannels() {
+            try {
+                const showDisabled = document.getElementById('showDisabled').checked;
+                const response = await fetch('/api/channels');
+                let channels = await response.json();
+                
+                // Store all channels before filtering so we can show count of hidden disabled channels
+                const allChannels = channels;
+                
+                if (!showDisabled) {
+                    channels = channels.filter(c => c.enabled);
+                }
+                
+                // Update disabled count indicator for better discoverability
+                const disabledCountSpan = document.getElementById('disabledCountIndicator');
+                const showDisabledLabel = document.getElementById('showDisabledLabel');
+                if (disabledCountSpan && showDisabledLabel) {
+                    const disabledCount = allChannels.filter(c => !c.enabled).length;
+                    if (disabledCount > 0 && !showDisabled) {
+                        disabledCountSpan.textContent = ` (${disabledCount} hidden)`;
+                        disabledCountSpan.style.display = 'inline';
+                        // Highlight the label to draw attention
+                        showDisabledLabel.style.background = 'rgba(255, 193, 7, 0.15)';
+                        showDisabledLabel.style.border = '1px solid var(--warning)';
+                    } else {
+                        disabledCountSpan.style.display = 'none';
+                        showDisabledLabel.style.background = 'transparent';
+                        showDisabledLabel.style.border = 'none';
+                    }
+                }
+                
+                document.getElementById('loading').style.display = 'none';
+                const table = document.getElementById('channelsTable');
+                const tableBody = document.getElementById('channelsTableBody');
+                const emptyState = document.getElementById('emptyState');
+                
+                if (channels.length === 0) {
+                    table.style.display = 'none';
+                    emptyState.style.display = 'block';
+                } else {
+                    table.style.display = 'table';
+                    emptyState.style.display = 'none';
+                    
+                    tableBody.innerHTML = channels.map(channel => `
+                        <tr>
+                            <td class="channel-number">${channel.number}</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    ${channel.logo_path 
+                                        ? `<img src="${channel.logo_path}" class="channel-logo" alt="${channel.name}">`
+                                        : `<div class="channel-logo" style="background: var(--hover); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 20px;">📺</div>`
+                                    }
+                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        <button class="btn-icon" data-action="openUploadIconModal" data-args='[${channel.id}, ${JSON.stringify(channel.name)}]' data-tooltip="Upload a custom logo/icon image for this channel">
+                                            <span class="material-icons" style="font-size: 18px;">image</span>
+                                        </button>
+                                        ${channel.logo_path && channel.logo_path.startsWith('/static/channel_icons/') 
+                                            ? `<button class="btn-icon delete" data-action="deleteChannelIcon" data-args='[${channel.id}, ${JSON.stringify(channel.name)}]' data-tooltip="Remove the custom icon and revert to default">
+                                                <span class="material-icons" style="font-size: 18px;">delete</span>
+                                            </button>`
+                                            : ''
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="channel-name">
+                                    ${channel.name}
+                                    ${channel.is_yaml_source ? '<span class="readonly-badge" title="Channel defined in YAML - edit via YAML file"><span class="material-icons" style="font-size: 12px;">lock</span>YAML</span>' : ''}
+                                </div>
+                            </td>
+                            <td>
+                                ${channel.group ? `<span class="channel-group">${channel.group}</span>` : '-'}
+                            </td>
+                            <td>
+                                <span class="badge ${(channel.playout_mode === 'continuous' || channel.playout_mode === 'CONTINUOUS') ? 'badge-info' : 'badge-warning'}" title="${(channel.playout_mode === 'continuous' || channel.playout_mode === 'CONTINUOUS') ? 'Maintains timeline position' : 'Always starts from beginning'}">
+                                    ${(channel.playout_mode === 'continuous' || channel.playout_mode === 'CONTINUOUS') ? 'Continuous' : 'On-Demand'}
+                                </span>
+                            </td>
+                            <td>
+                                ${channel.enabled ? `
+                                    <a href="/player" class="btn-icon" data-action="storeChannelPreview" data-args='[${JSON.stringify(channel.number)}]' data-tooltip="Preview this channel in the video player" aria-label="Preview Channel" style="color: var(--success);">
+                                        <span class="material-icons" aria-hidden="true">play_circle</span>
+                                    </a>
+                                ` : `
+                                    <button class="btn-icon" disabled data-tooltip="Enable this channel first to preview it" aria-label="Channel is disabled">
+                                        <span class="material-icons" aria-hidden="true">play_circle</span>
+                                    </button>
+                                `}
+                            </td>
+                            <td>
+                                <span class="badge ${channel.enabled ? 'badge-success' : 'badge-error'}">
+                                    ${channel.enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="action-buttons">
+                                    <button class="btn-icon edit" data-action="editChannel" data-args='[${channel.id}]' data-tooltip="${channel.is_yaml_source ? 'This channel is defined in YAML config and cannot be edited here' : 'Edit channel settings, content sources, and playout options'}" aria-label="${channel.is_yaml_source ? 'Cannot edit YAML-sourced channel' : 'Edit Channel'}" ${channel.is_yaml_source ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+                                        <span class="material-icons" aria-hidden="true">edit</span>
+                                    </button>
+                                    <button class="btn-icon" data-action="toggleChannel" data-args='[${channel.id}, ${JSON.stringify(!channel.enabled)}]' data-tooltip="${channel.enabled ? 'Disable this channel - it will stop streaming and be hidden from playlists' : 'Enable this channel - it will start streaming and appear in playlists'}" aria-label="${channel.enabled ? 'Disable Channel' : 'Enable Channel'}">
+                                        <span class="material-icons" aria-hidden="true">${channel.enabled ? 'toggle_on' : 'toggle_off'}</span>
+                                    </button>
+                                    <button class="btn-icon delete" data-action="deleteChannel" data-args='[${channel.id}]' data-tooltip="${channel.is_yaml_source ? 'This channel is defined in YAML config and cannot be deleted here' : 'Permanently delete this channel and all its settings'}" aria-label="${channel.is_yaml_source ? 'Cannot delete YAML-sourced channel' : 'Delete Channel'}" ${channel.is_yaml_source ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+                                        <span class="material-icons" aria-hidden="true">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                    bindActionHandlers(tableBody);
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                showAlert('Error loading channels: ' + error.message, 'error');
+            }
+        }
+        
+        async function loadProfilesAndWatermarks() {
+            try {
+                const [profilesRes, watermarksRes] = await Promise.all([
+                    fetch('/api/ffmpeg-profiles'),
+                    fetch('/api/watermarks')
+                ]);
+                
+                if (profilesRes.ok) {
+                    const profiles = await profilesRes.json();
+                    const profileSelect = document.getElementById('ffmpeg_profile_id');
+                    profileSelect.innerHTML = '<option value="">None (use legacy transcode_profile)</option>';
+                    profiles.forEach(profile => {
+                        const option = document.createElement('option');
+                        option.value = profile.id;
+                        option.textContent = profile.name;
+                        profileSelect.appendChild(option);
+                    });
+                }
+                
+                if (watermarksRes.ok) {
+                    const watermarks = await watermarksRes.json();
+                    const watermarkSelect = document.getElementById('watermark_id');
+                    watermarkSelect.innerHTML = '<option value="">None</option>';
+                    watermarks.forEach(watermark => {
+                        const option = document.createElement('option');
+                        option.value = watermark.id;
+                        option.textContent = watermark.name;
+                        watermarkSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load profiles/watermarks:', error);
+            }
+        }
+        
+        function openCreateModal() {
+            editingChannelId = null;
+            document.getElementById('modalTitle').textContent = 'Create Channel';
+            document.getElementById('channelForm').reset();
+            document.getElementById('enabled').checked = true;
+            document.getElementById('formAlert').classList.remove('show');
+            document.getElementById('channelModal').classList.add('active');
+        }
+        
+        function editChannel(id) {
+            editingChannelId = id;
+            document.getElementById('modalTitle').textContent = 'Edit Channel';
+            
+            authenticatedFetch(`/api/channels/${id}`)
+                .then(response => response.json())
+                .then(channel => {
+                    document.getElementById('number').value = channel.number;
+                    document.getElementById('name').value = channel.name;
+                    document.getElementById('group').value = channel.group || '';
+                    document.getElementById('logo_path').value = channel.logo_path || '';
+                    document.getElementById('enabled').checked = channel.enabled;
+                    // Convert enum value to lowercase for form select
+                    const playoutMode = channel.playout_mode || 'continuous';
+                    document.getElementById('playout_mode').value = playoutMode.toLowerCase() === 'continuous' ? 'continuous' : 'on_demand';
+                    
+                    // New fields
+                    document.getElementById('ffmpeg_profile_id').value = channel.ffmpeg_profile_id || '';
+                    document.getElementById('watermark_id').value = channel.watermark_id || '';
+                    document.getElementById('subtitle_mode').value = channel.subtitle_mode || 'none';
+                    document.getElementById('preferred_audio_language_code').value = channel.preferred_audio_language_code || '';
+                    document.getElementById('preferred_subtitle_language_code').value = channel.preferred_subtitle_language_code || '';
+                    
+                    document.getElementById('formAlert').classList.remove('show');
+                    document.getElementById('channelModal').classList.add('active');
+                })
+                .catch(error => {
+                    showAlert('Error loading channel: ' + error.message, 'error');
+                });
+        }
+        
+        function closeModal() {
+            document.getElementById('channelModal').classList.remove('active');
+            editingChannelId = null;
+        }
+        
+        async function handleSubmit(event) {
+            event.preventDefault();
+            
+            const formData = {
+                number: document.getElementById('number').value,
+                name: document.getElementById('name').value,
+                group: document.getElementById('group').value || null,
+                logo_path: document.getElementById('logo_path').value || null,
+                enabled: document.getElementById('enabled').checked,
+                playout_mode: document.getElementById('playout_mode').value,
+                ffmpeg_profile_id: document.getElementById('ffmpeg_profile_id').value ? parseInt(document.getElementById('ffmpeg_profile_id').value) : null,
+                watermark_id: document.getElementById('watermark_id').value ? parseInt(document.getElementById('watermark_id').value) : null,
+                subtitle_mode: document.getElementById('subtitle_mode').value,
+                preferred_audio_language_code: document.getElementById('preferred_audio_language_code').value || null,
+                preferred_subtitle_language_code: document.getElementById('preferred_subtitle_language_code').value || null
+            };
+            
+            const formAlert = document.getElementById('formAlert');
+            
+            try {
+                const url = editingChannelId 
+                    ? `/api/channels/${editingChannelId}`
+                    : '/api/channels';
+                const method = editingChannelId ? 'PUT' : 'POST';
+                
+                const response = await authenticatedFetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    showAlert(
+                        `Channel ${editingChannelId ? 'updated' : 'created'} successfully!`, 
+                        'success'
+                    );
+                    closeModal();
+                    loadChannels();
+                } else {
+                    const error = await response.json();
+                    formAlert.textContent = error.detail || 'Error saving channel';
+                    formAlert.className = 'alert alert-error show';
+                }
+            } catch (error) {
+                formAlert.textContent = 'Error: ' + error.message;
+                formAlert.className = 'alert alert-error show';
+            }
+        }
+        
+        async function toggleChannel(id, enabled) {
+            try {
+                const response = await authenticatedFetch(`/api/channels/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ enabled: enabled })
+                });
+                
+                if (response.ok) {
+                    showAlert(`Channel ${enabled ? 'enabled' : 'disabled'} successfully!`, 'success');
+                    loadChannels();
+                } else {
+                    const error = await response.json();
+                    showAlert(error.detail || 'Error updating channel', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function deleteChannel(id) {
+            if (!confirm('Are you sure you want to delete this channel?')) {
+                return;
+            }
+            
+            try {
+                const response = await authenticatedFetch(`/api/channels/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok || response.status === 204) {
+                    showAlert('Channel deleted successfully!', 'success');
+                    loadChannels();
+                } else {
+                    const error = await response.json();
+                    showAlert(error.detail || 'Error deleting channel', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+        
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 5000);
+        }
+        
+        function openUploadIconModal(channelId, channelName) {
+            uploadingIconChannelId = channelId;
+            document.getElementById('iconModalTitle').textContent = `Upload Icon for ${channelName}`;
+            document.getElementById('iconUploadForm').reset();
+            document.getElementById('iconFormAlert').classList.remove('show');
+            document.getElementById('iconUploadModal').classList.add('active');
+        }
+        
+        function closeIconModal() {
+            document.getElementById('iconUploadModal').classList.remove('active');
+            uploadingIconChannelId = null;
+        }
+        
+        async function handleIconUpload(event) {
+            event.preventDefault();
+            
+            const fileInput = document.getElementById('iconFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                const formAlert = document.getElementById('iconFormAlert');
+                formAlert.textContent = 'Please select a PNG file';
+                formAlert.className = 'alert alert-error show';
+                return;
+            }
+            
+            // Validate file type
+            if (file.type !== 'image/png' && !file.name.toLowerCase().endsWith('.png')) {
+                const formAlert = document.getElementById('iconFormAlert');
+                formAlert.textContent = 'Only PNG files are allowed';
+                formAlert.className = 'alert alert-error show';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const formAlert = document.getElementById('iconFormAlert');
+            
+            try {
+                const response = await authenticatedFetch(`/api/channels/${uploadingIconChannelId}/icon`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    showAlert('Icon uploaded successfully!', 'success');
+                    closeIconModal();
+                    loadChannels(); // Reload to show the new icon
+                } else {
+                    const error = await response.json();
+                    formAlert.textContent = error.detail || 'Error uploading icon';
+                    formAlert.className = 'alert alert-error show';
+                }
+            } catch (error) {
+                formAlert.textContent = 'Error: ' + error.message;
+                formAlert.className = 'alert alert-error show';
+            }
+        }
+        
+        async function deleteChannelIcon(channelId, channelName) {
+            if (!confirm(`Are you sure you want to delete the icon for ${channelName}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await authenticatedFetch(`/api/channels/${channelId}/icon`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok || response.status === 204) {
+                    showAlert('Icon deleted successfully!', 'success');
+                    loadChannels();
+                } else {
+                    const error = await response.json();
+                    showAlert(error.detail || 'Error deleting icon', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function storeChannelPreview(channelNumber) {
+            if (channelNumber !== undefined && channelNumber !== null) {
+                localStorage.setItem('autoPlayChannel', channelNumber);
+            }
+        }
+    </script>
+{% endblock %}

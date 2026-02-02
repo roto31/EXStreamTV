@@ -1,0 +1,9 @@
+{
+  "name": "get_project_info",
+  "description": "Get EXStreamTV project summary: name, version, description, and key features. Returns dict with name, version, description, features, project_root, documentation_guides.",
+  "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

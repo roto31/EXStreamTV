@@ -1,0 +1,1274 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule Items - StreamTV{% endblock %}
+
+{% block extra_styles %}
+    .schedule-items-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .schedule-header-bar {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .schedule-title-section {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .schedule-badges {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .badge {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        background: var(--primary);
+        color: white;
+    }
+    
+    .schedule-actions-bar {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .items-list {
+        background: var(--surface);
+        border-radius: 12px;
+        overflow: hidden;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .item-row {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 0.5px solid var(--divider);
+        transition: background 0.2s;
+        cursor: pointer;
+    }
+    
+    .item-row:hover {
+        background: var(--hover);
+    }
+    
+    .item-row:last-child {
+        border-bottom: none;
+    }
+    
+    .item-index {
+        width: 40px;
+        text-align: center;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    
+    .item-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .item-title {
+        font-weight: 500;
+        color: var(--text-primary);
+        font-size: 17px;
+    }
+    
+    .item-details {
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+    
+    .item-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        overflow-y: auto;
+        padding: 20px;
+    }
+    
+    .modal.active {
+        display: flex;
+    }
+    
+    .modal-content {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 900px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        margin: auto;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .modal-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .form-section {
+        margin-bottom: 32px;
+    }
+    
+    .section-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 15px;
+    }
+    
+    .form-input, .form-select {
+        width: 100%;
+        padding: 12px 16px;
+        background: var(--background);
+        border: 0.5px solid var(--divider);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 17px;
+        font-family: inherit;
+        box-sizing: border-box;
+    }
+    
+    .form-input:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    
+    .form-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .form-checkbox input {
+        width: 20px;
+        height: 20px;
+        accent-color: var(--primary);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1 id="scheduleTitle">Schedule Items</h1>
+        <p id="scheduleDescription">Manage schedule items for this schedule</p>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="schedule-items-container">
+        <div class="schedule-header-bar">
+            <div class="schedule-title-section">
+                <span id="scheduleName">Loading...</span>
+                <div class="schedule-badges">
+                    <span class="badge" id="scheduleMode">Dynamic</span>
+                    <span class="badge" id="schedulePlayout">One</span>
+                </div>
+            </div>
+            <div class="schedule-actions-bar">
+                <button class="btn btn-primary" id="openItemModalButton">
+                    <span class="material-icons" style="font-size: 18px;" aria-hidden="true">add</span>
+                    Add Item
+                </button>
+                <button class="btn btn-outlined" id="saveScheduleButton">
+                    <span class="material-icons" style="font-size: 18px;" aria-hidden="true">save</span>
+                    Save Schedule
+                </button>
+            </div>
+        </div>
+        
+        <div class="items-list" id="itemsList">
+            <div class="loading" id="loading">Loading items...</div>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-state-icon">📋</div>
+                <h3>No schedule items</h3>
+                <p>Add your first schedule item to get started</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Schedule Item Modal -->
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="itemModalTitle">Add Schedule Item</h2>
+                <button class="btn-icon js-close-item-modal" type="button" aria-label="Close schedule item modal">
+                    <span class="material-icons" aria-hidden="true">close</span>
+                </button>
+            </div>
+            <form id="itemForm">
+                <input type="hidden" id="itemId" name="id">
+                <input type="hidden" id="itemScheduleId" name="schedule_id">
+                
+                <!-- Schedule Item Section -->
+                <div class="form-section">
+                    <h3 class="section-title">Schedule Item</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="startType">Start Type</label>
+                        <select class="form-select" id="startType" name="start_type">
+                            <option value="dynamic">Dynamic</option>
+                            <option value="fixed">Fixed</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="startTimeGroup" style="display: none;">
+                        <label class="form-label" for="startTime">Start Time</label>
+                        <input type="datetime-local" class="form-input" id="startTime" name="start_time">
+                    </div>
+                    
+                    <div class="form-group" id="fixedStartTimeBehaviorGroup" style="display: none;">
+                        <label class="form-label" for="fixedStartTimeBehavior">Fixed Start Time Behavior</label>
+                        <select class="form-select" id="fixedStartTimeBehavior" name="fixed_start_time_behavior">
+                            <option value="strict">Strict - Always wait for exact start time, even if that means waiting until next day</option>
+                            <option value="flexible">Flexible - Start immediately if waiting would go into next day</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="collectionType">Collection Type</label>
+                        <select class="form-select" id="collectionType" name="collection_type">
+                            <option value="collection">Collection</option>
+                            <option value="television_show">Television Show</option>
+                            <option value="television_season">Television Season</option>
+                            <option value="artist">Artist</option>
+                            <option value="multi_collection">Multi Collection</option>
+                            <option value="smart_collection">Smart Collection</option>
+                            <option value="playlist">Playlist</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="collectionGroup">
+                        <label class="form-label" for="collectionId">Collection</label>
+                        <select class="form-select" id="collectionId" name="collection_id">
+                            <option value="">Select a manual collection...</option>
+                        </select>
+                        <p class="help-text" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                            Select a manually created collection from your collections.
+                        </p>
+                    </div>
+                    
+                    <div class="form-group" id="televisionShowGroup" style="display: none;">
+                        <label class="form-label" for="plexShowKey">Television Show</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select class="form-select" id="plexShowKey" name="plex_show_key" style="flex: 1;">
+                                <option value="">Select a TV show from Plex...</option>
+                            </select>
+                            <button type="button" class="btn btn-outlined" id="loadPlexShowsButton" style="white-space: nowrap;">
+                                <span class="material-icons" aria-hidden="true">refresh</span>
+                                Load Shows
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" id="televisionSeasonGroup" style="display: none;">
+                        <label class="form-label" for="plexSeasonKey">Television Season</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select class="form-select" id="plexSeasonKey" name="plex_season_key" style="flex: 1;">
+                                <option value="">First select a TV show...</option>
+                            </select>
+                            <button type="button" class="btn btn-outlined" id="loadPlexSeasonsButton" style="white-space: nowrap;">
+                                <span class="material-icons" aria-hidden="true">refresh</span>
+                                Load Seasons
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" id="artistGroup" style="display: none;">
+                        <label class="form-label" for="plexArtistKey">Artist</label>
+                        <select class="form-select" id="plexArtistKey" name="plex_artist_key">
+                            <option value="">Select an artist from Plex...</option>
+                        </select>
+                        <p class="help-text" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                            Note: Artist selection from Plex music libraries will be available soon.
+                        </p>
+                    </div>
+                    
+                    <div class="form-group" id="multiCollectionGroup" style="display: none;">
+                        <label class="form-label" for="multiCollectionId">Multi Collection</label>
+                        <select class="form-select" id="multiCollectionId" name="collection_id">
+                            <option value="">Select a multi collection...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="smartCollectionGroup" style="display: none;">
+                        <label class="form-label" for="smartCollectionId">Smart Collection</label>
+                        <select class="form-select" id="smartCollectionId" name="collection_id">
+                            <option value="">Select a smart collection...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="playlistGroup" style="display: none;">
+                        <label class="form-label" for="playlistId">Playlist</label>
+                        <select class="form-select" id="playlistId" name="playlist_id">
+                            <option value="">Select a playlist...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="playbackOrder">Playback Order</label>
+                        <select class="form-select" id="playbackOrder" name="playback_order">
+                            <option value="chronological">Chronological - By release date, then season/episode</option>
+                            <option value="random">Random - Random order, may contain repeats</option>
+                            <option value="shuffle">Shuffle - Random order, no repeats until all played</option>
+                            <option value="shuffle_in_order">Shuffle In Order - Groups shuffled, contents chronological</option>
+                            <option value="season_episode">Season, Episode - By season then episode number</option>
+                        </select>
+                        <p class="help-text" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                            <span id="playbackOrderHelp">Shuffle In Order can only be used with Collection, Smart Collection and Multi Collection. Season, Episode can only be used with Television Show.</span>
+                        </p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="playoutMode">Playout Mode</label>
+                        <select class="form-select" id="playoutMode" name="playout_mode">
+                            <option value="flood">Flood - Play items forever or until next schedule item's start time</option>
+                            <option value="one">One - Play one item before advancing</option>
+                            <option value="multiple">Multiple - Play specific number of items</option>
+                            <option value="duration">Duration - Play items to fill specified duration</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="multipleModeGroup" style="display: none;">
+                        <label class="form-label" for="multipleMode">Multiple Mode</label>
+                        <select class="form-select" id="multipleMode" name="multiple_mode">
+                            <option value="count">Count - Play specific number of items</option>
+                            <option value="collection_size">Collection Size - Play all items from collection</option>
+                            <option value="multi_episode_group_size">Multi-Episode Group Size - Play all items from current multi-part episode group</option>
+                            <option value="playlist_item_size">Playlist Item Size - Play all items from current playlist item</option>
+                        </select>
+                        <p class="help-text" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                            <span id="multipleModeHelp">Collection Size cannot be used with Playlist. Multi-Episode Group Size can only be used when Playback Order is Chronological. Playlist Item Size can only be used with Playlist.</span>
+                        </p>
+                    </div>
+                    
+                    <div class="form-group" id="multipleCountGroup" style="display: none;">
+                        <label class="form-label" for="multipleCount">Multiple Count</label>
+                        <input type="number" class="form-input" id="multipleCount" name="multiple_count" min="1" placeholder="Number of items to play">
+                    </div>
+                    
+                    <div class="form-row" id="playoutDurationGroup" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label" for="playoutDurationHours">Playout Duration (Hours)</label>
+                            <input type="number" class="form-input" id="playoutDurationHours" name="playout_duration_hours" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="playoutDurationMinutes">Playout Duration (Minutes)</label>
+                            <input type="number" class="form-input" id="playoutDurationMinutes" name="playout_duration_minutes" min="0" max="59" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" id="fillWithGroupModeGroup" style="display: none;">
+                        <label class="form-label" for="fillWithGroupMode">Fill With Group Mode</label>
+                        <select class="form-select" id="fillWithGroupMode" name="fill_with_group_mode">
+                            <option value="none">None - No change to scheduling behavior</option>
+                            <option value="ordered_groups">Ordered Groups - Fill with single group, rotate in fixed order</option>
+                            <option value="shuffled_groups">Shuffled Groups - Fill with single group, rotate in shuffled order</option>
+                        </select>
+                        <p class="help-text" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                            Can only be used with Collection, Smart Collection and Multi Collection. Can only be used with Playout Mode of Duration or Multiple. Cannot be used with Playback Order of Shuffle In Order.
+                        </p>
+                    </div>
+                    
+                    <div class="form-group" id="tailModeGroup" style="display: none;">
+                        <label class="form-label" for="tailMode">Tail Mode (Duration)</label>
+                        <select class="form-select" id="tailMode" name="tail_mode">
+                            <option value="none">(none) - Immediately advance to next schedule item</option>
+                            <option value="offline">Offline - Show offline image for remainder</option>
+                            <option value="filler">Filler - Fill with specified collection, then offline image if needed</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="tailFillerCollectionGroup" style="display: none;">
+                        <label class="form-label" for="tailFillerCollectionId">Tail Filler Collection</label>
+                        <select class="form-select" id="tailFillerCollectionId" name="tail_filler_collection_id">
+                            <option value="">Select a collection for tail filler...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="discardToFillAttempts">Discard To Fill Attempts</label>
+                        <input type="number" class="form-input" id="discardToFillAttempts" name="discard_to_fill_attempts" min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="customTitle">Custom Title</label>
+                        <input type="text" class="form-input" id="customTitle" name="custom_title" placeholder="Optional custom title">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="guideMode">Guide Mode</label>
+                        <select class="form-select" id="guideMode" name="guide_mode">
+                            <option value="normal">Normal</option>
+                            <option value="custom">Custom</option>
+                            <option value="hide">Hide</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Schedule Item Filler Section -->
+                <div class="form-section">
+                    <h3 class="section-title">Schedule Item Filler</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="preRollFillerId">Pre-Roll Filler</label>
+                        <select class="form-select" id="preRollFillerId" name="pre_roll_filler_id">
+                            <option value="">(none)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="midRollFillerId">Mid-Roll Filler</label>
+                        <select class="form-select" id="midRollFillerId" name="mid_roll_filler_id">
+                            <option value="">(none)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="postRollFillerId">Post-Roll Filler</label>
+                        <select class="form-select" id="postRollFillerId" name="post_roll_filler_id">
+                            <option value="">(none)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="tailFillerId">Tail Filler</label>
+                        <select class="form-select" id="tailFillerId" name="tail_filler_id">
+                            <option value="">(none)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="fallbackFillerId">Fallback Filler</label>
+                        <select class="form-select" id="fallbackFillerId" name="fallback_filler_id">
+                            <option value="">(none)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Schedule Item Overrides Section -->
+                <div class="form-section">
+                    <h3 class="section-title">Schedule Item Overrides</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="watermarkId">Watermarks</label>
+                        <select class="form-select" id="watermarkId" name="watermark_id">
+                            <option value="">(none)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="preferredAudioLanguage">Preferred Audio Language</label>
+                        <input type="text" class="form-input" id="preferredAudioLanguage" name="preferred_audio_language" placeholder="e.g., en, es, fr">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="preferredAudioTitle">Preferred Audio Title</label>
+                        <input type="text" class="form-input" id="preferredAudioTitle" name="preferred_audio_title" placeholder="Optional audio track title">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="preferredSubtitleLanguage">Preferred Subtitle Language</label>
+                        <input type="text" class="form-input" id="preferredSubtitleLanguage" name="preferred_subtitle_language" placeholder="e.g., en, es, fr">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="subtitleMode">Subtitle Mode</label>
+                        <select class="form-select" id="subtitleMode" name="subtitle_mode">
+                            <option value="">(none)</option>
+                            <option value="always">Always</option>
+                            <option value="only_forced">Only Forced</option>
+                            <option value="never">Never</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                    <button type="button" class="btn btn-outlined js-close-item-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script nonce="{{ request.state.csp_nonce }}">
+        const scheduleId = {{ schedule_id }};
+        let schedule = null;
+        let items = [];
+        let collections = [];
+        let mediaItems = [];
+        let playlists = [];
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSchedule();
+            loadCollections();
+            loadMediaItems();
+            loadPlaylists();
+            loadItems();
+            
+            const openButton = document.getElementById('openItemModalButton');
+            if (openButton) {
+                openButton.addEventListener('click', openItemModal);
+            }
+            
+            const saveScheduleButton = document.getElementById('saveScheduleButton');
+            if (saveScheduleButton) {
+                saveScheduleButton.addEventListener('click', saveSchedule);
+            }
+            
+            document.querySelectorAll('.js-close-item-modal').forEach(button => {
+                button.addEventListener('click', closeItemModal);
+            });
+            
+            const itemForm = document.getElementById('itemForm');
+            if (itemForm) {
+                itemForm.addEventListener('submit', saveItem);
+            }
+            
+            const startTypeSelect = document.getElementById('startType');
+            if (startTypeSelect) {
+                startTypeSelect.addEventListener('change', updateStartType);
+            }
+            
+            const collectionTypeSelect = document.getElementById('collectionType');
+            if (collectionTypeSelect) {
+                collectionTypeSelect.addEventListener('change', updateCollectionType);
+            }
+            
+            const playbackOrderSelect = document.getElementById('playbackOrder');
+            if (playbackOrderSelect) {
+                playbackOrderSelect.addEventListener('change', updatePlaybackOrder);
+            }
+            
+            const playoutModeSelect = document.getElementById('playoutMode');
+            if (playoutModeSelect) {
+                playoutModeSelect.addEventListener('change', updatePlayoutMode);
+            }
+            
+            const multipleModeSelect = document.getElementById('multipleMode');
+            if (multipleModeSelect) {
+                multipleModeSelect.addEventListener('change', updateMultipleMode);
+            }
+            
+            const fillWithGroupModeSelect = document.getElementById('fillWithGroupMode');
+            if (fillWithGroupModeSelect) {
+                fillWithGroupModeSelect.addEventListener('change', updateFillWithGroupMode);
+            }
+            
+            const tailModeSelect = document.getElementById('tailMode');
+            if (tailModeSelect) {
+                tailModeSelect.addEventListener('change', updateTailMode);
+            }
+            
+            const loadPlexShowsButton = document.getElementById('loadPlexShowsButton');
+            if (loadPlexShowsButton) {
+                loadPlexShowsButton.addEventListener('click', loadPlexShows);
+            }
+            
+            const loadPlexSeasonsButton = document.getElementById('loadPlexSeasonsButton');
+            if (loadPlexSeasonsButton) {
+                loadPlexSeasonsButton.addEventListener('click', loadPlexSeasons);
+            }
+            
+            const plexShowSelect = document.getElementById('plexShowKey');
+            if (plexShowSelect) {
+                plexShowSelect.addEventListener('change', function() {
+                    const collectionType = document.getElementById('collectionType').value;
+                    if (this.value && (collectionType === 'television_season' || collectionType === 'television_show')) {
+                        if (collectionType === 'television_season') {
+                            loadPlexSeasons();
+                        }
+                    }
+                });
+            }
+            
+            if (window.convertMaterialIcons) {
+                setTimeout(() => window.convertMaterialIcons(), 100);
+            }
+        });
+        
+        async function loadSchedule() {
+            try {
+                const res = await fetch(`/api/schedules/${scheduleId}`);
+                schedule = await res.json();
+                document.getElementById('scheduleTitle').textContent = `Schedule #${schedule.id} Items`;
+                document.getElementById('scheduleName').textContent = `Schedule #${schedule.id}`;
+            } catch (error) {
+                console.error('Error loading schedule:', error);
+            }
+        }
+        
+        async function loadCollections() {
+            try {
+                const res = await authenticatedFetch('/api/collections');
+                if (!res.ok) throw new Error('Failed to load collections');
+                collections = await res.json();
+                const manualCollections = collections.filter(c => !c.collection_type || c.collection_type === 'manual');
+                const select = document.getElementById('collectionId');
+                select.innerHTML = '<option value="">Select a collection...</option>' +
+                    manualCollections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                
+                // Also populate tail filler collection selector
+                const tailFillerSelect = document.getElementById('tailFillerCollectionId');
+                if (tailFillerSelect) {
+                    tailFillerSelect.innerHTML = '<option value="">Select a collection for tail filler...</option>' +
+                        manualCollections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                }
+            } catch (error) {
+                console.error('Error loading collections:', error);
+            }
+        }
+        
+        async function loadMediaItems() {
+            try {
+                const res = await fetch('/api/media?limit=1000');
+                const data = await res.json();
+                mediaItems = Array.isArray(data) ? data : (data.items || []);
+                const select = document.getElementById('mediaItemId');
+                select.innerHTML = '<option value="">Select a media item...</option>' +
+                    mediaItems.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading media items:', error);
+            }
+        }
+        
+        async function loadPlaylists() {
+            try {
+                const res = await fetch('/api/playlists');
+                playlists = await res.json();
+                const select = document.getElementById('playlistId');
+                select.innerHTML = '<option value="">Select a playlist...</option>' +
+                    playlists.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading playlists:', error);
+            }
+        }
+        
+        async function loadItems() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                const res = await fetch(`/api/schedule-items?schedule_id=${scheduleId}`);
+                items = await res.json();
+                
+                document.getElementById('loading').style.display = 'none';
+                const container = document.getElementById('itemsList');
+                const emptyState = document.getElementById('emptyState');
+                
+                if (items.length === 0) {
+                    container.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                
+                container.innerHTML = items.map((item, idx) => {
+                    const collectionType = item.collection_type || 'collection';
+                    const collectionName = getCollectionName(item);
+                    const playbackOrder = item.playback_order || 'chronological';
+                    const playoutMode = item.playout_mode || 'one';
+                    
+                    return `
+                        <div class="item-row" data-action="editItem" data-args='[${item.id}]'>
+                            <div class="item-index">${idx + 1}</div>
+                            <div class="item-info">
+                                <div class="item-title">${item.custom_title || collectionName || 'Untitled Item'}</div>
+                                <div class="item-details">
+                                    ${collectionType} | ${playbackOrder} | ${playoutMode}
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn-icon" data-action="moveItem" data-args='[${item.id}, \"up\"]' data-stop-propagation="true" ${idx === 0 ? 'disabled' : ''}>
+                                    <span class="material-icons" aria-hidden="true">arrow_upward</span>
+                                </button>
+                                <button class="btn-icon" data-action="moveItem" data-args='[${item.id}, \"down\"]' data-stop-propagation="true" ${idx === items.length - 1 ? 'disabled' : ''}>
+                                    <span class="material-icons" aria-hidden="true">arrow_downward</span>
+                                </button>
+                                <button class="btn-icon" data-action="deleteItem" data-args='[${item.id}]' data-stop-propagation="true" style="color: var(--error);">
+                                    <span class="material-icons" aria-hidden="true">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                if (typeof bindActionHandlers === 'function') {
+                    bindActionHandlers(container);
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                console.error('Error loading items:', error);
+            }
+        }
+        
+        function getCollectionName(item) {
+            if (item.collection_type === 'collection' && item.collection_id) {
+                const collection = collections.find(c => c.id === item.collection_id);
+                return collection ? collection.name : 'Unknown Collection';
+            } else if (item.collection_type === 'television_show' && item.plex_show_key) {
+                // Try to get show name from Plex shows list if available
+                const showSelect = document.getElementById('plexShowKey');
+                if (showSelect) {
+                    const option = Array.from(showSelect.options).find(opt => opt.value === item.plex_show_key);
+                    if (option) return `TV Show: ${option.textContent}`;
+                }
+                return `TV Show (Key: ${item.plex_show_key})`;
+            } else if (item.collection_type === 'television_season' && item.plex_season_key) {
+                // Try to get season name from Plex seasons list if available
+                const seasonSelect = document.getElementById('plexSeasonKey');
+                if (seasonSelect) {
+                    const option = Array.from(seasonSelect.options).find(opt => opt.value === item.plex_season_key);
+                    if (option) return `TV Season: ${option.textContent}`;
+                }
+                return `TV Season (Key: ${item.plex_season_key})`;
+            } else if (item.collection_type === 'artist' && item.plex_artist_key) {
+                return `Artist (Key: ${item.plex_artist_key})`;
+            } else if (item.collection_type === 'multi_collection' && item.collection_id) {
+                const collection = collections.find(c => c.id === item.collection_id);
+                return collection ? `Multi: ${collection.name}` : 'Unknown Multi Collection';
+            } else if (item.collection_type === 'smart_collection' && item.collection_id) {
+                const collection = collections.find(c => c.id === item.collection_id);
+                return collection ? `Smart: ${collection.name}` : 'Unknown Smart Collection';
+            } else if (item.collection_type === 'playlist' && item.playlist_id) {
+                const playlist = playlists.find(p => p.id === item.playlist_id);
+                return playlist ? playlist.name : 'Unknown Playlist';
+            }
+            return 'No Collection';
+        }
+        
+        function openItemModal() {
+            document.getElementById('itemModalTitle').textContent = 'Add Schedule Item';
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemId').value = '';
+            document.getElementById('itemScheduleId').value = scheduleId;
+            updateStartType();
+            updateCollectionType();
+            updatePlayoutMode();
+            updatePlaybackOrder();
+            updateFillWithGroupMode();
+            updateTailMode();
+            document.getElementById('itemModal').classList.add('active');
+        }
+        
+        function editItem(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            
+            document.getElementById('itemModalTitle').textContent = 'Edit Schedule Item';
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('itemScheduleId').value = item.schedule_id;
+            document.getElementById('startType').value = item.start_type || 'dynamic';
+            document.getElementById('startTime').value = item.start_time ? new Date(item.start_time).toISOString().slice(0, 16) : '';
+            document.getElementById('fixedStartTimeBehavior').value = item.fixed_start_time_behavior || 'strict';
+            document.getElementById('collectionType').value = item.collection_type || 'collection';
+            // Set collection-specific fields
+            if (item.collection_type === 'collection') {
+            document.getElementById('collectionId').value = item.collection_id || '';
+            } else if (item.collection_type === 'multi_collection') {
+                document.getElementById('multiCollectionId').value = item.collection_id || '';
+            } else if (item.collection_type === 'smart_collection') {
+                document.getElementById('smartCollectionId').value = item.collection_id || '';
+            } else if (item.collection_type === 'playlist') {
+            document.getElementById('playlistId').value = item.playlist_id || '';
+            }
+            
+            document.getElementById('plexShowKey').value = item.plex_show_key || '';
+            document.getElementById('plexSeasonKey').value = item.plex_season_key || '';
+            document.getElementById('plexArtistKey').value = item.plex_artist_key || '';
+            document.getElementById('playbackOrder').value = item.playback_order || 'chronological';
+            document.getElementById('playoutMode').value = item.playout_mode || 'one';
+            document.getElementById('multipleMode').value = item.multiple_mode || '';
+            document.getElementById('multipleCount').value = item.multiple_count || '';
+            document.getElementById('playoutDurationHours').value = item.playout_duration_hours || 0;
+            document.getElementById('playoutDurationMinutes').value = item.playout_duration_minutes || 0;
+            document.getElementById('fillWithGroupMode').value = item.fill_with_group_mode || 'none';
+            document.getElementById('tailMode').value = item.tail_mode || 'none';
+            document.getElementById('tailFillerCollectionId').value = item.tail_filler_collection_id || '';
+            document.getElementById('discardToFillAttempts').value = item.discard_to_fill_attempts || '';
+            
+            // Load Plex data if needed
+            if (item.plex_show_key) {
+                loadPlexShows().then(() => {
+                    document.getElementById('plexShowKey').value = item.plex_show_key;
+                    if (item.plex_season_key) {
+                        loadPlexSeasons().then(() => {
+                            document.getElementById('plexSeasonKey').value = item.plex_season_key;
+                        });
+                    }
+                });
+            }
+            document.getElementById('customTitle').value = item.custom_title || '';
+            document.getElementById('guideMode').value = item.guide_mode || 'normal';
+            document.getElementById('preRollFillerId').value = item.pre_roll_filler_id || '';
+            document.getElementById('midRollFillerId').value = item.mid_roll_filler_id || '';
+            document.getElementById('postRollFillerId').value = item.post_roll_filler_id || '';
+            document.getElementById('tailFillerId').value = item.tail_filler_id || '';
+            document.getElementById('fallbackFillerId').value = item.fallback_filler_id || '';
+            document.getElementById('watermarkId').value = item.watermark_id || '';
+            document.getElementById('preferredAudioLanguage').value = item.preferred_audio_language || '';
+            document.getElementById('preferredAudioTitle').value = item.preferred_audio_title || '';
+            document.getElementById('preferredSubtitleLanguage').value = item.preferred_subtitle_language || '';
+            document.getElementById('subtitleMode').value = item.subtitle_mode || '';
+            
+            updateStartType();
+            updateCollectionType();
+            updatePlayoutMode();
+            updatePlaybackOrder();
+            updateFillWithGroupMode();
+            updateTailMode();
+            document.getElementById('itemModal').classList.add('active');
+        }
+        
+        function closeItemModal() {
+            document.getElementById('itemModal').classList.remove('active');
+        }
+        
+        function updateStartType() {
+            const startType = document.getElementById('startType').value;
+            document.getElementById('startTimeGroup').style.display = startType === 'fixed' ? 'block' : 'none';
+            document.getElementById('fixedStartTimeBehaviorGroup').style.display = startType === 'fixed' ? 'block' : 'none';
+        }
+        
+        function updateCollectionType() {
+            const collectionType = document.getElementById('collectionType').value;
+            // Hide all groups first
+            document.getElementById('collectionGroup').style.display = 'none';
+            document.getElementById('televisionShowGroup').style.display = 'none';
+            document.getElementById('televisionSeasonGroup').style.display = 'none';
+            document.getElementById('artistGroup').style.display = 'none';
+            document.getElementById('multiCollectionGroup').style.display = 'none';
+            document.getElementById('smartCollectionGroup').style.display = 'none';
+            document.getElementById('playlistGroup').style.display = 'none';
+            
+            // Show appropriate group
+            if (collectionType === 'collection') {
+                document.getElementById('collectionGroup').style.display = 'block';
+            } else if (collectionType === 'television_show') {
+                document.getElementById('televisionShowGroup').style.display = 'block';
+                if (!document.getElementById('plexShowKey').options.length || document.getElementById('plexShowKey').options.length === 1) {
+                    loadPlexShows();
+                }
+            } else if (collectionType === 'television_season') {
+                document.getElementById('televisionShowGroup').style.display = 'block';
+                document.getElementById('televisionSeasonGroup').style.display = 'block';
+                if (!document.getElementById('plexShowKey').options.length || document.getElementById('plexShowKey').options.length === 1) {
+                    loadPlexShows();
+                }
+                // Load seasons if show is already selected
+                const selectedShow = document.getElementById('plexShowKey').value;
+                if (selectedShow) {
+                    loadPlexSeasons();
+                }
+            } else if (collectionType === 'artist') {
+                document.getElementById('artistGroup').style.display = 'block';
+            } else if (collectionType === 'multi_collection') {
+                document.getElementById('multiCollectionGroup').style.display = 'block';
+                loadMultiCollections();
+            } else if (collectionType === 'smart_collection') {
+                document.getElementById('smartCollectionGroup').style.display = 'block';
+                loadSmartCollections();
+            } else if (collectionType === 'playlist') {
+                document.getElementById('playlistGroup').style.display = 'block';
+            }
+            
+            // Update playback order restrictions and other dependent fields
+            updatePlaybackOrder();
+            updateFillWithGroupMode();
+        }
+        
+        async function loadPlexShows() {
+            try {
+                const response = await authenticatedFetch('/api/schedules/plex/shows');
+                if (!response.ok) throw new Error('Failed to load Plex shows');
+                const data = await response.json();
+                const shows = data.items || [];
+                
+                const select = document.getElementById('plexShowKey');
+                select.innerHTML = '<option value="">Select a TV show from Plex...</option>';
+                shows.forEach(show => {
+                    const option = document.createElement('option');
+                    option.value = show.ratingKey || show.key;
+                    option.textContent = show.title || show.name || `Show ${show.ratingKey}`;
+                    option.dataset.showKey = show.key || show.ratingKey;
+                    select.appendChild(option);
+                });
+                
+                // If editing and show is already selected, load seasons
+                const selectedShow = document.getElementById('plexShowKey').value;
+                if (selectedShow && document.getElementById('collectionType').value === 'television_season') {
+                    loadPlexSeasons();
+                }
+            } catch (error) {
+                console.error('Error loading Plex shows:', error);
+                showAlert('Failed to load Plex shows. Make sure Plex is configured.', 'error');
+            }
+        }
+        
+        async function loadPlexSeasons() {
+            const showKey = document.getElementById('plexShowKey').value;
+            if (!showKey) {
+                document.getElementById('plexSeasonKey').innerHTML = '<option value="">First select a TV show...</option>';
+                return;
+            }
+            
+            try {
+                const response = await authenticatedFetch(`/api/schedules/plex/shows/${showKey}/seasons`);
+                if (!response.ok) throw new Error('Failed to load seasons');
+                const data = await response.json();
+                const seasons = data.items || [];
+                
+                const select = document.getElementById('plexSeasonKey');
+                select.innerHTML = '<option value="">Select a season...</option>';
+                seasons.forEach(season => {
+                    const option = document.createElement('option');
+                    option.value = season.ratingKey || season.key;
+                    option.textContent = season.title || `Season ${season.index || ''}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading Plex seasons:', error);
+                showAlert('Failed to load seasons for this show.', 'error');
+            }
+        }
+        
+        async function loadMultiCollections() {
+            try {
+                const response = await authenticatedFetch('/api/collections');
+                if (!response.ok) throw new Error('Failed to load collections');
+                const allCollections = await response.json();
+                const multiCollections = allCollections.filter(c => c.collection_type === 'multi');
+                
+                const select = document.getElementById('multiCollectionId');
+                select.innerHTML = '<option value="">Select a multi collection...</option>';
+                multiCollections.forEach(collection => {
+                    const option = document.createElement('option');
+                    option.value = collection.id;
+                    option.textContent = collection.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading multi collections:', error);
+            }
+        }
+        
+        async function loadSmartCollections() {
+            try {
+                const response = await authenticatedFetch('/api/collections');
+                if (!response.ok) throw new Error('Failed to load collections');
+                const allCollections = await response.json();
+                const smartCollections = allCollections.filter(c => c.collection_type === 'smart');
+                
+                const select = document.getElementById('smartCollectionId');
+                select.innerHTML = '<option value="">Select a smart collection...</option>';
+                smartCollections.forEach(collection => {
+                    const option = document.createElement('option');
+                    option.value = collection.id;
+                    option.textContent = collection.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading smart collections:', error);
+            }
+        }
+        
+        function updatePlaybackOrder() {
+            const playbackOrder = document.getElementById('playbackOrder').value;
+            const collectionType = document.getElementById('collectionType').value;
+            const helpText = document.getElementById('playbackOrderHelp');
+            
+            if (playbackOrder === 'shuffle_in_order' && !['collection', 'smart_collection', 'multi_collection'].includes(collectionType)) {
+                helpText.textContent = 'Shuffle In Order can only be used with Collection, Smart Collection and Multi Collection.';
+                helpText.style.color = 'var(--error)';
+            } else if (playbackOrder === 'season_episode' && collectionType !== 'television_show') {
+                helpText.textContent = 'Season, Episode can only be used with Television Show.';
+                helpText.style.color = 'var(--error)';
+            } else {
+                helpText.textContent = 'Shuffle In Order can only be used with Collection, Smart Collection and Multi Collection. Season, Episode can only be used with Television Show.';
+                helpText.style.color = 'var(--text-secondary)';
+            }
+        }
+        
+        function updatePlayoutMode() {
+            const playoutMode = document.getElementById('playoutMode').value;
+            document.getElementById('multipleModeGroup').style.display = (playoutMode === 'multiple' || playoutMode === 'duration') ? 'block' : 'none';
+            document.getElementById('playoutDurationGroup').style.display = playoutMode === 'duration' ? 'flex' : 'none';
+            document.getElementById('fillWithGroupModeGroup').style.display = (playoutMode === 'duration' || playoutMode === 'multiple') ? 'block' : 'none';
+            document.getElementById('tailModeGroup').style.display = playoutMode === 'duration' ? 'block' : 'none';
+            
+            if (playoutMode === 'multiple') {
+                updateMultipleMode();
+            } else if (playoutMode === 'duration') {
+                document.getElementById('multipleMode').value = 'count'; // Duration uses count mode internally
+                document.getElementById('multipleCountGroup').style.display = 'none';
+            } else {
+                document.getElementById('multipleCountGroup').style.display = 'none';
+            }
+            
+            updateFillWithGroupMode();
+            updateTailMode();
+        }
+        
+        function updateMultipleMode() {
+            const multipleMode = document.getElementById('multipleMode').value;
+            const playoutMode = document.getElementById('playoutMode').value;
+            const collectionType = document.getElementById('collectionType').value;
+            const playbackOrder = document.getElementById('playbackOrder').value;
+            const helpText = document.getElementById('multipleModeHelp');
+            
+            document.getElementById('multipleCountGroup').style.display = (multipleMode === 'count') ? 'block' : 'none';
+            
+            // Validation help text
+            let helpMessages = [];
+            if (multipleMode === 'collection_size' && collectionType === 'playlist') {
+                helpMessages.push('Collection Size cannot be used with Playlist.');
+            }
+            if (multipleMode === 'multi_episode_group_size' && playbackOrder !== 'chronological') {
+                helpMessages.push('Multi-Episode Group Size can only be used when Playback Order is Chronological.');
+            }
+            if (multipleMode === 'playlist_item_size' && collectionType !== 'playlist') {
+                helpMessages.push('Playlist Item Size can only be used with Playlist.');
+            }
+            
+            if (helpMessages.length > 0) {
+                helpText.textContent = helpMessages.join(' ');
+                helpText.style.color = 'var(--error)';
+            } else {
+                helpText.textContent = 'Collection Size cannot be used with Playlist. Multi-Episode Group Size can only be used when Playback Order is Chronological. Playlist Item Size can only be used with Playlist.';
+                helpText.style.color = 'var(--text-secondary)';
+            }
+        }
+        
+        function updateFillWithGroupMode() {
+            const collectionType = document.getElementById('collectionType').value;
+            const playbackOrder = document.getElementById('playbackOrder').value;
+            const playoutMode = document.getElementById('playoutMode').value;
+            const fillWithGroupModeGroup = document.getElementById('fillWithGroupModeGroup');
+            
+            // Can only be used with Collection, Smart Collection, Multi Collection
+            // Can only be used with Duration or Multiple
+            // Cannot be used with Shuffle In Order
+            const canUseFillWithGroup = ['collection', 'smart_collection', 'multi_collection'].includes(collectionType) &&
+                                       ['duration', 'multiple'].includes(playoutMode) &&
+                                       playbackOrder !== 'shuffle_in_order';
+            
+            if (fillWithGroupModeGroup) {
+                fillWithGroupModeGroup.style.display = canUseFillWithGroup ? 'block' : 'none';
+            }
+        }
+        
+        function updateTailMode() {
+            const tailMode = document.getElementById('tailMode').value;
+            document.getElementById('tailFillerCollectionGroup').style.display = tailMode === 'filler' ? 'block' : 'none';
+        }
+        
+        
+        async function saveItem(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const collectionType = formData.get('collection_type');
+            
+            const data = {
+                schedule_id: parseInt(formData.get('schedule_id')),
+                start_type: formData.get('start_type'),
+                start_time: formData.get('start_time') || null,
+                fixed_start_time_behavior: formData.get('fixed_start_time_behavior') || null,
+                collection_type: collectionType,
+                playback_order: formData.get('playback_order'),
+                playout_mode: formData.get('playout_mode'),
+                multiple_mode: formData.get('multiple_mode') || null,
+                multiple_count: formData.get('multiple_count') ? parseInt(formData.get('multiple_count')) : null,
+                playout_duration_hours: parseInt(formData.get('playout_duration_hours') || 0),
+                playout_duration_minutes: parseInt(formData.get('playout_duration_minutes') || 0),
+                fill_with_group_mode: formData.get('fill_with_group_mode') || null,
+                tail_mode: formData.get('tail_mode') || null,
+                tail_filler_collection_id: formData.get('tail_filler_collection_id') ? parseInt(formData.get('tail_filler_collection_id')) : null,
+                discard_to_fill_attempts: formData.get('discard_to_fill_attempts') ? parseInt(formData.get('discard_to_fill_attempts')) : null,
+                custom_title: formData.get('custom_title') || null,
+                guide_mode: formData.get('guide_mode'),
+                pre_roll_filler_id: formData.get('pre_roll_filler_id') ? parseInt(formData.get('pre_roll_filler_id')) : null,
+                mid_roll_filler_id: formData.get('mid_roll_filler_id') ? parseInt(formData.get('mid_roll_filler_id')) : null,
+                post_roll_filler_id: formData.get('post_roll_filler_id') ? parseInt(formData.get('post_roll_filler_id')) : null,
+                tail_filler_id: formData.get('tail_filler_id') ? parseInt(formData.get('tail_filler_id')) : null,
+                fallback_filler_id: formData.get('fallback_filler_id') ? parseInt(formData.get('fallback_filler_id')) : null,
+                watermark_id: formData.get('watermark_id') ? parseInt(formData.get('watermark_id')) : null,
+                preferred_audio_language: formData.get('preferred_audio_language') || null,
+                preferred_audio_title: formData.get('preferred_audio_title') || null,
+                preferred_subtitle_language: formData.get('preferred_subtitle_language') || null,
+                subtitle_mode: formData.get('subtitle_mode') || null
+            };
+            
+            // Set collection-specific fields based on collection type
+            if (collectionType === 'collection') {
+                const collectionId = formData.get('collection_id');
+                data.collection_id = collectionId ? parseInt(collectionId) : null;
+            } else if (collectionType === 'multi_collection') {
+                const multiCollectionId = formData.get('multiCollectionId');
+                data.collection_id = multiCollectionId ? parseInt(multiCollectionId) : null;
+            } else if (collectionType === 'smart_collection') {
+                const smartCollectionId = formData.get('smartCollectionId');
+                data.collection_id = smartCollectionId ? parseInt(smartCollectionId) : null;
+            } else if (collectionType === 'television_show') {
+                data.plex_show_key = formData.get('plex_show_key') || null;
+            } else if (collectionType === 'television_season') {
+                data.plex_show_key = formData.get('plex_show_key') || null;
+                data.plex_season_key = formData.get('plex_season_key') || null;
+            } else if (collectionType === 'artist') {
+                data.plex_artist_key = formData.get('plex_artist_key') || null;
+            } else if (collectionType === 'playlist') {
+                data.playlist_id = formData.get('playlist_id') ? parseInt(formData.get('playlist_id')) : null;
+            }
+            
+            const id = formData.get('id');
+            const url = id ? `/api/schedule-items/${id}` : '/api/schedule-items';
+            const method = id ? 'PUT' : 'POST';
+            
+            try {
+                const res = await authenticatedFetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    closeItemModal();
+                    await loadItems();
+                    showAlert('Schedule item saved successfully', 'success');
+                } else {
+                    const error = await res.json();
+                    showAlert(error.detail || 'Failed to save schedule item', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving item:', error);
+                alert('Failed to save item');
+            }
+        }
+        
+        async function deleteItem(id) {
+            if (!confirm('Are you sure you want to delete this schedule item?')) return;
+            
+            try {
+                const res = await authenticatedFetch(`/api/schedule-items/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadItems();
+                    showAlert('Schedule item deleted successfully', 'success');
+                } else {
+                    const error = await res.json();
+                    showAlert(error.detail || 'Failed to delete item', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                showAlert('Failed to delete item', 'error');
+            }
+        }
+        
+        async function moveItem(id, direction) {
+            try {
+                const res = await authenticatedFetch(`/api/schedule-items/${id}/move?direction=${direction}`, { method: 'POST' });
+                if (res.ok) {
+                    loadItems();
+                } else {
+                    const error = await res.json();
+                    showAlert(error.detail || 'Failed to move item', 'error');
+                }
+            } catch (error) {
+                console.error('Error moving item:', error);
+                showAlert('Failed to move item', 'error');
+            }
+        }
+        
+        function saveSchedule() {
+            // Schedule configuration is saved automatically when schedule items are saved
+            showAlert('Schedule configuration is saved automatically with schedule items', 'info');
+        }
+        
+        // Helper function for alerts if not defined in base.html
+        function showAlert(message, type = 'info') {
+            // Try to use base.html's showAlert if available
+            if (typeof window.showAlert === 'function') {
+                window.showAlert(message, type);
+                return;
+            }
+            
+            // Fallback alert
+            const alertDiv = document.createElement('div');
+            alertDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 16px 24px;
+                background: ${type === 'error' ? '#ff4444' : type === 'success' ? '#44ff44' : '#4444ff'};
+                color: white;
+                border-radius: 8px;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            `;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 3000);
+        }
+    </script>
+{% endblock %}
+

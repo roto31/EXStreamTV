@@ -1,0 +1,9 @@
+{
+  "name": "get_api_overview",
+  "description": "Get an overview of the EXStreamTV API modules (exstreamtv.api) and main app routes. Returns api_modules list and high-level route categories.",
+  "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

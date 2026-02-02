@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+
+{% block title %}Deco - StreamTV{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .deco-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .deco-toolbar {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .deco-list {
+        background: var(--surface);
+        border-radius: 12px;
+        overflow: hidden;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .deco-row {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 0.5px solid var(--divider);
+        transition: background 0.2s;
+        cursor: pointer;
+    }
+    
+    .deco-row:hover {
+        background: var(--hover);
+    }
+    
+    .deco-row:last-child {
+        border-bottom: none;
+    }
+    
+    .deco-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .deco-name {
+        font-weight: 500;
+        color: var(--text-primary);
+        font-size: 17px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .deco-details {
+        font-size: 13px;
+        color: var(--text-secondary);
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .deco-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        background: var(--background);
+        border-radius: 6px;
+        font-size: 12px;
+    }
+    
+    .deco-badge.bumper {
+        background: rgba(255, 149, 0, 0.15);
+        color: var(--warning);
+    }
+    
+    .deco-badge.commercial {
+        background: rgba(10, 132, 255, 0.15);
+        color: var(--primary);
+    }
+    
+    .deco-badge.station_id {
+        background: rgba(52, 199, 89, 0.15);
+        color: var(--success);
+    }
+    
+    .deco-badge.promo {
+        background: rgba(175, 82, 222, 0.15);
+        color: #af52de;
+    }
+    
+    .deco-badge.credits {
+        background: rgba(142, 142, 147, 0.15);
+        color: var(--text-secondary);
+    }
+    
+    .deco-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    .modal.active {
+        display: flex;
+    }
+    
+    .modal-content {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 600px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+    
+    .modal-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 15px;
+    }
+    
+    .form-input, .form-select {
+        width: 100%;
+        padding: 12px 16px;
+        background: var(--background);
+        border: 0.5px solid var(--divider);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 17px;
+        font-family: inherit;
+        box-sizing: border-box;
+    }
+    
+    .form-input:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 16px;
+    }
+    
+    .form-row .form-group {
+        flex: 1;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 24px;
+    }
+    
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        background: var(--background);
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .section-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="content-header">
+        <h1>Deco</h1>
+        <p>Bumpers, station IDs, commercials, and promotional content between programs</p>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="deco-container">
+        <div class="deco-toolbar">
+            <button class="btn btn-primary" id="openDecoModalButton" aria-label="Create new deco">
+                <span class="material-icons">add</span>
+                Add Deco
+            </button>
+            <button class="btn btn-outlined" id="openGroupModalButton" aria-label="Create deco group">
+                <span class="material-icons">create_new_folder</span>
+                Add Group
+            </button>
+            <div style="flex: 1;"></div>
+            <button class="btn btn-outlined" id="refreshButton" aria-label="Refresh">
+                <span class="material-icons">refresh</span>
+                Refresh
+            </button>
+        </div>
+        
+        <div class="deco-list" id="decoList">
+            <div class="loading" id="loading">Loading deco items...</div>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-state-icon">
+                    <span class="material-icons" style="font-size: 48px;">auto_awesome</span>
+                </div>
+                <h3>No deco items found</h3>
+                <p>Create deco items for bumpers, station IDs, and promotions</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create/Edit Deco Modal -->
+    <div class="modal" id="decoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Add Deco</h2>
+                <button class="btn-icon" id="closeDecoModal" type="button" aria-label="Close">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form id="decoForm">
+                <input type="hidden" id="decoId" name="id">
+                
+                <div class="form-group">
+                    <label class="form-label" for="decoName">Deco Name *</label>
+                    <input type="text" id="decoName" name="name" class="form-input" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="decoType">Type *</label>
+                        <select id="decoType" name="deco_type" class="form-select" required>
+                            <option value="bumper">Bumper</option>
+                            <option value="commercial">Commercial</option>
+                            <option value="station_id">Station ID</option>
+                            <option value="promo">Promo</option>
+                            <option value="credits">Credits</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="groupId">Group</label>
+                        <select id="groupId" name="group_id" class="form-select">
+                            <option value="">No group</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="filePath">File Path</label>
+                    <input type="text" id="filePath" name="file_path" class="form-input" placeholder="/path/to/video.mp4">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="durationSeconds">Duration (seconds)</label>
+                        <input type="number" id="durationSeconds" name="duration_seconds" class="form-input" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="weight">Weight</label>
+                        <input type="number" id="weight" name="weight" class="form-input" min="1" value="1">
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outlined" id="cancelDecoBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Deco</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Create/Edit Group Modal -->
+    <div class="modal" id="groupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="groupModalTitle">Add Deco Group</h2>
+                <button class="btn-icon" id="closeGroupModal" type="button" aria-label="Close">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form id="groupForm">
+                <input type="hidden" id="groupFormId" name="id">
+                
+                <div class="form-group">
+                    <label class="form-label" for="groupName">Group Name *</label>
+                    <input type="text" id="groupName" name="name" class="form-input" required>
+                </div>
+                
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outlined" id="cancelGroupBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+let decos = [];
+let groups = [];
+
+async function loadGroups() {
+    try {
+        const response = await authenticatedFetch('/api/deco-groups');
+        if (!response.ok) throw new Error('Failed to load groups');
+        groups = await response.json();
+        
+        const select = document.getElementById('groupId');
+        select.innerHTML = '<option value="">No group</option>';
+        groups.forEach(group => {
+            const option = document.createElement('option');
+            option.value = group.id;
+            option.textContent = group.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading groups:', error);
+    }
+}
+
+async function loadDecos() {
+    const loading = document.getElementById('loading');
+    const emptyState = document.getElementById('emptyState');
+    const list = document.getElementById('decoList');
+    
+    loading.style.display = 'block';
+    emptyState.style.display = 'none';
+    
+    try {
+        const response = await authenticatedFetch('/api/deco');
+        if (!response.ok) throw new Error('Failed to load decos');
+        decos = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (decos.length === 0) {
+            emptyState.style.display = 'block';
+            return;
+        }
+        
+        // Group decos
+        const grouped = {};
+        const ungrouped = [];
+        
+        decos.forEach(deco => {
+            if (deco.group_id) {
+                if (!grouped[deco.group_id]) grouped[deco.group_id] = [];
+                grouped[deco.group_id].push(deco);
+            } else {
+                ungrouped.push(deco);
+            }
+        });
+        
+        let html = '';
+        
+        // Render grouped decos
+        groups.forEach(group => {
+            if (grouped[group.id] && grouped[group.id].length > 0) {
+                html += `
+                    <div class="section-header">
+                        <span class="section-title">${escapeHtml(group.name)}</span>
+                        <button class="btn-icon" onclick="deleteGroup(${group.id})" title="Delete group">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    </div>
+                `;
+                grouped[group.id].forEach(deco => {
+                    html += renderDecoRow(deco);
+                });
+            }
+        });
+        
+        // Render ungrouped decos
+        if (ungrouped.length > 0) {
+            if (Object.keys(grouped).length > 0) {
+                html += `<div class="section-header"><span class="section-title">Ungrouped</span></div>`;
+            }
+            ungrouped.forEach(deco => {
+                html += renderDecoRow(deco);
+            });
+        }
+        
+        list.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading decos:', error);
+        loading.style.display = 'none';
+        showAlert('Failed to load deco items', 'error');
+    }
+}
+
+function renderDecoRow(deco) {
+    const typeLabels = {
+        'bumper': 'Bumper',
+        'commercial': 'Commercial',
+        'station_id': 'Station ID',
+        'promo': 'Promo',
+        'credits': 'Credits'
+    };
+    
+    return `
+        <div class="deco-row" onclick="editDeco(${deco.id})">
+            <div class="deco-info">
+                <div class="deco-name">
+                    ${escapeHtml(deco.name)}
+                    <span class="deco-badge ${deco.deco_type}">${typeLabels[deco.deco_type] || deco.deco_type}</span>
+                </div>
+                <div class="deco-details">
+                    ${deco.duration_seconds ? `<span>${deco.duration_seconds}s</span>` : ''}
+                    ${deco.file_path ? `<span>${escapeHtml(deco.file_path.split('/').pop())}</span>` : ''}
+                    <span>Weight: ${deco.weight}</span>
+                </div>
+            </div>
+            <div class="deco-actions">
+                <button class="btn-icon" onclick="event.stopPropagation(); editDeco(${deco.id})" title="Edit">
+                    <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon" onclick="event.stopPropagation(); deleteDeco(${deco.id})" title="Delete">
+                    <span class="material-icons">delete</span>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function openDecoModal() {
+    document.getElementById('decoId').value = '';
+    document.getElementById('decoForm').reset();
+    document.getElementById('weight').value = 1;
+    document.getElementById('modalTitle').textContent = 'Add Deco';
+    document.getElementById('decoModal').classList.add('active');
+}
+
+function editDeco(decoId) {
+    const deco = decos.find(d => d.id === decoId);
+    if (!deco) return;
+    
+    document.getElementById('decoId').value = deco.id;
+    document.getElementById('decoName').value = deco.name || '';
+    document.getElementById('decoType').value = deco.deco_type || 'bumper';
+    document.getElementById('groupId').value = deco.group_id || '';
+    document.getElementById('filePath').value = deco.file_path || '';
+    document.getElementById('durationSeconds').value = deco.duration_seconds || '';
+    document.getElementById('weight').value = deco.weight || 1;
+    
+    document.getElementById('modalTitle').textContent = 'Edit Deco';
+    document.getElementById('decoModal').classList.add('active');
+}
+
+function closeDecoModal() {
+    document.getElementById('decoModal').classList.remove('active');
+}
+
+function openGroupModal() {
+    document.getElementById('groupFormId').value = '';
+    document.getElementById('groupForm').reset();
+    document.getElementById('groupModalTitle').textContent = 'Add Deco Group';
+    document.getElementById('groupModal').classList.add('active');
+}
+
+function closeGroupModal() {
+    document.getElementById('groupModal').classList.remove('active');
+}
+
+async function saveDeco(event) {
+    event.preventDefault();
+    
+    const formData = {
+        name: document.getElementById('decoName').value,
+        deco_type: document.getElementById('decoType').value,
+        group_id: document.getElementById('groupId').value ? parseInt(document.getElementById('groupId').value) : null,
+        file_path: document.getElementById('filePath').value || null,
+        duration_seconds: document.getElementById('durationSeconds').value ? parseInt(document.getElementById('durationSeconds').value) : null,
+        weight: parseInt(document.getElementById('weight').value) || 1
+    };
+    
+    const decoId = document.getElementById('decoId').value;
+    const url = decoId ? `/api/deco/${decoId}` : '/api/deco';
+    const method = decoId ? 'PUT' : 'POST';
+    
+    try {
+        const response = await authenticatedFetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to save deco');
+        }
+        
+        closeDecoModal();
+        await loadDecos();
+        showAlert('Deco saved successfully', 'success');
+    } catch (error) {
+        console.error('Error saving deco:', error);
+        showAlert(error.message || 'Failed to save deco', 'error');
+    }
+}
+
+async function deleteDeco(decoId) {
+    if (!confirm('Are you sure you want to delete this deco item?')) return;
+    
+    try {
+        const response = await authenticatedFetch(`/api/deco/${decoId}`, {method: 'DELETE'});
+        if (!response.ok) throw new Error('Failed to delete deco');
+        
+        await loadDecos();
+        showAlert('Deco deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting deco:', error);
+        showAlert('Failed to delete deco', 'error');
+    }
+}
+
+async function saveGroup(event) {
+    event.preventDefault();
+    
+    const formData = {
+        name: document.getElementById('groupName').value
+    };
+    
+    const groupId = document.getElementById('groupFormId').value;
+    const url = groupId ? `/api/deco-groups/${groupId}` : '/api/deco-groups';
+    const method = groupId ? 'PUT' : 'POST';
+    
+    try {
+        const response = await authenticatedFetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) throw new Error('Failed to save group');
+        
+        closeGroupModal();
+        await loadGroups();
+        await loadDecos();
+        showAlert('Group saved successfully', 'success');
+    } catch (error) {
+        console.error('Error saving group:', error);
+        showAlert('Failed to save group', 'error');
+    }
+}
+
+async function deleteGroup(groupId) {
+    if (!confirm('Are you sure you want to delete this group and all its deco items?')) return;
+    
+    try {
+        const response = await authenticatedFetch(`/api/deco-groups/${groupId}`, {method: 'DELETE'});
+        if (!response.ok) throw new Error('Failed to delete group');
+        
+        await loadGroups();
+        await loadDecos();
+        showAlert('Group deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting group:', error);
+        showAlert('Failed to delete group', 'error');
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadGroups();
+    await loadDecos();
+    
+    document.getElementById('openDecoModalButton').addEventListener('click', openDecoModal);
+    document.getElementById('openGroupModalButton').addEventListener('click', openGroupModal);
+    document.getElementById('refreshButton').addEventListener('click', () => {
+        loadGroups();
+        loadDecos();
+    });
+    
+    document.getElementById('closeDecoModal').addEventListener('click', closeDecoModal);
+    document.getElementById('cancelDecoBtn').addEventListener('click', closeDecoModal);
+    document.getElementById('decoForm').addEventListener('submit', saveDeco);
+    
+    document.getElementById('closeGroupModal').addEventListener('click', closeGroupModal);
+    document.getElementById('cancelGroupBtn').addEventListener('click', closeGroupModal);
+    document.getElementById('groupForm').addEventListener('submit', saveGroup);
+});
+</script>
+{% endblock %}

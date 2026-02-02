@@ -1,0 +1,739 @@
+{% extends "base.html" %}
+
+{% block title %}System Monitor - EXStreamTV{% endblock %}
+
+{% block extra_styles %}
+    .monitor-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    
+    @media (max-width: 1200px) {
+        .monitor-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .monitor-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .metric-card {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 20px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .metric-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+    
+    .metric-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .metric-icon {
+        font-size: 20px;
+    }
+    
+    .metric-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1;
+        margin-bottom: 8px;
+    }
+    
+    .metric-chart {
+        height: 60px;
+        position: relative;
+    }
+    
+    .metric-bar {
+        height: 8px;
+        background: var(--apple-fill);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 12px;
+    }
+    
+    .metric-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+    
+    .metric-bar-fill.cpu { background: linear-gradient(90deg, #0A84FF, #5AC8FA); }
+    .metric-bar-fill.memory { background: linear-gradient(90deg, #AF52DE, #BF5AF2); }
+    .metric-bar-fill.disk { background: linear-gradient(90deg, #34C759, #30D158); }
+    .metric-bar-fill.network { background: linear-gradient(90deg, #FF9500, #FFCC00); }
+    
+    .metric-bar-fill.warning { background: linear-gradient(90deg, #FF9500, #FFCC00); }
+    .metric-bar-fill.critical { background: linear-gradient(90deg, #FF3B30, #FF6961); }
+    
+    .metric-subtitle {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-top: 8px;
+    }
+    
+    /* Panels Layout */
+    .panels-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+    
+    @media (max-width: 1024px) {
+        .panels-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .panel {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 0.5px solid var(--divider);
+        overflow: hidden;
+    }
+    
+    .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .panel-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .panel-badge {
+        padding: 4px 10px;
+        background: var(--apple-fill);
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+    
+    .panel-badge.active {
+        background: rgba(52, 199, 89, 0.2);
+        color: #34C759;
+    }
+    
+    .panel-body {
+        padding: 0;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    /* Stream List */
+    .stream-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        border-bottom: 0.5px solid var(--divider);
+        transition: background 0.2s ease;
+    }
+    
+    .stream-item:hover {
+        background: var(--apple-fill);
+    }
+    
+    .stream-item:last-child {
+        border-bottom: none;
+    }
+    
+    .stream-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #34C759;
+        flex-shrink: 0;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.4); }
+        50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(52, 199, 89, 0); }
+    }
+    
+    .stream-indicator.idle {
+        background: var(--apple-gray-3);
+        animation: none;
+    }
+    
+    .stream-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .stream-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .stream-detail {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-top: 2px;
+    }
+    
+    .stream-stats {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .stream-stat {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .stream-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    /* Process List */
+    .process-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 20px;
+        border-bottom: 0.5px solid var(--divider);
+    }
+    
+    .process-item:last-child {
+        border-bottom: none;
+    }
+    
+    .process-icon {
+        width: 36px;
+        height: 36px;
+        background: var(--apple-fill);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+    
+    .process-name {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+    
+    .process-cpu, .process-memory {
+        width: 60px;
+        text-align: right;
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+    
+    /* Log Viewer */
+    .log-viewer {
+        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        padding: 16px 20px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .log-entry {
+        display: flex;
+        gap: 12px;
+        padding: 4px 0;
+    }
+    
+    .log-time {
+        color: var(--text-secondary);
+        flex-shrink: 0;
+    }
+    
+    .log-level {
+        width: 60px;
+        flex-shrink: 0;
+        font-weight: 500;
+    }
+    
+    .log-level.info { color: #0A84FF; }
+    .log-level.warn { color: #FF9500; }
+    .log-level.error { color: #FF3B30; }
+    .log-level.debug { color: var(--text-secondary); }
+    
+    .log-message {
+        color: var(--text-primary);
+        word-break: break-all;
+    }
+    
+    /* Network Stats */
+    .network-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        padding: 20px;
+    }
+    
+    .network-stat {
+        text-align: center;
+        padding: 16px;
+        background: var(--apple-fill);
+        border-radius: 12px;
+    }
+    
+    .network-stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .network-stat-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+    }
+    
+    /* Sparkline Charts */
+    .sparkline {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 40px;
+    }
+    
+    .sparkline-bar {
+        flex: 1;
+        background: var(--primary);
+        border-radius: 2px;
+        opacity: 0.6;
+        transition: height 0.3s ease;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+    }
+    
+    .empty-icon {
+        font-size: 48px;
+        opacity: 0.5;
+        margin-bottom: 12px;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">System Monitor</h1>
+            <p class="page-subtitle">Real-time system performance and active streams.</p>
+        </div>
+        <div class="page-actions">
+            <span id="lastUpdate" style="color: var(--text-secondary); font-size: 13px; margin-right: 16px;">
+                Last update: --
+            </span>
+            <button class="btn btn-secondary" onclick="toggleAutoRefresh()">
+                <span id="refreshIcon">⏸️</span> Auto-refresh
+            </button>
+        </div>
+    </div>
+    
+    <!-- Metrics Grid -->
+    <div class="monitor-grid">
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">CPU Usage</span>
+                <span class="metric-icon">⚡</span>
+            </div>
+            <div class="metric-value" id="cpuValue">0%</div>
+            <div class="sparkline" id="cpuSparkline">
+                <!-- Sparkline bars -->
+            </div>
+            <div class="metric-bar">
+                <div class="metric-bar-fill cpu" id="cpuBar" style="width: 0%"></div>
+            </div>
+            <div class="metric-subtitle" id="cpuSubtitle">0 cores</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Memory</span>
+                <span class="metric-icon">💾</span>
+            </div>
+            <div class="metric-value" id="memoryValue">0 GB</div>
+            <div class="sparkline" id="memorySparkline">
+                <!-- Sparkline bars -->
+            </div>
+            <div class="metric-bar">
+                <div class="metric-bar-fill memory" id="memoryBar" style="width: 0%"></div>
+            </div>
+            <div class="metric-subtitle" id="memorySubtitle">0% of 0 GB</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Disk</span>
+                <span class="metric-icon">💿</span>
+            </div>
+            <div class="metric-value" id="diskValue">0 GB</div>
+            <div class="metric-bar">
+                <div class="metric-bar-fill disk" id="diskBar" style="width: 0%"></div>
+            </div>
+            <div class="metric-subtitle" id="diskSubtitle">0% used</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-label">Network</span>
+                <span class="metric-icon">🌐</span>
+            </div>
+            <div class="metric-value" id="networkValue">0 MB/s</div>
+            <div class="sparkline" id="networkSparkline">
+                <!-- Sparkline bars -->
+            </div>
+            <div class="metric-subtitle" id="networkSubtitle">↑ 0 MB  ↓ 0 MB</div>
+        </div>
+    </div>
+    
+    <!-- Panels -->
+    <div class="panels-grid">
+        <!-- Active Streams -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">Active Streams</span>
+                <span class="panel-badge active" id="streamCount">0 active</span>
+            </div>
+            <div class="panel-body" id="streamList">
+                <div class="empty-state">
+                    <div class="empty-icon">📺</div>
+                    <p>No active streams</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FFmpeg Processes -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">FFmpeg Processes</span>
+                <span class="panel-badge" id="processCount">0 running</span>
+            </div>
+            <div class="panel-body" id="processList">
+                <div class="empty-state">
+                    <div class="empty-icon">⚙️</div>
+                    <p>No FFmpeg processes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panels-grid">
+        <!-- Network Bandwidth -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">Network Bandwidth</span>
+            </div>
+            <div class="network-grid">
+                <div class="network-stat">
+                    <div class="network-stat-value" id="netUpload">0</div>
+                    <div class="network-stat-label">MB Uploaded</div>
+                </div>
+                <div class="network-stat">
+                    <div class="network-stat-value" id="netDownload">0</div>
+                    <div class="network-stat-label">MB Downloaded</div>
+                </div>
+                <div class="network-stat">
+                    <div class="network-stat-value" id="netConnections">0</div>
+                    <div class="network-stat-label">Connections</div>
+                </div>
+                <div class="network-stat">
+                    <div class="network-stat-value" id="netBitrate">0</div>
+                    <div class="network-stat-label">Mbps Total</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Logs -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">Recent Logs</span>
+                <a href="/logs" class="btn btn-ghost btn-sm">View All</a>
+            </div>
+            <div class="panel-body">
+                <div class="log-viewer" id="logViewer">
+                    <!-- Logs loaded via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let autoRefresh = true;
+    let refreshInterval;
+    let cpuHistory = [];
+    let memoryHistory = [];
+    let networkHistory = [];
+    const HISTORY_LENGTH = 20;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize sparklines
+        initSparklines();
+        
+        // Load data
+        loadSystemStats();
+        loadActiveStreams();
+        loadLogs();
+        
+        // Start auto-refresh
+        refreshInterval = setInterval(() => {
+            if (autoRefresh) {
+                loadSystemStats();
+                loadActiveStreams();
+            }
+        }, 2000);
+    });
+    
+    function initSparklines() {
+        const containers = ['cpuSparkline', 'memorySparkline', 'networkSparkline'];
+        containers.forEach(id => {
+            const container = document.getElementById(id);
+            let html = '';
+            for (let i = 0; i < HISTORY_LENGTH; i++) {
+                html += `<div class="sparkline-bar" style="height: 5%"></div>`;
+            }
+            container.innerHTML = html;
+        });
+    }
+    
+    async function loadSystemStats() {
+        try {
+            const response = await fetch('/api/dashboard/resource-usage');
+            const data = await response.json();
+            
+            // Update metrics
+            updateCPU(data.cpu_percent);
+            updateMemory(data.memory_percent, data.memory_used_gb);
+            updateDisk(data.disk_percent, data.disk_used_gb);
+            updateNetwork(data.network_sent_mb, data.network_recv_mb);
+            
+            // Update timestamp
+            document.getElementById('lastUpdate').textContent = 
+                `Last update: ${new Date().toLocaleTimeString()}`;
+        } catch (error) {
+            console.error('Failed to load system stats:', error);
+        }
+    }
+    
+    function updateCPU(percent) {
+        const value = document.getElementById('cpuValue');
+        const bar = document.getElementById('cpuBar');
+        
+        value.textContent = `${percent}%`;
+        bar.style.width = `${percent}%`;
+        bar.className = `metric-bar-fill cpu ${getBarClass(percent)}`;
+        
+        // Update history
+        cpuHistory.push(percent);
+        if (cpuHistory.length > HISTORY_LENGTH) cpuHistory.shift();
+        updateSparkline('cpuSparkline', cpuHistory);
+    }
+    
+    function updateMemory(percent, usedGb) {
+        const value = document.getElementById('memoryValue');
+        const bar = document.getElementById('memoryBar');
+        const subtitle = document.getElementById('memorySubtitle');
+        
+        value.textContent = `${usedGb} GB`;
+        bar.style.width = `${percent}%`;
+        bar.className = `metric-bar-fill memory ${getBarClass(percent)}`;
+        subtitle.textContent = `${percent}% used`;
+        
+        // Update history
+        memoryHistory.push(percent);
+        if (memoryHistory.length > HISTORY_LENGTH) memoryHistory.shift();
+        updateSparkline('memorySparkline', memoryHistory);
+    }
+    
+    function updateDisk(percent, usedGb) {
+        const value = document.getElementById('diskValue');
+        const bar = document.getElementById('diskBar');
+        const subtitle = document.getElementById('diskSubtitle');
+        
+        value.textContent = `${usedGb} GB`;
+        bar.style.width = `${percent}%`;
+        bar.className = `metric-bar-fill disk ${getBarClass(percent)}`;
+        subtitle.textContent = `${percent}% used`;
+    }
+    
+    function updateNetwork(sentMb, recvMb) {
+        const value = document.getElementById('networkValue');
+        const subtitle = document.getElementById('networkSubtitle');
+        
+        const total = sentMb + recvMb;
+        value.textContent = `${total.toFixed(1)} MB`;
+        subtitle.textContent = `↑ ${sentMb.toFixed(1)} MB  ↓ ${recvMb.toFixed(1)} MB`;
+        
+        document.getElementById('netUpload').textContent = sentMb.toFixed(1);
+        document.getElementById('netDownload').textContent = recvMb.toFixed(1);
+        
+        // Update history
+        networkHistory.push(total);
+        if (networkHistory.length > HISTORY_LENGTH) networkHistory.shift();
+        updateSparkline('networkSparkline', networkHistory);
+    }
+    
+    function updateSparkline(containerId, data) {
+        const container = document.getElementById(containerId);
+        const bars = container.querySelectorAll('.sparkline-bar');
+        const max = Math.max(...data, 1);
+        
+        bars.forEach((bar, index) => {
+            const value = data[index] || 0;
+            const height = Math.max(5, (value / max) * 100);
+            bar.style.height = `${height}%`;
+        });
+    }
+    
+    function getBarClass(percent) {
+        if (percent >= 90) return 'critical';
+        if (percent >= 75) return 'warning';
+        return '';
+    }
+    
+    async function loadActiveStreams() {
+        try {
+            const response = await fetch('/api/dashboard/active-streams');
+            const streams = await response.json();
+            
+            const container = document.getElementById('streamList');
+            const countBadge = document.getElementById('streamCount');
+            
+            countBadge.textContent = `${streams.length} active`;
+            countBadge.className = streams.length > 0 ? 'panel-badge active' : 'panel-badge';
+            
+            if (streams.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📺</div>
+                        <p>No active streams</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = streams.map(stream => `
+                <div class="stream-item">
+                    <div class="stream-indicator"></div>
+                    <div class="stream-info">
+                        <div class="stream-name">${stream.channel_number}. ${escapeHtml(stream.channel_name)}</div>
+                        <div class="stream-detail">${stream.current_item || 'Streaming...'}</div>
+                    </div>
+                    <div class="stream-stats">
+                        <div class="stream-stat">
+                            <span>⏱️</span>
+                            <span>${Math.round(stream.uptime_minutes)} min</span>
+                        </div>
+                        <div class="stream-stat">
+                            <span>👁</span>
+                            <span>${stream.viewers}</span>
+                        </div>
+                        ${stream.bitrate_kbps ? `
+                            <div class="stream-stat">
+                                <span>📊</span>
+                                <span>${stream.bitrate_kbps} kbps</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="stream-actions">
+                        <button class="btn btn-sm btn-ghost" onclick="stopStream(${stream.channel_id})">
+                            Stop
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load streams:', error);
+        }
+    }
+    
+    async function loadLogs() {
+        try {
+            const response = await fetch('/api/dashboard/activity?limit=10');
+            const logs = await response.json();
+            
+            const container = document.getElementById('logViewer');
+            
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="empty-state">No recent logs</div>';
+                return;
+            }
+            
+            container.innerHTML = logs.map(log => {
+                const date = new Date(log.timestamp);
+                const time = date.toLocaleTimeString();
+                const level = log.type === 'error' ? 'error' : 
+                              log.type === 'warning' ? 'warn' : 'info';
+                
+                return `
+                    <div class="log-entry">
+                        <span class="log-time">${time}</span>
+                        <span class="log-level ${level}">${level.toUpperCase()}</span>
+                        <span class="log-message">${escapeHtml(log.message)}</span>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Failed to load logs:', error);
+        }
+    }
+    
+    function toggleAutoRefresh() {
+        autoRefresh = !autoRefresh;
+        document.getElementById('refreshIcon').textContent = autoRefresh ? '⏸️' : '▶️';
+    }
+    
+    function stopStream(channelId) {
+        if (confirm('Stop this stream?')) {
+            // Would call API to stop stream
+            alert('Stream stopped');
+            loadActiveStreams();
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

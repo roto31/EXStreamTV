@@ -1,0 +1,86 @@
+{
+  "cycle_number": 1,
+  "start_time": "2026-01-28T07:59:31.892604",
+  "end_time": "2026-01-28T08:05:21.983234",
+  "duration_seconds": 350.09063,
+  "total_channels": 4,
+  "passed": 0,
+  "failed": 2,
+  "timeouts": 2,
+  "errors": 0,
+  "success_rate": 0.0,
+  "channel_results": [
+    {
+      "channel_number": "80",
+      "channel_name": "Magnum P.I. Complete Series",
+      "status": "TestStatus.TIMEOUT",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "epg_match": null,
+      "error_message": "Timeout after 45.0s",
+      "error_type": "timeout",
+      "timestamp": "2026-01-28T08:01:31.916717",
+      "metadata": {
+        "enabled": true,
+        "retry": 2,
+        "epg_available": false
+      }
+    },
+    {
+      "channel_number": "100",
+      "channel_name": "Disney Afternoon",
+      "status": "TestStatus.FAILED",
+      "tune_success": false,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "epg_match": null,
+      "error_message": "HTTP 404",
+      "error_type": "http_error",
+      "timestamp": "2026-01-28T08:02:26.924552",
+      "metadata": {
+        "enabled": false,
+        "retry": 0,
+        "epg_available": false
+      }
+    },
+    {
+      "channel_number": "101",
+      "channel_name": "Bluey",
+      "status": "TestStatus.FAILED",
+      "tune_success": false,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "epg_match": null,
+      "error_message": "HTTP 404",
+      "error_type": "http_error",
+      "timestamp": "2026-01-28T08:02:26.934149",
+      "metadata": {
+        "enabled": false,
+        "retry": 0,
+        "epg_available": false
+      }
+    },
+    {
+      "channel_number": "102",
+      "channel_name": "Ashley",
+      "status": "TestStatus.TIMEOUT",
+      "tune_success": true,
+      "stream_received": false,
+      "bytes_received": 0,
+      "time_to_first_byte": null,
+      "epg_match": null,
+      "error_message": "Timeout after 45.0s",
+      "error_type": "timeout",
+      "timestamp": "2026-01-28T08:04:26.975152",
+      "metadata": {
+        "enabled": true,
+        "retry": 2,
+        "epg_available": false
+      }
+    }
+  ]
+}

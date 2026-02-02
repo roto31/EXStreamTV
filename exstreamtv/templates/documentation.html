@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - StreamTV{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .doc-content {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .doc-content h1 {
+        font-size: 34px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: var(--text-primary);
+    }
+    
+    .doc-content h2 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-top: 32px;
+        margin-bottom: 16px;
+        color: var(--text-primary);
+        border-bottom: 0.5px solid var(--divider);
+        padding-bottom: 8px;
+    }
+    
+    .doc-content h3 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-top: 24px;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+    }
+    
+    .doc-content h4 {
+        font-size: 17px;
+        font-weight: 600;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        color: var(--text-primary);
+    }
+    
+    .doc-content p {
+        font-size: 17px;
+        line-height: 1.47059;
+        margin-bottom: 16px;
+        color: var(--text-primary);
+    }
+    
+    .doc-content ul, .doc-content ol {
+        margin-bottom: 16px;
+        padding-left: 24px;
+    }
+    
+    .doc-content li {
+        font-size: 17px;
+        line-height: 1.47059;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+    }
+    
+    .doc-content code {
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 15px;
+        color: var(--primary);
+    }
+    
+    .doc-content pre {
+        background: var(--surface);
+        border: 0.5px solid var(--divider);
+        border-radius: 8px;
+        padding: 16px;
+        overflow-x: auto;
+        margin-bottom: 16px;
+    }
+    
+    .doc-content pre code {
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--text-primary);
+        font-size: 13px;
+    }
+    
+    .doc-content blockquote {
+        border-left: 3px solid var(--primary);
+        padding-left: 16px;
+        margin: 16px 0;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+    
+    .doc-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+    }
+    
+    .doc-content table th,
+    .doc-content table td {
+        padding: 12px;
+        border: 0.5px solid var(--divider);
+        text-align: left;
+    }
+    
+    .doc-content table th {
+        background: var(--surface);
+        font-weight: 600;
+    }
+    
+    .doc-content a {
+        color: var(--primary);
+        text-decoration: none;
+    }
+    
+    .doc-content a:hover {
+        text-decoration: underline;
+    }
+    
+    .doc-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 16px 0;
+    }
+    
+    /* Troubleshooting Script Buttons */
+    .troubleshooting-script-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 17px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+        margin: 4px 8px 4px 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+        min-height: 44px;
+        box-sizing: border-box;
+        vertical-align: top;
+    }
+    
+    .troubleshooting-script-btn:hover {
+        background: var(--primary-dark);
+        transform: scale(0.98);
+    }
+    
+    .troubleshooting-script-btn:active {
+        transform: scale(0.96);
+    }
+    
+    .troubleshooting-script-btn .material-icons {
+        font-size: 20px;
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        line-height: 1;
+    }
+    
+    .troubleshooting-script-btn > span:not(.material-icons) {
+        white-space: normal;
+        flex: 0 1 auto;
+        text-align: left;
+        line-height: 1.4;
+    }
+    
+    /* List items containing script buttons - display as block for better layout */
+    .doc-content li:has(.troubleshooting-script-btn) {
+        display: block;
+        margin-bottom: 8px;
+        list-style: none;
+        margin-left: 0;
+        padding-left: 0;
+    }
+    
+    /* Fallback for browsers that don't support :has() */
+    .doc-content li {
+        margin-bottom: 8px;
+    }
+    
+    /* Script Results */
+    .script-result {
+        margin: 16px 0;
+        padding: 16px;
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+    }
+    
+    .script-result.success {
+        background: rgba(52, 199, 89, 0.1);
+        border-color: var(--success);
+    }
+    
+    .script-result.error {
+        background: rgba(255, 59, 48, 0.1);
+        border-color: var(--error);
+    }
+    
+    .script-result-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-weight: 600;
+    }
+    
+    .script-result-output {
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background: var(--surface);
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="doc-content">
+    {{ content | safe }}
+    <div id="scriptResults"></div>
+</div>
+
+<script nonce="{{ request.state.csp_nonce }}">
+    // Move scriptResults div to right after Quick Diagnostics section or script buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        const docContent = document.querySelector('.doc-content');
+        const scriptResults = document.getElementById('scriptResults');
+        
+        if (!docContent || !scriptResults) return;
+        
+        // First, try to find "Quick Diagnostics" heading
+        const headings = Array.from(docContent.querySelectorAll('h2'));
+        const quickDiagnosticsHeading = headings.find(h => 
+            h.textContent.toLowerCase().includes('quick diagnostic')
+        );
+        
+        if (quickDiagnosticsHeading) {
+        // Find all script buttons after the Quick Diagnostics heading
+        let current = quickDiagnosticsHeading.nextElementSibling;
+        let lastScriptButton = null;
+        let lastScriptButtonParent = null;
+        
+        // Look for script buttons until we hit the next h2
+        while (current && current.tagName !== 'H2') {
+            if (current.classList && current.classList.contains('troubleshooting-script-btn')) {
+                lastScriptButton = current;
+                lastScriptButtonParent = current.parentElement;
+            }
+            current = current.nextElementSibling;
+        }
+        
+        // Insert scriptResults right after the script buttons
+        if (lastScriptButtonParent) {
+            lastScriptButtonParent.parentNode.insertBefore(scriptResults, lastScriptButtonParent.nextSibling);
+        } else {
+                // Find the paragraph after the heading that contains "How to use"
+            current = quickDiagnosticsHeading.nextElementSibling;
+            while (current && current.tagName !== 'H2') {
+                if (current.tagName === 'P' && current.textContent.includes('How to use')) {
+                    current.parentNode.insertBefore(scriptResults, current.nextSibling);
+                    break;
+                }
+                current = current.nextElementSibling;
+            }
+            
+            // If still not found, insert after the first paragraph after the heading
+            if (scriptResults.parentNode === docContent) {
+                const firstPara = quickDiagnosticsHeading.nextElementSibling;
+                if (firstPara && firstPara.tagName === 'P') {
+                    firstPara.parentNode.insertBefore(scriptResults, firstPara.nextSibling);
+                } else {
+                    quickDiagnosticsHeading.parentNode.insertBefore(scriptResults, quickDiagnosticsHeading.nextSibling);
+                }
+                }
+            }
+        } else {
+            // If no "Quick Diagnostics" heading, find first script button and insert after it
+            const firstScriptButton = docContent.querySelector('.troubleshooting-script-btn');
+            if (firstScriptButton) {
+                const parent = firstScriptButton.parentElement;
+                // Find the last script button in the same parent
+                const scriptButtons = Array.from(parent.querySelectorAll('.troubleshooting-script-btn'));
+                const lastButton = scriptButtons[scriptButtons.length - 1];
+                if (lastButton && lastButton.nextSibling) {
+                    lastButton.parentNode.insertBefore(scriptResults, lastButton.nextSibling);
+                } else {
+                    // Insert after the parent element (usually a <p> or <ul>)
+                    if (parent.nextSibling) {
+                        parent.parentNode.insertBefore(scriptResults, parent.nextSibling);
+                    } else {
+                        parent.appendChild(scriptResults);
+                    }
+                }
+            } else {
+                // If no script buttons found, just append to doc content
+                docContent.appendChild(scriptResults);
+            }
+        }
+        
+        // Add some spacing styling
+        scriptResults.style.marginTop = '24px';
+        scriptResults.style.marginBottom = '32px';
+        
+        // Convert icons in script buttons after they're created
+        if (window.convertMaterialIcons) {
+            setTimeout(() => {
+                window.convertMaterialIcons();
+            }, 100);
+        }
+    });
+
+    async function runTroubleshootingScript(scriptId) {
+        // Show confirmation dialog
+        const confirmed = confirm(`Do you want to run the troubleshooting script "${scriptId}"?\n\nThis will execute diagnostic checks on your system.`);
+        
+        if (!confirmed) {
+            return;
+        }
+        
+        // Show loading state
+        const resultsDiv = document.getElementById('scriptResults');
+        const loadingIcon = window.iconMap && window.iconMap['hourglass_empty'] ? window.iconMap['hourglass_empty'] : '⏳';
+        resultsDiv.innerHTML = `<div class="script-result"><div class="script-result-header"><span class="material-icons" aria-hidden="true">${loadingIcon}</span>Running script...</div></div>`;
+        
+        // Ensure results div is visible
+        resultsDiv.style.display = 'block';
+        
+        try {
+            const response = await fetch(`/api/scripts/${scriptId}/run`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const result = await response.json();
+            
+            // Display results
+            const resultClass = result.success ? 'success' : 'error';
+            const iconSymbol = result.success ? (window.iconMap && window.iconMap['check_circle'] ? window.iconMap['check_circle'] : '✓') : (window.iconMap && window.iconMap['error'] ? window.iconMap['error'] : '❌');
+            const statusText = result.success ? 'Script completed successfully' : 'Script completed with errors';
+            
+            resultsDiv.innerHTML = `
+                <div class="script-result ${resultClass}">
+                    <div class="script-result-header">
+                        <span class="material-icons" aria-hidden="true">${iconSymbol}</span>
+                        <span>${escapeHtml(result.script_name)} - ${statusText}</span>
+                    </div>
+                    ${result.stdout ? `<div class="script-result-output">${escapeHtml(result.stdout)}</div>` : ''}
+                    ${result.stderr ? `<div class="script-result-output" style="color: var(--error);">${escapeHtml(result.stderr)}</div>` : ''}
+                </div>
+            `;
+            
+            // Convert icons after rendering
+            if (window.convertMaterialIcons) {
+                setTimeout(() => {
+                    window.convertMaterialIcons();
+                }, 100);
+            }
+            
+            // Scroll to results smoothly
+            setTimeout(() => {
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+            
+        } catch (error) {
+            const errorIcon = window.iconMap && window.iconMap['error'] ? window.iconMap['error'] : '❌';
+            resultsDiv.innerHTML = `
+                <div class="script-result error">
+                    <div class="script-result-header">
+                        <span class="material-icons" aria-hidden="true">${errorIcon}</span>
+                        <span>Error running script</span>
+                    </div>
+                    <div class="script-result-output">${escapeHtml(error.message)}</div>
+                </div>
+            `;
+            
+            // Convert icons after rendering
+            if (window.convertMaterialIcons) {
+                setTimeout(() => {
+                    window.convertMaterialIcons();
+                }, 100);
+            }
+            setTimeout(() => {
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}
+

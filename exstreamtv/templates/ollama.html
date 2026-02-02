@@ -1,0 +1,1134 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="ollama-container">
+    <div class="page-header">
+        <h1>
+            <span class="material-icons" aria-hidden="true">psychology</span>
+            AI Troubleshooting Assistant (Ollama)
+        </h1>
+        <p class="page-description">
+            Install and manage Ollama for AI-powered troubleshooting. 100% free and runs locally on your machine.
+        </p>
+    </div>
+
+    <div id="statusSection" class="status-section">
+        <div class="status-card">
+            <div class="status-header">
+                <span class="material-icons" id="statusIcon" aria-hidden="true">hourglass_empty</span>
+                <h2 id="statusTitle">Loading...</h2>
+            </div>
+            <div id="statusContent" class="status-content">
+                <p>Checking Ollama installation status...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="installSection" class="install-section" style="display: none;">
+        <div class="install-card">
+            <h2>Install Ollama</h2>
+            <p>Ollama provides AI-powered troubleshooting that can:</p>
+            <ul>
+                <li>Analyze errors and provide explanations</li>
+                <li>Suggest fixes based on context</li>
+                <li>Learn from your system's patterns</li>
+                <li>100% free and runs locally</li>
+            </ul>
+            
+            <div class="system-info">
+                <h3>System Information</h3>
+                <div id="systemInfo" class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Available RAM:</span>
+                        <span id="ramInfo" class="info-value">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Free Disk Space:</span>
+                        <span id="diskInfo" class="info-value">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">CPU Cores:</span>
+                        <span id="cpuInfo" class="info-value">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <button id="installOllamaBtn" class="btn btn-primary" data-action="installOllama">
+                <span class="material-icons" aria-hidden="true">download</span>
+                Install Ollama (~5 GB)
+            </button>
+            <div id="installProgress" class="progress-container" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <p id="progressText" class="progress-text">Installing...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="modelsSection" class="models-section" style="display: none;">
+        <div class="models-card">
+            <h2>Available AI Models</h2>
+            <p>Select models based on your system's capabilities. Recommended: <strong>Mistral 7B</strong> (~4GB)</p>
+            
+            <div id="modelsList" class="models-list">
+                <!-- Models will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="installedModelsSection" class="installed-models-section" style="display: none;">
+        <div class="installed-models-card">
+            <h2>Installed Models</h2>
+            <div id="installedModelsList" class="installed-models-list">
+                <!-- Installed models will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="querySection" class="query-section" style="display: none;">
+        <div class="query-card">
+            <h2>
+                <span class="material-icons" aria-hidden="true">chat</span>
+                AI Troubleshooting Assistant
+            </h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Ask questions about errors, issues, or get help troubleshooting. The AI will analyze StreamTV and Plex logs automatically.
+            </p>
+            
+            <div class="query-controls" style="margin-bottom: 16px;">
+                <label class="form-checkbox" style="margin-bottom: 8px;">
+                    <input type="checkbox" id="includeStreamTVLogs" checked aria-label="Include StreamTV logs in context">
+                    <span>Include StreamTV logs in context</span>
+                </label>
+                <label class="form-checkbox" style="margin-bottom: 8px;">
+                    <input type="checkbox" id="includePlexLogs" checked aria-label="Include Plex logs in context">
+                    <span>Include Plex Media Server logs in context</span>
+                </label>
+                <div style="margin-top: 12px;">
+                    <label for="selectedModel" style="display: block; margin-bottom: 4px; font-size: 13px; color: var(--text-secondary);">AI Model:</label>
+                    <select id="selectedModel" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-primary); width: 100%; max-width: 300px;">
+                        <option value="">Auto-select (first installed)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <textarea 
+                    id="queryInput" 
+                    placeholder="Ask a question about errors, issues, or troubleshooting... (e.g., 'Why am I getting FFmpeg errors?' or 'What does this Python exception mean?')"
+                    style="width: 100%; min-height: 120px; padding: 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-primary); font-family: inherit; font-size: 14px; resize: vertical;"
+                ></textarea>
+            </div>
+
+            <button id="queryBtn" class="btn btn-primary" data-action="queryAI" style="width: 100%;" aria-label="Send question to AI assistant">
+                <span class="material-icons" aria-hidden="true">send</span>
+                Ask AI Assistant
+            </button>
+
+            <div id="queryResult" style="display: none; margin-top: 24px; padding: 16px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="margin: 0; font-size: 16px;">AI Response</h3>
+                    <button data-action="hideElementById" data-args='["queryResult"]' type="button" aria-label="Close AI response" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px;">
+                        <span class="material-icons" style="font-size: 20px;" aria-hidden="true">close</span>
+                    </button>
+                </div>
+                <div id="queryResponse" style="color: var(--text-primary); line-height: 1.6; white-space: pre-wrap;"></div>
+                <div id="queryContext" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-secondary);"></div>
+            </div>
+
+            <div id="fixesSection" class="fixes-section" style="display: none; margin-top: 24px;">
+                <div class="fixes-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2 style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                            <span class="material-icons" aria-hidden="true">build</span>
+                            Suggested Fixes
+                        </h2>
+                        <button data-action="hideElementById" data-args='["fixesSection"]' type="button" aria-label="Close suggested fixes" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px;">
+                            <span class="material-icons" style="font-size: 20px;" aria-hidden="true">close</span>
+                        </button>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 13px;">
+                        The AI has identified the following fixes. Review each one and click "Apply" to implement it.
+                    </p>
+                    <div id="fixesList" class="fixes-list">
+                        <!-- Fixes will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="queryLoading" style="display: none; text-align: center; padding: 24px; color: var(--text-secondary);">
+                <div class="loading-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;"></div>
+                <p>Analyzing logs and generating response...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ollama-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+    }
+
+    .page-header {
+        margin-bottom: 32px;
+    }
+
+    .page-header h1 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 28px;
+        margin-bottom: 8px;
+    }
+
+    .page-description {
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+
+    .status-section, .install-section, .models-section, .installed-models-section {
+        margin-bottom: 24px;
+    }
+
+    .status-card, .install-card, .models-card, .installed-models-card {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .status-header .material-icons {
+        font-size: 32px;
+    }
+
+    .status-header h2 {
+        margin: 0;
+        font-size: 20px;
+    }
+
+    .status-content {
+        color: var(--text-secondary);
+    }
+
+    .system-info {
+        margin: 24px 0;
+        padding: 16px;
+        background: var(--bg-secondary);
+        border-radius: 6px;
+    }
+
+    .system-info h3 {
+        margin-top: 0;
+        margin-bottom: 12px;
+        font-size: 16px;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .info-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+
+    .info-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+
+    .btn-primary:disabled {
+        background: var(--text-disabled);
+        cursor: not-allowed;
+    }
+
+    .btn-success {
+        background: #4caf50;
+        color: white;
+    }
+
+    .btn-danger {
+        background: #f44336;
+        color: white;
+    }
+
+    .progress-container {
+        margin-top: 16px;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: var(--bg-secondary);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.3s;
+    }
+
+    .progress-text {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        text-align: center;
+    }
+
+    .models-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .model-item {
+        padding: 16px;
+        border: 2px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg-secondary);
+        transition: all 0.2s;
+    }
+
+    .model-item.available {
+        border-color: var(--primary);
+    }
+
+    .model-item.unavailable {
+        opacity: 0.6;
+        border-color: var(--text-disabled);
+    }
+
+    .model-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 8px;
+    }
+
+    .model-name {
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .model-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .badge-recommended {
+        background: #4caf50;
+        color: white;
+    }
+
+    .badge-unavailable {
+        background: #f44336;
+        color: white;
+    }
+
+    .model-description {
+        color: var(--text-secondary);
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .model-specs {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+    }
+
+    .model-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .installed-models-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .installed-model-item {
+        padding: 16px;
+        border: 2px solid #4caf50;
+        border-radius: 6px;
+        background: var(--bg-secondary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .installed-model-name {
+        font-weight: 600;
+    }
+
+    .message {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-top: 16px;
+    }
+
+    .message-success {
+        background: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #4caf50;
+    }
+
+    .message-error {
+        background: #ffebee;
+        color: #c62828;
+        border: 1px solid #f44336;
+    }
+
+    .message-info {
+        background: #e3f2fd;
+        color: #1565c0;
+        border: 1px solid #2196f3;
+    }
+
+    .message-warning {
+        background: #fff3e0;
+        color: #e65100;
+        border: 1px solid #ff9800;
+    }
+
+    .query-section {
+        margin-top: 32px;
+    }
+
+    .query-card {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .query-card h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .query-controls {
+        padding: 16px;
+        background: var(--bg-secondary);
+        border-radius: 6px;
+    }
+
+    .form-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .form-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .loading-spinner {
+        animation: spin 1s linear infinite;
+    }
+
+    .fixes-section {
+        margin-top: 24px;
+    }
+
+    .fixes-card {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 2px solid var(--primary);
+    }
+
+    .fixes-list {
+        display: grid;
+        gap: 16px;
+    }
+
+    .fix-item {
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg-secondary);
+        transition: all 0.2s;
+    }
+
+    .fix-item:hover {
+        border-color: var(--primary);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .fix-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 8px;
+    }
+
+    .fix-title {
+        font-weight: 600;
+        font-size: 16px;
+        color: var(--text-primary);
+    }
+
+    .fix-risk-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .risk-low {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .risk-medium {
+        background: #fff3e0;
+        color: #e65100;
+    }
+
+    .risk-high {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .fix-description {
+        color: var(--text-secondary);
+        font-size: 13px;
+        margin-bottom: 12px;
+        line-height: 1.5;
+    }
+
+    .fix-details {
+        background: var(--card-bg);
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        font-size: 12px;
+        font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    }
+
+    .fix-detail-row {
+        display: flex;
+        margin-bottom: 4px;
+    }
+
+    .fix-detail-label {
+        font-weight: 600;
+        min-width: 80px;
+        color: var(--text-secondary);
+    }
+
+    .fix-detail-value {
+        color: var(--text-primary);
+        word-break: break-all;
+    }
+
+    .fix-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .btn-small {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+</style>
+
+<script nonce="{{ request.state.csp_nonce }}">
+    let ollamaStatus = null;
+    let installingOllama = false;
+    let installingModel = null;
+
+    async function loadStatus() {
+        try {
+            const response = await fetch('/api/ollama/status');
+            const data = await response.json();
+            ollamaStatus = data;
+            updateUI(data);
+        } catch (error) {
+            console.error('Error loading status:', error);
+            showError('Failed to load Ollama status');
+        }
+    }
+
+    function updateUI(data) {
+        const statusSection = document.getElementById('statusSection');
+        const installSection = document.getElementById('installSection');
+        const modelsSection = document.getElementById('modelsSection');
+        const installedModelsSection = document.getElementById('installedModelsSection');
+
+        // Update status
+        const statusIcon = document.getElementById('statusIcon');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusContent = document.getElementById('statusContent');
+
+        if (data.installed && data.server_running) {
+            statusIcon.textContent = window.iconMap && window.iconMap['check'] ? window.iconMap['check'] : '✓';
+            statusIcon.style.color = '#4caf50';
+            statusTitle.textContent = 'Ollama Ready';
+            statusContent.innerHTML = '<p>Ollama is installed and the server is running. You can install and use AI models.</p>';
+        } else if (data.installed && !data.server_running) {
+            statusIcon.textContent = 'warning';
+            statusIcon.style.color = '#ff9800';
+            statusTitle.textContent = 'Ollama Server Not Running';
+            statusContent.innerHTML = `
+                <p style="margin-bottom: 12px;">Ollama is installed but the server is not running. Please start the Ollama server to install and use AI models.</p>
+                <div style="background: var(--bg-secondary); padding: 16px; border-radius: 6px; border-left: 4px solid #ff9800;">
+                    <p style="margin: 0 0 8px 0; font-weight: 600;">How to start Ollama:</p>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li><strong>macOS:</strong> Open the <strong>Ollama</strong> app from your Applications folder</li>
+                        <li><strong>Or run in terminal:</strong> <code style="background: var(--card-bg); padding: 2px 6px; border-radius: 4px;">ollama serve</code></li>
+                    </ul>
+                    <p style="margin: 12px 0 0 0;">
+                        <button class="btn btn-primary" onclick="location.reload()" style="padding: 8px 16px;">
+                            <span class="material-icons" style="font-size: 18px; vertical-align: middle;">refresh</span>
+                            Check Again
+                        </button>
+                    </p>
+                </div>
+            `;
+            // Still show models section so user knows what they can install once server is running
+            if (data.recommended_models) {
+                modelsSection.style.display = 'block';
+                renderModels(data.recommended_models, data.installed_models || [], true); // Pass flag to disable install buttons
+            }
+            return; // Don't continue to show installed models if server isn't running
+        } else {
+            statusIcon.textContent = 'error';
+            statusIcon.style.color = '#f44336';
+            statusTitle.textContent = 'Ollama Not Installed';
+            statusContent.innerHTML = '<p>Install Ollama to enable AI-powered troubleshooting.</p>';
+            installSection.style.display = 'block';
+        }
+
+        // Update system info
+        if (data.system_info) {
+            document.getElementById('ramInfo').textContent = `${data.system_info.ram_gb?.toFixed(1) || 'Unknown'} GB`;
+            document.getElementById('diskInfo').textContent = `${data.system_info.disk_free_gb || 'Unknown'} GB`;
+            document.getElementById('cpuInfo').textContent = data.system_info.cpu_cores || 'Unknown';
+        }
+
+        // Show models section
+        if (data.recommended_models) {
+            modelsSection.style.display = 'block';
+            renderModels(data.recommended_models, data.installed_models || []);
+        }
+
+        // Show installed models
+        if (data.installed && data.installed_models && data.installed_models.length > 0) {
+            installedModelsSection.style.display = 'block';
+            renderInstalledModels(data.installed_models);
+            
+            // Show query section and populate model selector
+            document.getElementById('querySection').style.display = 'block';
+            populateModelSelector(data.installed_models);
+        }
+    }
+
+    function populateModelSelector(models) {
+        const selector = document.getElementById('selectedModel');
+        // Clear existing options except the first one
+        while (selector.options.length > 1) {
+            selector.remove(1);
+        }
+        
+        models.forEach(modelId => {
+            const option = document.createElement('option');
+            option.value = modelId;
+            option.textContent = modelId;
+            selector.appendChild(option);
+        });
+    }
+
+    function renderModels(models, installedModels, serverNotRunning = false) {
+        const modelsList = document.getElementById('modelsList');
+        modelsList.innerHTML = '';
+
+        models.forEach(model => {
+            const isInstalled = installedModels.includes(model.id);
+            const isRecommended = model.id === 'mistral:7b' && model.can_install;
+            const canInstallNow = model.can_install && !serverNotRunning;
+
+            const modelItem = document.createElement('div');
+            modelItem.className = `model-item ${model.can_install ? 'available' : 'unavailable'}`;
+            
+            modelItem.innerHTML = `
+                <div class="model-header">
+                    <div class="model-name">${model.name}</div>
+                    ${isRecommended ? '<span class="model-badge badge-recommended">Recommended</span>' : ''}
+                    ${!model.can_install ? '<span class="model-badge badge-unavailable">Not Available</span>' : ''}
+                    ${isInstalled ? '<span class="model-badge badge-recommended">Installed</span>' : ''}
+                </div>
+                <div class="model-description">${model.description}</div>
+                <div class="model-specs">
+                    <span>Size: ${model.size_gb} GB</span>
+                    <span>RAM Required: ${model.ram_required_gb} GB</span>
+                </div>
+                ${!model.can_install ? `<div style="color: #f44336; font-size: 12px; margin-bottom: 8px;">${model.reason || ''}</div>` : ''}
+                ${serverNotRunning && model.can_install ? `<div style="color: #ff9800; font-size: 12px; margin-bottom: 8px;">Start Ollama server to install</div>` : ''}
+                <div class="model-actions">
+                    ${isInstalled ? 
+                        `<button class="btn btn-danger" data-action="deleteModel" data-args='[${JSON.stringify(model.id)}]' ${serverNotRunning ? 'disabled title="Start Ollama server first"' : ''} style="display: inline-flex; align-items: center; gap: 6px;">
+                            <span class="material-icons" style="font-size: 18px;">delete</span>
+                            <span>Remove</span>
+                        </button>` :
+                        (canInstallNow ? 
+                            `<button class="btn btn-primary" data-action="installModel" data-args='[${JSON.stringify(model.id)}]' ${installingModel ? 'disabled' : ''} style="display: inline-flex; align-items: center; gap: 6px;">
+                                <span class="material-icons" style="font-size: 18px;">download</span>
+                                <span>Install</span>
+                            </button>` :
+                            (serverNotRunning && model.can_install ?
+                                `<button class="btn" disabled title="Start Ollama server first" style="display: inline-flex; align-items: center; gap: 6px; opacity: 0.6;">
+                                    <span class="material-icons" style="font-size: 18px;">download</span>
+                                    <span>Install</span>
+                                </button>` :
+                                '<button class="btn" disabled>Not Available</button>'
+                            )
+                        )
+                    }
+                </div>
+            `;
+            
+            modelsList.appendChild(modelItem);
+            if (window.bindActionHandlers) {
+                bindActionHandlers(modelItem);
+            }
+        });
+    }
+
+    function renderInstalledModels(models) {
+        const installedModelsList = document.getElementById('installedModelsList');
+        installedModelsList.innerHTML = '';
+
+        models.forEach(modelId => {
+            const modelItem = document.createElement('div');
+            modelItem.className = 'installed-model-item';
+            modelItem.innerHTML = `
+                <div class="installed-model-name">${modelId}</div>
+                <button class="btn btn-danger" data-action="deleteModel" data-args='[${JSON.stringify(modelId)}]' style="display: inline-flex; align-items: center; gap: 6px;">
+                    <span class="material-icons" style="font-size: 18px;">delete</span>
+                    <span>Remove</span>
+                </button>
+            `;
+            installedModelsList.appendChild(modelItem);
+            if (window.bindActionHandlers) {
+                bindActionHandlers(modelItem);
+            }
+        });
+    }
+
+    async function installOllama() {
+        if (installingOllama) return;
+
+        const btn = document.getElementById('installOllamaBtn');
+        const progressContainer = document.getElementById('installProgress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+
+        installingOllama = true;
+        btn.disabled = true;
+        progressContainer.style.display = 'block';
+        progressFill.style.width = '0%';
+        progressText.textContent = 'Installing Ollama...';
+
+        try {
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                if (progress <= 90) {
+                    progressFill.style.width = `${progress}%`;
+                }
+            }, 1000);
+
+            const response = await fetch('/api/ollama/install', {
+                method: 'POST'
+            });
+
+            clearInterval(progressInterval);
+            progressFill.style.width = '100%';
+
+            const result = await response.json();
+
+            if (result.success) {
+                progressText.textContent = 'Installation complete!';
+                showMessage('Ollama installed successfully!', 'success');
+                setTimeout(() => {
+                    loadStatus();
+                }, 2000);
+            } else {
+                progressText.textContent = 'Installation failed';
+                showMessage(result.message || 'Installation failed', 'error');
+            }
+        } catch (error) {
+            progressText.textContent = 'Installation failed';
+            showMessage(`Installation error: ${error.message}`, 'error');
+        } finally {
+            installingOllama = false;
+            btn.disabled = false;
+        }
+    }
+
+    async function installModel(modelId) {
+        if (installingModel) return;
+
+        installingModel = modelId;
+        showMessage(`Installing ${modelId}... This may take several minutes.`, 'info');
+
+        try {
+            const response = await fetch(`/api/ollama/models/${modelId}/install`, {
+                method: 'POST'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showMessage(`Model ${modelId} installed successfully!`, 'success');
+                loadStatus();
+            } else {
+                showMessage(result.message || 'Model installation failed', 'error');
+            }
+        } catch (error) {
+            showMessage(`Installation error: ${error.message}`, 'error');
+        } finally {
+            installingModel = null;
+        }
+    }
+
+    async function deleteModel(modelId) {
+        if (!confirm(`Are you sure you want to remove ${modelId}?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/ollama/models/${modelId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showMessage(`Model ${modelId} removed successfully`, 'success');
+                loadStatus();
+            } else {
+                showMessage(result.message || 'Failed to remove model', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    }
+
+    function showMessage(message, type) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message message-${type}`;
+        messageDiv.textContent = message;
+        
+        const container = document.querySelector('.ollama-container');
+        container.insertBefore(messageDiv, container.firstChild);
+
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 5000);
+    }
+
+    function showError(message) {
+        showMessage(message, 'error');
+    }
+
+    async function queryAI() {
+        const queryInput = document.getElementById('queryInput');
+        const queryBtn = document.getElementById('queryBtn');
+        const queryResult = document.getElementById('queryResult');
+        const queryResponse = document.getElementById('queryResponse');
+        const queryContext = document.getElementById('queryContext');
+        const queryLoading = document.getElementById('queryLoading');
+        const selectedModel = document.getElementById('selectedModel').value;
+        const includeStreamTVLogs = document.getElementById('includeStreamTVLogs').checked;
+        const includePlexLogs = document.getElementById('includePlexLogs').checked;
+
+        const query = queryInput.value.trim();
+        if (!query) {
+            showMessage('Please enter a question', 'error');
+            return;
+        }
+
+        // Show loading state
+        queryBtn.disabled = true;
+        queryLoading.style.display = 'block';
+        queryResult.style.display = 'none';
+        queryBtn.innerHTML = '<span class="material-icons" aria-hidden="true">hourglass_empty</span> Analyzing...';
+        if (window.convertMaterialIcons) setTimeout(window.convertMaterialIcons, 50);
+
+        try {
+            const requestBody = {
+                query: query,
+                include_streamtv_logs: includeStreamTVLogs,
+                include_plex_logs: includePlexLogs,
+                max_log_lines: 200
+            };
+            
+            if (selectedModel) {
+                requestBody.model = selectedModel;
+            }
+
+            const response = await fetch('/api/ollama/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Query failed');
+            }
+
+            const result = await response.json();
+
+            // Display response
+            queryResponse.textContent = result.response || 'No response received';
+            
+            // Display context info
+            const contextInfo = [];
+            if (result.context_used) {
+                if (result.context_used.streamtv_logs) {
+                    contextInfo.push('✓ StreamTV logs analyzed');
+                }
+                if (result.context_used.plex_logs) {
+                    contextInfo.push('✓ Plex logs analyzed');
+                }
+                contextInfo.push(`Analyzed ${result.context_used.log_lines_analyzed || 200} log lines`);
+            }
+            if (result.model) {
+                contextInfo.push(`Model: ${result.model}`);
+            }
+            queryContext.textContent = contextInfo.join(' • ');
+
+            queryResult.style.display = 'block';
+            queryLoading.style.display = 'none';
+
+            // Display fixes if available
+            if (result.fixes && result.fixes.length > 0) {
+                renderFixes(result.fixes);
+                document.getElementById('fixesSection').style.display = 'block';
+                
+                // Scroll to fixes section
+                setTimeout(() => {
+                    document.getElementById('fixesSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+
+        } catch (error) {
+            queryLoading.style.display = 'none';
+            showMessage(`Error: ${error.message}`, 'error');
+        } finally {
+            queryBtn.disabled = false;
+            queryBtn.innerHTML = '<span class="material-icons" aria-hidden="true">send</span> Ask AI Assistant';
+            if (window.convertMaterialIcons) setTimeout(window.convertMaterialIcons, 50);
+        }
+    }
+
+    // Allow Enter key to submit (Shift+Enter for new line)
+    document.addEventListener('DOMContentLoaded', () => {
+        loadStatus();
+        
+        const queryInput = document.getElementById('queryInput');
+        if (queryInput) {
+            queryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    queryAI();
+                }
+            });
+        }
+    });
+
+    function hideElementById(elementId) {
+        const el = document.getElementById(elementId);
+        if (el) {
+            el.style.display = 'none';
+        }
+    }
+
+    function renderFixes(fixes) {
+        const fixesList = document.getElementById('fixesList');
+        fixesList.innerHTML = '';
+
+        fixes.forEach((fix, index) => {
+            const fixItem = document.createElement('div');
+            fixItem.className = 'fix-item';
+            
+            const riskClass = `risk-${fix.risk_level || 'medium'}`;
+            const riskLabel = (fix.risk_level || 'medium').toUpperCase();
+            
+            fixItem.innerHTML = `
+                <div class="fix-header">
+                    <div class="fix-title">${fix.title || `Fix ${index + 1}`}</div>
+                    <span class="fix-risk-badge ${riskClass}">${riskLabel} RISK</span>
+                </div>
+                <div class="fix-description">${fix.description || 'No description provided'}</div>
+                <div class="fix-details">
+                    ${fix.action ? `<div class="fix-detail-row"><span class="fix-detail-label">Action:</span><span class="fix-detail-value">${fix.action}</span></div>` : ''}
+                    ${fix.target ? `<div class="fix-detail-row"><span class="fix-detail-label">Target:</span><span class="fix-detail-value">${fix.target}</span></div>` : ''}
+                    ${fix.change ? `<div class="fix-detail-row"><span class="fix-detail-label">Change:</span><span class="fix-detail-value">${fix.change}</span></div>` : ''}
+                    ${fix.value ? `<div class="fix-detail-row"><span class="fix-detail-label">Value:</span><span class="fix-detail-value">${fix.value}</span></div>` : ''}
+                </div>
+                <div class="fix-actions">
+                    <button class="btn btn-primary btn-small" onclick="applyFix(${index}, ${JSON.stringify(fix).replace(/"/g, '&quot;')})">
+                        <span class="material-icons" style="font-size: 16px;">check</span>
+                        Apply Fix
+                    </button>
+                    <button class="btn btn-small" onclick="dismissFix(${index})" style="background: var(--bg-secondary); color: var(--text-primary);">
+                        <span class="material-icons" style="font-size: 16px;">close</span>
+                        Dismiss
+                    </button>
+                </div>
+            `;
+            
+            fixesList.appendChild(fixItem);
+            if (window.convertMaterialIcons) setTimeout(window.convertMaterialIcons, 50);
+        });
+    }
+
+    async function applyFix(fixIndex, fixData) {
+        if (!confirm(`Are you sure you want to apply this fix?\n\n${fixData.title}\n\n${fixData.description}`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/ollama/fixes/${fixIndex}/apply`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(fixData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showMessage(`Fix "${fixData.title}" applied successfully!`, 'success');
+                // Remove the fix from the list
+                const fixesList = document.getElementById('fixesList');
+                const fixItems = fixesList.querySelectorAll('.fix-item');
+                if (fixItems[fixIndex]) {
+                    fixItems[fixIndex].remove();
+                }
+                
+                // Hide fixes section if no more fixes
+                if (fixesList.children.length === 0) {
+                    document.getElementById('fixesSection').style.display = 'none';
+                }
+            } else {
+                showMessage(`Failed to apply fix: ${result.message || 'Unknown error'}`, 'error');
+            }
+        } catch (error) {
+            showMessage(`Error applying fix: ${error.message}`, 'error');
+        }
+    }
+
+    function dismissFix(fixIndex) {
+        const fixesList = document.getElementById('fixesList');
+        const fixItems = fixesList.querySelectorAll('.fix-item');
+        if (fixItems[fixIndex]) {
+            fixItems[fixIndex].remove();
+        }
+        
+        // Hide fixes section if no more fixes
+        if (fixesList.children.length === 0) {
+            document.getElementById('fixesSection').style.display = 'none';
+        }
+    }
+
+    // Check if we should show fixes section (from notification click)
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check URL parameter for show_fixes
+        const urlParams = new URLSearchParams(window.location.search);
+        const showFixes = urlParams.get('show_fixes') === 'true' || {% if show_fixes %}true{% else %}false{% endif %};
+        
+        if (showFixes) {
+            // Show a message that fixes are available
+            showMessage('Review the suggested fixes below or ask a new question to get more suggestions.', 'info');
+            
+            // Scroll to query section to prompt user to ask a question if no fixes are shown yet
+            setTimeout(() => {
+                const querySection = document.getElementById('querySection');
+                if (querySection) {
+                    querySection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 300);
+        }
+    });
+
+    // Expose functions to window for data-action bindings
+    window.installOllama = installOllama;
+    window.installModel = installModel;
+    window.deleteModel = deleteModel;
+    window.queryAI = queryAI;
+    window.hideElementById = hideElementById;
+</script>
+{% endblock %}
+

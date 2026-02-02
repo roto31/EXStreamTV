@@ -1,0 +1,292 @@
+{
+  "test_run_id": "20260128_075931",
+  "test_type": "Extended Overnight Reliability & Regression Test",
+  "start_time": "2026-01-28T07:59:31.892604",
+  "end_time": "2026-01-28T08:05:21.983234",
+  "config": {
+    "duration_hours": 2.0,
+    "cycle_interval_seconds": 180.0,
+    "tune_duration_seconds": 45.0,
+    "base_url": "http://localhost:8411",
+    "hdhomerun_url": "http://localhost:5004",
+    "include_all_channels": true,
+    "verify_epg": true,
+    "verify_stream_data": true,
+    "max_retries_per_channel": 2,
+    "retry_delay_seconds": 5.0,
+    "output_dir": "tests/reliability/reports",
+    "log_level": "INFO"
+  },
+  "summary": {
+    "total_cycles": 1,
+    "total_channels_tested": 36,
+    "total_tests_executed": 4,
+    "overall_success_rate": 0.0,
+    "passed": 0,
+    "failed": 2,
+    "timeouts": 2,
+    "errors": 0
+  },
+  "performance": {
+    "avg_time_to_first_byte": null,
+    "min_time_to_first_byte": null,
+    "max_time_to_first_byte": null
+  },
+  "reliability": {
+    "reliable_channels_count": 0,
+    "unreliable_channels_count": 4,
+    "reliable_channels": [],
+    "unreliable_channels": [
+      {
+        "number": "80",
+        "name": "Magnum P.I. Complete Series",
+        "success_rate": 0.0,
+        "passed": 0,
+        "total": 1
+      },
+      {
+        "number": "100",
+        "name": "Disney Afternoon",
+        "success_rate": 0.0,
+        "passed": 0,
+        "total": 1
+      },
+      {
+        "number": "101",
+        "name": "Bluey",
+        "success_rate": 0.0,
+        "passed": 0,
+        "total": 1
+      },
+      {
+        "number": "102",
+        "name": "Ashley",
+        "success_rate": 0.0,
+        "passed": 0,
+        "total": 1
+      }
+    ]
+  },
+  "channel_metrics": {
+    "80": {
+      "channel_number": "80",
+      "channel_name": "Magnum P.I. Complete Series",
+      "total_tests": 1,
+      "passed": 0,
+      "failed": 0,
+      "timeouts": 1,
+      "errors": 0,
+      "total_bytes": 0,
+      "avg_ttfb": null,
+      "failures": [
+        {
+          "type": "timeout",
+          "time": "2026-01-28T08:01:31.916717"
+        }
+      ],
+      "success_rate": 0.0
+    },
+    "100": {
+      "channel_number": "100",
+      "channel_name": "Disney Afternoon",
+      "total_tests": 1,
+      "passed": 0,
+      "failed": 1,
+      "timeouts": 0,
+      "errors": 0,
+      "total_bytes": 0,
+      "avg_ttfb": null,
+      "failures": [
+        {
+          "type": "failed",
+          "time": "2026-01-28T08:02:26.924552",
+          "msg": "HTTP 404"
+        }
+      ],
+      "success_rate": 0.0
+    },
+    "101": {
+      "channel_number": "101",
+      "channel_name": "Bluey",
+      "total_tests": 1,
+      "passed": 0,
+      "failed": 1,
+      "timeouts": 0,
+      "errors": 0,
+      "total_bytes": 0,
+      "avg_ttfb": null,
+      "failures": [
+        {
+          "type": "failed",
+          "time": "2026-01-28T08:02:26.934149",
+          "msg": "HTTP 404"
+        }
+      ],
+      "success_rate": 0.0
+    },
+    "102": {
+      "channel_number": "102",
+      "channel_name": "Ashley",
+      "total_tests": 1,
+      "passed": 0,
+      "failed": 0,
+      "timeouts": 1,
+      "errors": 0,
+      "total_bytes": 0,
+      "avg_ttfb": null,
+      "failures": [
+        {
+          "type": "timeout",
+          "time": "2026-01-28T08:04:26.975152"
+        }
+      ],
+      "success_rate": 0.0
+    }
+  },
+  "error_log": [
+    {
+      "timestamp": "2026-01-28T08:00:26.897731",
+      "channel_number": "80",
+      "channel_name": "Magnum P.I. Complete Series",
+      "error": "Timeout after 45.0s",
+      "stacktrace": null
+    },
+    {
+      "timestamp": "2026-01-28T08:01:26.915056",
+      "channel_number": "80",
+      "channel_name": "Magnum P.I. Complete Series",
+      "error": "Timeout after 45.0s",
+      "stacktrace": null
+    },
+    {
+      "timestamp": "2026-01-28T08:02:26.923497",
+      "channel_number": "80",
+      "channel_name": "Magnum P.I. Complete Series",
+      "error": "Timeout after 45.0s",
+      "stacktrace": null
+    },
+    {
+      "timestamp": "2026-01-28T08:02:26.933874",
+      "channel_number": "100",
+      "channel_name": "Disney Afternoon",
+      "error": "HTTP 404",
+      "stacktrace": null
+    },
+    {
+      "timestamp": "2026-01-28T08:02:26.940324",
+      "channel_number": "101",
+      "channel_name": "Bluey",
+      "error": "HTTP 404",
+      "stacktrace": null
+    },
+    {
+      "timestamp": "2026-01-28T08:03:21.947770",
+      "channel_number": "102",
+      "channel_name": "Ashley",
+      "error": "Timeout after 45.0s",
+      "stacktrace": null
+    },
+    {
+      "timestamp": "2026-01-28T08:04:21.973799",
+      "channel_number": "102",
+      "channel_name": "Ashley",
+      "error": "Timeout after 45.0s",
+      "stacktrace": null
+    },
+    {
+      "timestamp": "2026-01-28T08:05:21.983055",
+      "channel_number": "102",
+      "channel_name": "Ashley",
+      "error": "Timeout after 45.0s",
+      "stacktrace": null
+    }
+  ],
+  "cycles": [
+    {
+      "cycle_number": 1,
+      "start_time": "2026-01-28T07:59:31.892604",
+      "end_time": "2026-01-28T08:05:21.983234",
+      "duration_seconds": 350.09063,
+      "total_channels": 4,
+      "passed": 0,
+      "failed": 2,
+      "timeouts": 2,
+      "errors": 0,
+      "success_rate": 0.0,
+      "channel_results": [
+        {
+          "channel_number": "80",
+          "channel_name": "Magnum P.I. Complete Series",
+          "status": "TestStatus.TIMEOUT",
+          "tune_success": true,
+          "stream_received": false,
+          "bytes_received": 0,
+          "time_to_first_byte": null,
+          "epg_match": null,
+          "error_message": "Timeout after 45.0s",
+          "error_type": "timeout",
+          "timestamp": "2026-01-28T08:01:31.916717",
+          "metadata": {
+            "enabled": true,
+            "retry": 2,
+            "epg_available": false
+          }
+        },
+        {
+          "channel_number": "100",
+          "channel_name": "Disney Afternoon",
+          "status": "TestStatus.FAILED",
+          "tune_success": false,
+          "stream_received": false,
+          "bytes_received": 0,
+          "time_to_first_byte": null,
+          "epg_match": null,
+          "error_message": "HTTP 404",
+          "error_type": "http_error",
+          "timestamp": "2026-01-28T08:02:26.924552",
+          "metadata": {
+            "enabled": false,
+            "retry": 0,
+            "epg_available": false
+          }
+        },
+        {
+          "channel_number": "101",
+          "channel_name": "Bluey",
+          "status": "TestStatus.FAILED",
+          "tune_success": false,
+          "stream_received": false,
+          "bytes_received": 0,
+          "time_to_first_byte": null,
+          "epg_match": null,
+          "error_message": "HTTP 404",
+          "error_type": "http_error",
+          "timestamp": "2026-01-28T08:02:26.934149",
+          "metadata": {
+            "enabled": false,
+            "retry": 0,
+            "epg_available": false
+          }
+        },
+        {
+          "channel_number": "102",
+          "channel_name": "Ashley",
+          "status": "TestStatus.TIMEOUT",
+          "tune_success": true,
+          "stream_received": false,
+          "bytes_received": 0,
+          "time_to_first_byte": null,
+          "epg_match": null,
+          "error_message": "Timeout after 45.0s",
+          "error_type": "timeout",
+          "timestamp": "2026-01-28T08:04:26.975152",
+          "metadata": {
+            "enabled": true,
+            "retry": 2,
+            "epg_available": false
+          }
+        }
+      ]
+    }
+  ]
+}
