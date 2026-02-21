@@ -87,18 +87,20 @@ class ChannelStream:
     def __init__(
         self,
         channel_id: int,
-        channel_number: int,
+        channel_number: int | str,
         channel_name: str,
         db_session_factory: Callable[[], Session],
+        process_pool_manager: Optional[Any] = None,
     ):
         """
         Initialize channel stream.
-        
+
         Args:
             channel_id: Database ID of the channel.
-            channel_number: Channel number for display.
+            channel_number: Channel number for display (str or int).
             channel_name: Channel name for logging.
             db_session_factory: Factory function to create database sessions.
+            process_pool_manager: Optional ProcessPoolManager for FFmpeg lifecycle.
         """
         self.channel_id = channel_id
         self.channel_number = channel_number
@@ -131,7 +133,10 @@ class ChannelStream:
         # Health tracking
         self._last_output_time: datetime | None = None
         self._bytes_streamed = 0
-        
+
+        # Process pool manager for FFmpeg lifecycle (optional)
+        self._process_pool_manager = process_pool_manager
+
         # New components from Tunarr/dizqueTV integration
         self._throttler: Optional[Any] = None
         self._use_throttling = False
@@ -381,6 +386,14 @@ class ChannelStream:
                 result = db.execute(stmt)
                 position = result.scalar_one_or_none()
                 
+                now_utc = datetime.utcnow()
+                elapsed_in_item = 0
+                if self._current_item_start_time:
+                    elapsed_in_item = max(
+                        0,
+                        int((now_utc - self._current_item_start_time).total_seconds()),
+                    )
+
                 if position:
                     # Update existing position
                     # CRITICAL: Update BOTH current_index and last_item_index
@@ -388,7 +401,12 @@ class ChannelStream:
                     # last_item_index is used by EPG for guide display
                     position.current_index = self._current_item_index
                     position.last_item_index = self._current_item_index
-                    position.last_played_at = datetime.utcnow()
+                    position.last_played_at = now_utc
+                    # EPG sync: when the current item started and how far in we are
+                    position.current_item_start_time = self._current_item_start_time
+                    position.elapsed_seconds_in_item = elapsed_in_item
+                    if self._playout_start_time:
+                        position.playout_start_time = self._playout_start_time
                 else:
                     # Create new position record
                     position = ChannelPlaybackPosition(
@@ -396,7 +414,10 @@ class ChannelStream:
                         channel_number=str(self.channel_number),
                         current_index=self._current_item_index,
                         last_item_index=self._current_item_index,
-                        last_played_at=datetime.utcnow()
+                        last_played_at=now_utc,
+                        current_item_start_time=self._current_item_start_time,
+                        elapsed_seconds_in_item=elapsed_in_item,
+                        playout_start_time=self._playout_start_time,
                     )
                     db.add(position)
                 
@@ -723,10 +744,27 @@ class ChannelStream:
                     playout_item = filler_item
                     logger.debug(f"Using filler for channel {self.channel_number}")
                 else:
-                    # No content available - show offline slate or wait
+                    # No content available - show "No programming" slate then wait
                     logger.debug(
                         f"No content for channel {self.channel_number}, waiting..."
                     )
+                    # #region agent log
+                    try:
+                        import json as _json
+                        import time as _time
+                        open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a").write(_json.dumps({"location":"channel_manager.py:_stream_loop","message":"no_content","data":{"channel_number":self.channel_number,"channel_id":self.channel_id},"timestamp":_time.time(),"sessionId":"debug-session"}) + "\n")
+                    except Exception:
+                        pass
+                    # #endregion
+                    if self._use_error_screens:
+                        try:
+                            await self._broadcast_error_screen(
+                                title="No programming",
+                                subtitle="This channel has no content scheduled.",
+                                duration=5.0,
+                            )
+                        except Exception as e:
+                            logger.debug(f"No-programming slate failed: {e}")
                     await asyncio.sleep(5.0)
                     continue
             
@@ -741,9 +779,12 @@ class ChannelStream:
             import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H4","location":"channel_manager.py:_stream_loop:playing","message":"Now playing item","data":{"channel_number":self.channel_number,"current_item_index":self._current_item_index,"title":playout_item.get("title"),"seek_offset":seek_offset},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
             # #endregion
             
-            # Update current item tracking
+            # Update current item tracking (EPG uses this for guide alignment)
             self._current_item_start_time = datetime.utcnow()
-            
+
+            # Save position at start of item so EPG sees current programme and start time
+            await self._save_position()
+
             # Reset failure counter on successful item start
             self._consecutive_failures = 0
             
@@ -756,7 +797,16 @@ class ChannelStream:
                     await asyncio.sleep(0.1)  # Small delay before next item
                     continue
                     
-                async for chunk in streamer.stream(media_url, seek_offset=seek_offset):
+                if self._process_pool_manager:
+                    stream_iter = streamer.stream_via_pool(
+                        media_url,
+                        self.channel_id,
+                        self._process_pool_manager,
+                        seek_offset=seek_offset,
+                    )
+                else:
+                    stream_iter = streamer.stream(media_url, seek_offset=seek_offset)
+                async for chunk in stream_iter:
                         # Update health metrics
                         self._last_output_time = datetime.utcnow()
                         self._bytes_streamed += len(chunk)
@@ -1060,14 +1110,20 @@ class ChannelManager:
     Provides centralized control over channel lifecycle and client connections.
     """
 
-    def __init__(self, db_session_factory: Callable[[], Session]):
+    def __init__(
+        self,
+        db_session_factory: Callable[[], Session],
+        process_pool_manager: Optional[Any] = None,
+    ):
         """
         Initialize channel manager.
-        
+
         Args:
             db_session_factory: Factory function to create database sessions.
+            process_pool_manager: Optional ProcessPoolManager for FFmpeg lifecycle.
         """
         self.db_session_factory = db_session_factory
+        self._process_pool_manager = process_pool_manager
         self._channels: dict[int, ChannelStream] = {}
         self._lock = asyncio.Lock()
         self._is_running = False
@@ -1183,7 +1239,7 @@ class ChannelManager:
     async def get_channel_stream(
         self,
         channel_id: int,
-        channel_number: int,
+        channel_number: int | str,
         channel_name: str,
     ) -> ChannelStream:
         """
@@ -1197,22 +1253,60 @@ class ChannelManager:
         Returns:
             ChannelStream for the channel.
         """
-        async with self._lock:
-            if channel_id not in self._channels:
-                channel_stream = ChannelStream(
-                    channel_id=channel_id,
-                    channel_number=channel_number,
-                    channel_name=channel_name,
-                    db_session_factory=self.db_session_factory,
-                )
-                self._channels[channel_id] = channel_stream
-                
-            return self._channels[channel_id]
+        # #region agent log
+        try:
+            import json as _json
+            import time as _time
+            open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a").write(_json.dumps({"hypothesisId":"H4","location":"channel_manager.py:get_channel_stream:entry","message":"get_channel_stream called","data":{"channel_id":channel_id,"channel_number":channel_number},"timestamp":_time.time(),"sessionId":"debug-session"}) + "\n")
+        except Exception:
+            pass
+        # #endregion
+        try:
+            async with self._lock:
+                if channel_id not in self._channels:
+                    channel_stream = ChannelStream(
+                        channel_id=channel_id,
+                        channel_number=channel_number,
+                        channel_name=channel_name,
+                        db_session_factory=self.db_session_factory,
+                        process_pool_manager=self._process_pool_manager,
+                    )
+                    self._channels[channel_id] = channel_stream
+
+                stream = self._channels[channel_id]
+            # Log when a tuned channel has no streamable content (diagnostic for "channel not streaming")
+            try:
+                has_content = self._channel_has_streamable_content(channel_id)
+                if not has_content:
+                    import json as _json
+                    import time as _time
+                    from exstreamtv.utils.paths import get_debug_log_path
+                    with open(get_debug_log_path(), "a") as _f:
+                        _f.write(_json.dumps({
+                            "location": "channel_manager.py:get_channel_stream",
+                            "message": "channel_no_content_at_tune",
+                            "data": {"channel_id": channel_id, "channel_number": channel_number},
+                            "timestamp": _time.time(),
+                            "sessionId": "debug-session",
+                        }) + "\n")
+            except Exception:
+                pass
+            return stream
+        except Exception as e:
+            # #region agent log
+            try:
+                import json as _json
+                import time as _time
+                open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a").write(_json.dumps({"hypothesisId":"H4","location":"channel_manager.py:get_channel_stream:exception","message":"get_channel_stream failed","data":{"channel_id":channel_id,"error":str(e),"error_type":type(e).__name__},"timestamp":_time.time(),"sessionId":"debug-session"}) + "\n")
+            except Exception:
+                pass
+            # #endregion
+            raise
 
     async def start_channel(
         self,
         channel_id: int,
-        channel_number: int,
+        channel_number: int | str,
         channel_name: str,
     ) -> ChannelStream:
         """
@@ -1238,6 +1332,61 @@ class ChannelManager:
             if channel_id in self._channels:
                 await self._channels[channel_id].stop()
                 del self._channels[channel_id]
+
+    def _channel_has_streamable_content(self, channel_id: int) -> bool:
+        """
+        Check if a channel has any streamable content (active playout with items or filler).
+        Used for diagnostics when a client tunes to a channel.
+        """
+        from exstreamtv.database.models import (
+            Channel,
+            FillerPreset,
+            FillerPresetItem,
+            Playout,
+            PlayoutItem,
+        )
+        from sqlalchemy import select
+
+        db = self.db_session_factory()
+        try:
+            # Active playout with at least one item
+            playout_stmt = (
+                select(Playout.id)
+                .where(
+                    Playout.channel_id == channel_id,
+                    Playout.is_active == True,
+                )
+                .join(PlayoutItem, PlayoutItem.playout_id == Playout.id)
+                .limit(1)
+            )
+            if db.execute(playout_stmt).first():
+                return True
+            # Filler: channel has fallback_filler_id and preset has items
+            channel_stmt = select(Channel).where(Channel.id == channel_id)
+            channel = db.execute(channel_stmt).scalar_one_or_none()
+            if not channel or not channel.fallback_filler_id:
+                return False
+            filler_stmt = select(FillerPresetItem.id).where(
+                FillerPresetItem.preset_id == channel.fallback_filler_id
+            ).limit(1)
+            if db.execute(filler_stmt).first():
+                return True
+            preset_stmt = select(FillerPreset).where(
+                FillerPreset.id == channel.fallback_filler_id
+            )
+            preset = db.execute(preset_stmt).scalar_one_or_none()
+            if preset and preset.collection_id:
+                from exstreamtv.database.models import PlaylistItem
+                coll_stmt = select(PlaylistItem.id).where(
+                    PlaylistItem.playlist_id == preset.collection_id
+                ).limit(1)
+                if db.execute(coll_stmt).first():
+                    return True
+            return False
+        except Exception:
+            return False
+        finally:
+            db.close()
 
     def get_active_channels(self) -> list[int]:
         """Get list of active channel IDs."""

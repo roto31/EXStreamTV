@@ -16,6 +16,10 @@ import shutil
 import subprocess
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exstreamtv.streaming.process_pool_manager import ProcessPoolManager
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
@@ -210,7 +214,7 @@ class MPEGTSStreamer:
             FFmpeg command as list of arguments.
         """
         config = get_config()
-        
+        # Security: FFmpeg path and args must come from config or validated inputs only; no unsanitized user input.
         cmd = [self._ffmpeg_path]
         
         # ErsatzTV-style: Seek to the correct position in the stream
@@ -720,6 +724,62 @@ class MPEGTSStreamer:
                 stderr = await process.stderr.read()
                 if stderr:
                     logger.warning(f"FFmpeg stderr: {stderr.decode('utf-8', errors='replace')[:500]}")
+
+    async def stream_via_pool(
+        self,
+        input_url: str,
+        channel_id: int | str,
+        process_pool_manager: "ProcessPoolManager",
+        codec_info: CodecInfo | None = None,
+        source: StreamSource = StreamSource.UNKNOWN,
+        buffer_size: int = 65536,
+        seek_offset: float = 0.0,
+    ) -> AsyncIterator[bytes]:
+        """
+        Stream content as MPEG-TS via ProcessPoolManager (rate-limited, guarded).
+
+        Uses acquire_process/release_process for deterministic FFmpeg lifecycle.
+        """
+        if codec_info is None:
+            codec_info = await self.probe_stream(input_url)
+        actual_seek = seek_offset
+        if seek_offset > 0 and codec_info.duration and codec_info.duration > 0:
+            max_seek = max(0, codec_info.duration - 10)
+            if seek_offset >= codec_info.duration:
+                actual_seek = 0.0
+            elif seek_offset > max_seek:
+                actual_seek = max_seek
+        cmd = self.build_ffmpeg_command(
+            input_url, codec_info, source, seek_offset=actual_seek
+        )
+        logger.info(f"FFmpeg (pool): {' '.join(cmd[:10])}...")
+        try:
+            process = await process_pool_manager.acquire_process(
+                channel_id, cmd
+            )
+        except Exception as e:
+            logger.error(f"ProcessPoolManager acquire failed: {e}")
+            raise
+        try:
+            while True:
+                chunk = await process.stdout.read(buffer_size)
+                if not chunk:
+                    break
+                yield chunk
+        except asyncio.CancelledError:
+            logger.info("Stream cancelled (pool), releasing FFmpeg")
+            raise
+        finally:
+            await process_pool_manager.release_process(channel_id)
+            if process.returncode and process.returncode != 0:
+                try:
+                    stderr = await process.stderr.read()
+                    if stderr:
+                        logger.warning(
+                            f"FFmpeg stderr: {stderr.decode('utf-8', errors='replace')[:500]}"
+                        )
+                except Exception:
+                    pass
 
     def cleanup(self, channel_id: str) -> None:
         """Clean up FFmpeg process for a channel."""

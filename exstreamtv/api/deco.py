@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..database import get_db
-from ..database.models.deco import Deco, DecoGroup
+from ..database.models.deco import DecoGroup, DecoTemplate
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="", tags=["Deco"])
@@ -93,8 +93,8 @@ class DecoResponse(BaseModel):
 # ============================================================================
 
 
-def deco_to_response(deco: Deco) -> dict[str, Any]:
-    """Convert Deco model to response dictionary."""
+def deco_to_response(deco: DecoTemplate) -> dict[str, Any]:
+    """Convert DecoTemplate model to response dictionary."""
     return {
         "id": deco.id,
         "name": deco.name,
@@ -266,12 +266,12 @@ async def get_all_decos(
     Returns:
         List of decos.
     """
-    stmt = select(Deco)
+    stmt = select(DecoTemplate)
     
     if group_id is not None:
-        stmt = stmt.where(Deco.group_id == group_id)
+        stmt = stmt.where(DecoTemplate.group_id == group_id)
     if deco_type is not None:
-        stmt = stmt.where(Deco.deco_type == deco_type)
+        stmt = stmt.where(DecoTemplate.deco_type == deco_type)
     
     result = await db.execute(stmt)
     decos = result.scalars().all()
@@ -315,7 +315,7 @@ async def create_deco(
             detail=f"Invalid deco_type. Must be one of: {', '.join(valid_types)}"
         )
     
-    db_deco = Deco(
+    db_deco = DecoTemplate(
         name=deco.name,
         group_id=deco.group_id,
         deco_type=deco.deco_type,
@@ -346,8 +346,8 @@ async def get_deco(
     Returns:
         Deco details.
     """
-    stmt = select(Deco).where(Deco.id == deco_id).options(
-        selectinload(Deco.group)
+    stmt = select(DecoTemplate).where(DecoTemplate.id == deco_id).options(
+        selectinload(DecoTemplate.group)
     )
     result = await db.execute(stmt)
     deco = result.scalar_one_or_none()
@@ -376,7 +376,7 @@ async def update_deco(
     Returns:
         Updated deco.
     """
-    stmt = select(Deco).where(Deco.id == deco_id)
+    stmt = select(DecoTemplate).where(DecoTemplate.id == deco_id)
     result = await db.execute(stmt)
     deco = result.scalar_one_or_none()
     
@@ -432,7 +432,7 @@ async def delete_deco(
     Args:
         deco_id: Deco ID.
     """
-    stmt = select(Deco).where(Deco.id == deco_id)
+    stmt = select(DecoTemplate).where(DecoTemplate.id == deco_id)
     result = await db.execute(stmt)
     deco = result.scalar_one_or_none()
     

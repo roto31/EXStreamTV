@@ -1,8 +1,10 @@
 """IPTV streaming endpoints (m3u, xmltv.xml, HLS)"""
 
+import asyncio
 import logging
 import urllib.parse
 from datetime import datetime, timedelta
+from pathlib import Path
 from datetime import time as dt_time
 from xml.sax.saxutils import escape as xml_escape
 
@@ -20,9 +22,10 @@ from ..constants import (
     EPG_MAX_PROGRAMMES_PER_CHANNEL,
     EPG_QUERY_LIMIT,
     EPG_TITLE_TRUNCATE_LENGTH,
+    EXSTREAM_CHANNEL_ID_PREFIX,
     MAX_EPG_ITEMS_PER_CHANNEL,
 )
-from ..database import Channel, MediaItem, Playout, PlayoutItem, get_db
+from ..database import Channel, MediaItem, Playout, PlayoutItem, get_db, get_sync_session
 from ..scheduling import ScheduleEngine, ScheduleParser
 from ..streaming import StreamManager, StreamSource
 from ..streaming.plex_api_client import PlexAPIClient
@@ -39,6 +42,133 @@ def _xml(value) -> str:
     if value is None:
         return ""
     return xml_escape(str(value), {'"': "&quot;", "'": "&apos;"})
+
+
+def _channel_xmltv_id(channel) -> str:
+    """Stable channel ID for XMLTV and M3U (same universe as Plex DVR)."""
+    return f"{EXSTREAM_CHANNEL_ID_PREFIX}-{channel.id}"
+
+
+def _run_schedule_engine_sync(channel_id: int, schedule_file_path: Path) -> list:
+    """Run ScheduleEngine in a sync context (for EPG file-based schedules). Returns list of schedule item dicts."""
+    from sqlalchemy.orm import Session
+    session: Session = get_sync_session()
+    try:
+        channel = session.get(Channel, channel_id)
+        if not channel:
+            return []
+        parsed_schedule = ScheduleParser.parse_file(schedule_file_path, schedule_file_path.parent)
+        engine = ScheduleEngine(session)
+        return engine.generate_playlist_from_schedule(channel, parsed_schedule, max_items=1000)
+    finally:
+        session.close()
+
+async def _build_epg_via_timeline_builder(
+    channels: list,
+    db: AsyncSession,
+    now: datetime,
+    end_time: datetime,
+    base_url: str,
+) -> str | None:
+    """
+    Build EPG XML using TimelineBuilder + TitleResolver + XMLTVGenerator.
+
+    Returns XML string if successful, None to fall back to legacy path.
+    """
+    from ..api.timeline_builder import TimelineBuilder, PlaybackAnchor
+    from ..api.title_resolver import TitleResolver
+    from ..api.xmltv_generator import XMLTVGenerator
+
+    programmes_by_channel: dict[int, list] = {}
+
+    for channel in channels:
+        schedule_items = []
+        playback_pos = None
+
+        try:
+            stmt = select(ChannelPlaybackPosition).where(
+                ChannelPlaybackPosition.channel_id == channel.id
+            )
+            result = await db.execute(stmt)
+            playback_pos = result.scalar_one_or_none()
+        except Exception:
+            pass
+
+        schedule_file = ScheduleParser.find_schedule_file(channel.number)
+        if schedule_file:
+            try:
+                schedule_items = await asyncio.to_thread(
+                    _run_schedule_engine_sync, channel.id, schedule_file
+                )
+            except Exception:
+                schedule_items = []
+
+        if not schedule_items:
+            stmt = select(Playout).where(
+                Playout.channel_id == channel.id,
+                Playout.is_active == True,
+            )
+            result = await db.execute(stmt)
+            playout = result.scalar_one_or_none()
+            if playout:
+                items_stmt = (
+                    select(PlayoutItem, MediaItem)
+                    .outerjoin(MediaItem, PlayoutItem.media_item_id == MediaItem.id)
+                    .where(PlayoutItem.playout_id == playout.id)
+                    .order_by(PlayoutItem.id)
+                )
+                items_result = await db.execute(items_stmt)
+                for pi, mi in items_result.all():
+                    if mi:
+                        schedule_items.append({
+                            "media_item": mi,
+                            "custom_title": getattr(pi, "title", None) or getattr(pi, "custom_title", None),
+                        })
+
+        if not schedule_items:
+            programmes_by_channel[channel.id] = []
+            continue
+
+        anchor = PlaybackAnchor(
+            playout_start_time=getattr(playback_pos, "playout_start_time", None) or now if playback_pos else now,
+            last_item_index=getattr(playback_pos, "last_item_index", 0) or 0 if playback_pos else 0,
+            current_item_start_time=getattr(playback_pos, "current_item_start_time", None) if playback_pos else None,
+            elapsed_seconds_in_item=getattr(playback_pos, "elapsed_seconds_in_item", 0) or 0 if playback_pos else 0,
+        )
+        builder = TimelineBuilder()
+        programmes_raw = builder.build(
+            schedule_items, anchor, now=now, max_programmes=EPG_MAX_PROGRAMMES_PER_CHANNEL
+        )
+
+        resolver = TitleResolver()
+        programmes_filtered = []
+        for p in programmes_raw:
+            if p.stop_time < now or p.start_time > end_time:
+                continue
+            try:
+                title = resolver.resolve_title(p.playout_item, p.media_item, channel)
+            except Exception:
+                title = p.title or "Unknown"
+            from ..api.timeline_builder import TimelineProgramme
+            programmes_filtered.append(
+                TimelineProgramme(
+                    start_time=p.start_time,
+                    stop_time=p.stop_time,
+                    media_item=p.media_item,
+                    playout_item=p.playout_item,
+                    title=title,
+                    index=p.index,
+                )
+            )
+        programmes_by_channel[channel.id] = programmes_filtered
+
+    try:
+        gen = XMLTVGenerator()
+        return gen.generate(channels, programmes_by_channel, base_url=base_url, validate=False)
+    except Exception as e:
+        logger.warning(f"TimelineBuilder EPG generation failed: {e}")
+        return None
+
 
 def _resolve_logo_url(channel, base_url: str) -> str | None:
     """
@@ -169,7 +299,7 @@ async def get_channel_playlist(
                     stream_url = f"{base_url}/iptv/channel/{channel.number}.ts{token_param}"
 
                 logo_url = _resolve_logo_url(channel, base_url)
-                m3u_content += f'#EXTINF:-1 tvg-id="{channel.number}" tvg-name="{channel.name}"'
+                m3u_content += f'#EXTINF:-1 tvg-id="{_channel_xmltv_id(channel)}" tvg-name="{channel.name}"'
                 if channel.group:
                     m3u_content += f' group-title="{channel.group}"'
                 if logo_url:
@@ -326,7 +456,7 @@ async def get_epg(
         # #region agent log
         try:
             import json
-            channel_ids_in_epg = [str(c.number).strip() for c in channels]
+            channel_ids_in_epg = [_channel_xmltv_id(c) for c in channels]
             with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
                 f.write(json.dumps({"location":"iptv.py:xmltv:start","message":"XMLTV EPG generation started","data":{"channel_count":len(channels),"channel_ids":channel_ids_in_epg[:10],"client_ip":request.client.host if request and request.client else "unknown"},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H2-H4"}) + "\n")
         except: pass
@@ -381,14 +511,40 @@ async def get_epg(
         now = datetime.utcnow()
         build_days = config.playout.build_days
         end_time = now + timedelta(days=build_days)
-        
+
+        # Try TimelineBuilder pipeline (remediation: monotonic EPG, no drift)
+        timeline_xml = await _build_epg_via_timeline_builder(
+            channels, db, now, end_time, base_url
+        )
+        if timeline_xml:
+            return Response(
+                content=timeline_xml,
+                media_type="application/xml",
+                headers={"Content-Disposition": "inline; filename=xmltv.xml"},
+            )
+
         # #region agent log
         try:
-            import json
-            now_str = now.strftime("%Y%m%d%H%M%S +0000")
-            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                f.write(json.dumps({"location":"iptv.py:xmltv:time_base","message":"EPG time base","data":{"now_utc":now_str,"now_iso":now.isoformat(),"build_days":build_days,"end_time":end_time.isoformat()},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H1-H5"}) + "\n")
-        except: pass
+            import json as _json
+            _plex = getattr(config, "plex", None)
+            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as _f:
+                _f.write(_json.dumps({
+                    "location": "iptv.py:get_epg:status",
+                    "message": "EPG generation started",
+                    "data": {
+                        "channel_count": len(channels),
+                        "plex_enabled": getattr(_plex, "enabled", False),
+                        "use_for_epg": getattr(_plex, "use_for_epg", True),
+                        "reload_guide_after_epg": getattr(_plex, "reload_guide_after_epg", False),
+                        "now_utc": now.strftime("%Y%m%d%H%M%S +0000"),
+                        "build_days": build_days,
+                    },
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "sessionId": "debug-session",
+                    "hypothesisId": "EPG-STATUS",
+                }) + "\n")
+        except Exception:
+            pass
         # #endregion
 
         # Build XML header; optionally include XSL stylesheet for browsers
@@ -400,16 +556,18 @@ async def get_epg(
         # Initialize Plex API client if configured for schedule/EPG integration
         plex_client = None
         plex_channel_map = {}
+        use_for_epg = getattr(config.plex, "use_for_epg", True)
+        plex_base_url = config.plex.base_url or getattr(config.plex, "url", None) or ""
         if (
             config.plex.enabled
-            and config.plex.base_url
-            and config.plex.use_for_epg
+            and plex_base_url
+            and use_for_epg
             and config.plex.token
         ):
             try:
-                plex_client = PlexAPIClient(base_url=config.plex.base_url, token=config.plex.token)
+                plex_client = PlexAPIClient(base_url=plex_base_url, token=config.plex.token)
                 logger.info(
-                    f"Plex API client initialized for EPG/schedule integration (server: {config.plex.base_url})"
+                    f"Plex API client initialized for EPG/schedule integration (server: {plex_base_url})"
                 )
 
                 # Try to get channel mappings from Plex if DVR is configured
@@ -431,10 +589,9 @@ async def get_epg(
                 )
                 plex_client = None
 
-        # Channel definitions - ensure Plex-compatible format
+        # Channel definitions - stable IDs (exstream-{id}) for Plex DVR mapping
         for channel in channels:
-            # Use channel number as ID (Plex expects numeric or alphanumeric IDs)
-            channel_id = str(channel.number).strip()
+            channel_id = _channel_xmltv_id(channel)
             xml_content += f'  <channel id="{_xml(channel_id)}">\n'
 
             # Primary display name (required)
@@ -445,7 +602,7 @@ async def get_epg(
                 xml_content += f"    <display-name>{_xml(channel.group)}</display-name>\n"
 
             # Channel number as display name (Plex compatibility)
-            xml_content += f"    <display-name>{_xml(channel_id)}</display-name>\n"
+            xml_content += f"    <display-name>{_xml(str(channel.number).strip())}</display-name>\n"
 
             # Logo/icon (Plex expects absolute URLs). Fall back to default icon by number.
             logo_url = _resolve_logo_url(channel, base_url)
@@ -548,26 +705,22 @@ async def get_epg(
                 )
 
             if schedule_file:
-                # #region agent log
                 try:
-                    import json as _j
-                    with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                        f.write(_j.dumps({"location":"iptv.py:xmltv:schedule_file_found","message":"Channel has schedule file - falling back to DB","data":{"channel_number":str(channel.number),"schedule_file":str(schedule_file)},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H6"}) + "\n")
-                except: pass
-                # #endregion
-                try:
-                    parsed_schedule = ScheduleParser.parse_file(schedule_file, schedule_file.parent)
-                    # NOTE: ScheduleEngine expects sync Session, but we have AsyncSession
-                    # Skip schedule engine for now and use parsed schedule directly or fallback to database
-                    # TODO: Port ScheduleEngine to async or create sync session wrapper
-                    logger.info(
-                        f"Schedule file found for channel {channel.number}, but ScheduleEngine requires sync session"
+                    schedule_items = await asyncio.to_thread(
+                        _run_schedule_engine_sync, channel.id, schedule_file
                     )
-                    # Fallback to database schedules
+                    if schedule_items:
+                        logger.info(
+                            f"Channel {channel.number}: EPG using {len(schedule_items)} items from schedule file"
+                        )
+                except (OSError, ValueError) as e:
+                    logger.warning(f"Failed to load schedule file for EPG (io/parse): {e}")
                     schedule_items = []
                 except Exception as e:
-                    logger.warning(f"Failed to load schedule file for EPG: {e}")
+                    logger.warning(f"ScheduleEngine failed for channel {channel.number}: {e}")
+                    schedule_items = []
 
+            if schedule_items:
                     # Calculate total cycle duration (sum of all item durations)
                     total_duration = sum(
                         (item.get("media_item", {}).duration or 1800)
@@ -872,8 +1025,6 @@ async def get_epg(
                     logger.info(
                         f"After filtering: {len(schedule_items)} items within time range ({now} to {end_time}) for channel {channel.number}"
                     )
-                except Exception as e:
-                    logger.warning(f"Failed to load schedule file for EPG: {e}")
 
             # Fallback to database if schedule file not available
             if not schedule_items:
@@ -909,7 +1060,25 @@ async def get_epg(
                     start_offset = 0
                     if playback_position and playback_position.last_item_index is not None:
                         start_offset = playback_position.last_item_index
-                    
+                    # #region agent log
+                    try:
+                        import json as _j
+                        _pos = playback_position
+                        _data = {
+                            "channel_number": channel.number,
+                            "channel_name": channel.name,
+                            "last_item_index": getattr(_pos, "last_item_index", None) if _pos else None,
+                            "current_item_start_time": getattr(_pos, "current_item_start_time", None).isoformat() if _pos and getattr(_pos, "current_item_start_time", None) else None,
+                            "elapsed_seconds_in_item": getattr(_pos, "elapsed_seconds_in_item", None) if _pos else None,
+                            "start_offset": start_offset,
+                            "now": now.isoformat(),
+                        }
+                        with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as _f:
+                            _f.write(_j.dumps({"location": "iptv.py:xmltv:db_path_position", "message": "DB path playback position", "data": _data, "timestamp": datetime.utcnow().isoformat(), "sessionId": "debug-session", "hypothesisId": "H2-H3-H5"}) + "\n")
+                    except Exception:
+                        pass
+                    # #endregion
+
                     # Query playout items starting from the current position
                     # This ensures we get the items that are currently playing and will play next
                     stmt = (
@@ -962,10 +1131,66 @@ async def get_epg(
                         current_item_index = 0
                         
                         # Calculate when the current item started playing
-                        # We trust that the first item in our query is currently playing
-                        # Assume the item just started (conservative approach for timing)
+                        # Use persisted current_item_start_time / elapsed so EPG matches stream
                         time_into_item = 0
                         current_item_start = now - timedelta(seconds=time_into_item)
+                        if playback_position:
+                            _db_start = getattr(
+                                playback_position, "current_item_start_time", None
+                            )
+                            _db_elapsed = getattr(
+                                playback_position, "elapsed_seconds_in_item", None
+                            )
+                            _playout_start = getattr(
+                                playback_position, "playout_start_time", None
+                            )
+                            if _db_start is not None:
+                                current_item_start = _db_start
+                                if _db_elapsed is not None:
+                                    time_into_item = int(_db_elapsed)
+                            elif _db_elapsed is not None and _db_elapsed > 0:
+                                current_item_start = now - timedelta(seconds=int(_db_elapsed))
+                                time_into_item = int(_db_elapsed)
+                            elif _playout_start is not None and start_offset > 0:
+                                # Fallback: compute current item start from playout_start_time
+                                # + sum of durations of items 0..start_offset-1 (EPG sync when
+                                # current_item_start_time not persisted)
+                                prev_items_stmt = (
+                                    select(PlayoutItem)
+                                    .where(PlayoutItem.playout_id == playout.id)
+                                    .order_by(PlayoutItem.id)
+                                    .limit(start_offset)
+                                )
+                                prev_result = await db.execute(prev_items_stmt)
+                                prev_items = prev_result.scalars().all()
+                                seconds_before_current = 0
+                                for pi in prev_items:
+                                    if pi.start_time and pi.finish_time:
+                                        seconds_before_current += (
+                                            pi.finish_time - pi.start_time
+                                        ).total_seconds()
+                                    else:
+                                        seconds_before_current += 1800
+                                current_item_start = _playout_start + timedelta(
+                                    seconds=int(seconds_before_current)
+                                )
+                            elif _playout_start is not None and start_offset == 0:
+                                current_item_start = _playout_start
+                        # #region agent log
+                        try:
+                            import json as _j
+                            _first_title = None
+                            if playout_items:
+                                _first_title = getattr(playout_items[0], "custom_title", None)
+                                if not _first_title and playout_items[0].media_item_id and media_items_dict:
+                                    _mi = media_items_dict.get(playout_items[0].media_item_id)
+                                    _first_title = getattr(_mi, "title", None) if _mi else None
+                                _first_title = (str(_first_title)[:50] if _first_title else None)
+                            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as _f:
+                                _f.write(_j.dumps({"location": "iptv.py:xmltv:db_path_first_programme", "message": "DB path first programme start", "data": {"channel_number": channel.number, "current_item_start": current_item_start.isoformat(), "now": now.isoformat(), "time_into_item": time_into_item, "first_title": _first_title}, "timestamp": datetime.utcnow().isoformat(), "sessionId": "debug-session", "hypothesisId": "H1-H3-H4"}) + "\n")
+                        except Exception:
+                            pass
+                        # #endregion
                         
                         # Build schedule items starting from current item with proper times
                         schedule_time = current_item_start
@@ -1022,7 +1247,7 @@ async def get_epg(
                 # Use the full end_time instead of just 24 hours to cover the entire EPG period
                 start_str = now.strftime("%Y%m%d%H%M%S +0000")
                 end_str = end_time.strftime("%Y%m%d%H%M%S +0000")
-                channel_id = str(channel.number).strip()
+                channel_id = _channel_xmltv_id(channel)
                 xml_content += f'  <programme start="{_xml(start_str)}" stop="{_xml(end_str)}" channel="{_xml(channel_id)}">\n'
                 # Use a more descriptive title that Plex will recognize
                 xml_content += f'    <title lang="en">{_xml(channel.name)} - Live Stream</title>\n'
@@ -1278,8 +1503,8 @@ async def get_epg(
                     start_str = start_time.strftime("%Y%m%d%H%M%S +0000")
                     end_str = end_time_prog.strftime("%Y%m%d%H%M%S +0000")
 
-                    # Use channel number as ID (must match channel definition)
-                    channel_id = str(channel.number).strip()
+                    # Stable channel ID (must match channel definition and M3U tvg-id)
+                    channel_id = _channel_xmltv_id(channel)
                     xml_content += f'  <programme start="{_xml(start_str)}" stop="{_xml(end_str)}" channel="{_xml(channel_id)}">\n'
 
                     # Parse metadata JSON early to extract language and other metadata
@@ -1608,7 +1833,40 @@ async def get_epg(
                 logger.debug(f"Plex client cleanup: {e}")
 
         generation_time = time.time() - perf_start_time
+        programme_count_epg = xml_content.count('<programme start=')
         logger.info(f"XMLTV EPG generated in {generation_time:.2f}s ({len(xml_content)} bytes)")
+
+        # #region agent log
+        try:
+            import json as _json
+            _plex_cfg = getattr(config, "plex", None)
+            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as _f:
+                _f.write(_json.dumps({
+                    "location": "iptv.py:get_epg:complete",
+                    "message": "EPG generation complete",
+                    "data": {
+                        "programme_count": programme_count_epg,
+                        "xml_bytes": len(xml_content),
+                        "generation_time_sec": round(generation_time, 2),
+                        "reload_guide_after_epg": getattr(_plex_cfg, "reload_guide_after_epg", False),
+                    },
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "sessionId": "debug-session",
+                    "hypothesisId": "EPG-COMPLETE",
+                }) + "\n")
+        except Exception:
+            pass
+        # #endregion
+
+        # Optional: request Plex DVR to reload guide after EPG is generated (throttled 60s)
+        plex_cfg = getattr(config, "plex", None)
+        if plex_cfg and getattr(plex_cfg, "reload_guide_after_epg", False):
+            try:
+                from ..streaming.plex_api_client import request_plex_guide_reload
+                import asyncio
+                asyncio.create_task(request_plex_guide_reload(force=False))
+            except Exception as e:
+                logger.debug(f"Plex reload-after-EPG skipped: {e}")
 
         return Response(
             content=xml_content,
@@ -2024,16 +2282,10 @@ async def get_transport_stream(
 
             async def generate():
                 try:
-                    # Get the ChannelStream object
-                    # Handle channel numbers like "1984.1" - try to parse as float then int
-                    try:
-                        parsed_channel_num = int(float(channel_number))
-                    except (ValueError, TypeError):
-                        parsed_channel_num = 0
-                    
+                    # Get the ChannelStream object - use channel.number (str) for decimal channels (e.g. "1984.1")
                     channel_stream = await channel_manager.get_channel_stream(
                         channel_id=channel.id,
-                        channel_number=parsed_channel_num,
+                        channel_number=channel.number,
                         channel_name=channel.name
                     )
                     

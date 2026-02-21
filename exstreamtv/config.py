@@ -79,6 +79,14 @@ class FFmpegConfig(BaseModel):
     youtube_video_encoder: Optional[str] = None
     archive_org_video_encoder: Optional[str] = None
     plex_video_encoder: Optional[str] = None
+
+    # Process pool manager (streaming stability)
+    max_processes: Optional[int] = None  # None = auto from memory/FD; or explicit cap
+    spawns_per_second: int = 5  # Startup rate limiter (token bucket)
+    cold_start_timeout_seconds: int = 90  # Fail fast if FFmpeg doesn't produce output
+    long_run_hours: float = 24.0  # Kill processes running longer (zombie prevention)
+    memory_guard_threshold: float = 0.85  # Reject spawn if memory > 85%
+    fd_guard_reserve: int = 100  # Reserve FDs from ulimit for other uses
     
     @property
     def ffmpeg_path(self) -> str:
@@ -114,6 +122,10 @@ class PlexConfig(BaseModel):
     url: str = ""
     base_url: str = ""  # Alias for url
     token: str = ""
+    # When True, use Plex API for EPG/DVR integration (channel mapping, etc.)
+    use_for_epg: bool = True
+    # When True, request Plex DVR guide reload after EPG is generated (throttled 60s)
+    reload_guide_after_epg: bool = False
 
 
 class JellyfinConfig(BaseModel):
@@ -319,7 +331,7 @@ class SchedulingConfig(BaseModel):
 
 
 class PlayoutConfig(BaseModel):
-    """Playout configuration."""
+    """Playout configuration. Canonical key is build_days; API also exposes days_to_build for compatibility."""
     build_days: int = 7
     prebuffer_minutes: int = 5
     max_concurrent: int = 10
