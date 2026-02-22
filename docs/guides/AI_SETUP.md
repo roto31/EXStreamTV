@@ -1,10 +1,11 @@
 # AI Setup Guide
 
-EXStreamTV uses AI to help create channels, troubleshoot issues, and analyze logs. This guide covers configuring AI providers for your installation.
+EXStreamTV uses AI to help create channels, troubleshoot issues, and analyze logs. This guide covers configuring AI providers. For the bounded agent, containment, and safety model, see the [Platform Guide](../PLATFORM_GUIDE.md#5-ai-agent--safety-model).
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Bounded Agent & Safety](#bounded-agent--safety)
 - [Provider Options](#provider-options)
 - [Cloud AI Setup](#cloud-ai-setup)
   - [Groq (Recommended)](#groq-recommended)
@@ -31,6 +32,32 @@ EXStreamTV supports three AI provider modes:
 | **Hybrid** | Cloud primary with local fallback | Best reliability - works offline when cloud unavailable |
 
 All cloud providers offer **free tiers** - no credit card required.
+
+---
+
+## Bounded Agent & Safety
+
+### Bounded Agent
+
+The bounded agent is a deterministic loop that runs up to 3 steps. It does not write to the database, call tools from tools, or restart channels directly—all restarts go through the guarded `request_channel_restart` path. This prevents runaway automation.
+
+### Containment Mode
+
+When the system is stressed (restart velocity ≥ 10/60s, pool pressure ≥ 90%, circuit breaker open, or memory leak detected), the agent enters **containment mode**. No tools run; the agent escalates to the operator. See [Platform Guide §5](../PLATFORM_GUIDE.md#containment-mode).
+
+### Confidence Gating
+
+Metadata tools require a minimum confidence (0.3) before running. If a metadata tool fails, confidence decays. After 3 consecutive failures, the agent stops. This limits ineffective retries.
+
+### Safely Disabling AI
+
+| Config Key | Effect |
+|------------|--------|
+| `ai_agent.enabled: false` | Disables all AI features |
+| `ai_agent.bounded_agent_enabled: false` | Disables bounded agent (default) |
+| `ai_agent.metadata_self_resolution_enabled: false` | Disables metadata self-resolution (default) |
+
+Set these in `config.yaml` when you want to run without AI automation. Channel creation and troubleshooting can still use AI when invoked manually, depending on provider setup.
 
 ---
 

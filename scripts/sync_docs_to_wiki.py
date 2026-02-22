@@ -29,6 +29,22 @@ DOCS_DIR = PROJECT_ROOT / "docs"
 # Map: Wiki page filename (no .md) -> source path relative to project root
 WIKI_PAGE_SOURCES: Final[dict[str, str]] = {
     "Home": "docs/README.md",
+    "Platform-Guide": "docs/PLATFORM_GUIDE.md",
+    "Observability": "docs/OBSERVABILITY.md",
+    "Invariants": "docs/INVARIANTS.md",
+    "Operational-Guide": "docs/OPERATIONAL_GUIDE.md",
+    "Feature-Flags": "docs/FEATURE_FLAGS.md",
+    "Architecture": "docs/wiki/Architecture.md",
+    "Streaming-Internals": "docs/wiki/Streaming-Internals.md",
+    "HDHomeRun-Emulation": "docs/wiki/HDHomeRun-Emulation.md",
+    "Metadata-And-XMLTV": "docs/wiki/Metadata-And-XMLTV.md",
+    "AI-Agent-And-Containment": "docs/wiki/AI-Agent-And-Containment.md",
+    "Restart-Safety-Model": "docs/wiki/Restart-Safety-Model.md",
+    "CI-CD-And-Testing": "docs/wiki/CI-CD-And-Testing.md",
+    "Deployment": "docs/wiki/Deployment.md",
+    "Production-Certification": "docs/wiki/Production-Certification.md",
+    "Troubleshooting": "docs/wiki/Troubleshooting.md",
+    "Log-Interpretation": "docs/wiki/Log-Interpretation.md",
     "Installation": "docs/guides/INSTALLATION.md",
     "Quick-Start": "docs/guides/QUICK_START.md",
     "Onboarding": "docs/guides/ONBOARDING.md",
@@ -82,11 +98,18 @@ def path_to_wiki_page(link_path: str) -> str | None:
         anchor = ""
     if not p:
         return None
+    # Try variants for cross-doc links (e.g. ../PLATFORM_GUIDE.md from docs/wiki/)
+    candidates = [p, p.lstrip("./"), p.split("/")[-1] if "/" in p else p]
+    for c in candidates:
+        if c in _PATH_TO_WIKI_PAGE:
+            page = _PATH_TO_WIKI_PAGE[c]
+            return f"{page}#{anchor}" if anchor else page
     if p in _PATH_TO_WIKI_PAGE:
         page = _PATH_TO_WIKI_PAGE[p]
         return f"{page}#{anchor}" if anchor else page
     # Try without extension
     base = p.replace(".md", "").replace(".txt", "")
+    base = base.split("/")[-1] if "/" in base else base
     if base in _PATH_TO_WIKI_PAGE:
         page = _PATH_TO_WIKI_PAGE[base]
         return f"{page}#{anchor}" if anchor else page
@@ -141,11 +164,55 @@ def main() -> int:
         print(f"Wrote: {page_name}.md <- {src_rel}")
 
     if args.sidebar:
-        sidebar_lines = ["# Documentation\n", "\n", "[[Home]]\n", "\n"]
-        for page_name in WIKI_PAGE_SOURCES:
-            if page_name == "Home":
-                continue
-            sidebar_lines.append(f"[[{page_name}]]\n")
+        sidebar_lines = [
+            "# Documentation\n\n",
+            "* [[Home]]\n",
+            "* [[Platform-Guide]]\n\n",
+            "**Getting Started**\n",
+            "* [[Installation]]\n",
+            "* [[Quick-Start]]\n",
+            "* [[Onboarding]]\n\n",
+            "**Guides**\n",
+            "* [[AI-Setup]]\n",
+            "* [[Channel-Creation-Guide]]\n",
+            "* [[Local-Media]]\n",
+            "* [[Hardware-Transcoding]]\n",
+            "* [[macOS-App-Guide]]\n",
+            "* [[Navigation-Guide]]\n",
+            "* [[Streaming-Stability]]\n",
+            "* [[Advanced-Scheduling]]\n\n",
+            "**Reference**\n",
+            "* [[API-Reference]]\n",
+            "* [[System-Design]]\n",
+            "* [[Architecture]]\n",
+            "* [[Streaming-Internals]]\n",
+            "* [[HDHomeRun-Emulation]]\n",
+            "* [[Metadata-And-XMLTV]]\n",
+            "* [[AI-Agent-And-Containment]]\n",
+            "* [[Restart-Safety-Model]]\n",
+            "* [[Observability]]\n",
+            "* [[Troubleshooting]]\n",
+            "* [[Log-Interpretation]]\n",
+            "* [[Tunarr-DizqueTV-Integration]]\n",
+            "* [[Distribution]]\n",
+            "* [[Build-Progress]]\n\n",
+            "**Operations**\n",
+            "* [[Operational-Guide]]\n",
+            "* [[Feature-Flags]]\n",
+            "* [[Invariants]]\n",
+            "* [[CI-CD-And-Testing]]\n",
+            "* [[Deployment]]\n",
+            "* [[Production-Certification]]\n\n",
+            "**Changelog & Migration**\n",
+            "* [[Changelog]]\n",
+            "* [[Integration-Plan]]\n",
+            "* [[Lessons-Learned]]\n",
+            "* [[StreamTV-Migration-QuickStart]]\n",
+            "* [[StreamTV-Schema-Mapping]]\n",
+            "* [[Platform-Comparison]]\n",
+            "* [[MCP-Server]]\n",
+            "* [[Documentation-Changelog]]\n",
+        ]
         (out / "_Sidebar.md").write_text("".join(sidebar_lines), encoding="utf-8")
         print("Wrote: _Sidebar.md")
 

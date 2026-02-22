@@ -1,79 +1,49 @@
 # EXStreamTV System Design
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-21
+
+For a full architecture overview, streaming lifecycle, restart safety, and AI model, see the [Platform Guide](../PLATFORM_GUIDE.md). This document focuses on component layout and data models.
 
 ---
 
 ## Overview
 
-EXStreamTV is a unified IPTV streaming platform that combines:
-- **StreamTV**: Python/FastAPI web application with AI agent
-- **ErsatzTV**: Advanced scheduling, transcoding, and local media features
-
-This document describes the system architecture and design decisions.
+EXStreamTV combines StreamTV (Python/FastAPI, AI agent) and ErsatzTV (scheduling, transcoding, local media) into one platform. Clients connect via REST, M3U/EPG, or HDHomeRun emulation; the channel manager and ProcessPoolManager control streaming; the playout engine drives scheduling.
 
 ---
 
-## Architecture Diagram
+## Component Layout
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              EXStreamTV Platform                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                         WebUI (Jinja2 Templates)                      │  │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐        │  │
-│  │  │Channels │ │Playlists│ │Schedules│ │Libraries│ │Settings │        │  │
-│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘        │  │
+│  │  WebUI (Jinja2)  │ Channels │ Playlists │ Schedules │ Libraries │ ...  │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                    │                                        │
 │  ┌─────────────────────────────────▼────────────────────────────────────┐  │
-│  │                        FastAPI Application                            │  │
-│  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐        │  │
-│  │  │   REST     │ │  IPTV      │ │ HDHomeRun  │ │   SSDP     │        │  │
-│  │  │   API      │ │  M3U/EPG   │ │  Emulator  │ │  Discovery │        │  │
-│  │  └────────────┘ └────────────┘ └────────────┘ └────────────┘        │  │
+│  │  REST API │ IPTV M3U/EPG │ HDHomeRun Emulator │ SSDP Discovery         │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                    │                                        │
 │  ┌─────────────────────────────────▼────────────────────────────────────┐  │
-│  │                         Core Services                                 │  │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────────┐ │  │
-│  │  │   Channel    │ │   Playout    │ │    Media     │ │  AI Agent   │ │  │
-│  │  │   Manager    │ │   Engine     │ │   Scanner    │ │  (Log AI)   │ │  │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘ └─────────────┘ │  │
+│  │  ChannelManager │ SessionManager │ ProcessPoolManager │ StreamThrottler│  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                    │                                        │
 │  ┌─────────────────────────────────▼────────────────────────────────────┐  │
-│  │                       FFmpeg Pipeline                                 │  │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │  │
-│  │  │Decoders  │ │Filters   │ │Encoders  │ │Formats   │ │Profiles  │  │  │
-│  │  │(HW/SW)   │ │(V/A)     │ │(HW/SW)   │ │(TS/HLS)  │ │(Custom)  │  │  │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘  │  │
+│  │  Playout Engine │ FFmpeg Pipeline │ AI Agent (bounded)                  │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 │                                    │                                        │
 │  ┌─────────────────────────────────▼────────────────────────────────────┐  │
-│  │                         Data Layer                                    │  │
-│  │  ┌────────────────────┐        ┌────────────────────────────────┐   │  │
-│  │  │  SQLite/PostgreSQL │        │  Media Sources                  │   │  │
-│  │  │  (SQLAlchemy)      │        │  ┌────────┐ ┌────────┐ ┌─────┐ │   │  │
-│  │  │                    │        │  │YouTube │ │Archive │ │Local│ │   │  │
-│  │  │  - Channels        │        │  │        │ │.org    │ │Files│ │   │  │
-│  │  │  - Playlists       │        │  └────────┘ └────────┘ └─────┘ │   │  │
-│  │  │  - Playouts        │        │  ┌────────┐ ┌────────┐ ┌─────┐ │   │  │
-│  │  │  - Schedules       │        │  │Plex    │ │Jellyfin│ │Emby │ │   │  │
-│  │  │  - Filler/Deco     │        │  └────────┘ └────────┘ └─────┘ │   │  │
-│  │  └────────────────────┘        └────────────────────────────────┘   │  │
+│  │  SQLite/PostgreSQL │ Plex/Jellyfin/Emby │ YouTube │ Archive.org        │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                     ┌───────────────┼───────────────┐
                     ▼               ▼               ▼
             ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
             │    Plex     │ │  Jellyfin   │ │   IPTV      │
-            │   Client    │ │   Client    │ │   Player    │
             └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
@@ -81,93 +51,53 @@ This document describes the system architecture and design decisions.
 
 ## Core Components
 
-### 1. FastAPI Application (`exstreamtv/main.py`)
+### FastAPI Application (`exstreamtv/main.py`)
 
-The main application entry point using FastAPI:
+- Lifespan: async startup/shutdown for database, channel manager, ProcessPoolManager
+- Routers: REST, IPTV, HDHomeRun, WebUI, SSDP
+- Static files and Jinja2 templates
 
-- **Lifespan Management**: Async startup/shutdown for database, channel manager
-- **Router Registration**: REST API, IPTV, HDHomeRun, WebUI routes
-- **Static Files**: CSS, JavaScript, images
-- **Templates**: Jinja2 template rendering
+### Channel Manager (`exstreamtv/streaming/channel_manager.py`)
 
-### 2. Channel Manager (`exstreamtv/streaming/channel_manager.py`)
+- Background streams per channel
+- Shared streams for multiple clients
+- Integration with ProcessPoolManager for FFmpeg spawn/release
+- Buffer: 2MB with 64KB read chunks
 
-Manages continuous channel streaming (ErsatzTV-style):
+### ProcessPoolManager (`exstreamtv/streaming/process_pool_manager.py`)
 
-- **Background Streams**: Each channel runs continuously in background
-- **Client Connections**: Multiple clients can connect to same stream
-- **Seamless Transitions**: Smooth switching between playlist items
-- **Buffer Management**: 2MB buffer with 64KB read chunks
+Sole gatekeeper for FFmpeg processes. See [Platform Guide §2](../PLATFORM_GUIDE.md#2-how-streaming-works).
 
-### 3. Playout Engine (`exstreamtv/scheduling/engine/`)
+- `acquire_process` / `release_process`
+- Rate limiting, memory/FD guards, zombie detection
 
-Advanced scheduling system ported from ErsatzTV:
+### Circuit Breaker (`exstreamtv/streaming/circuit_breaker.py`)
 
-- **Schedule Modes**: Flood, Duration, Multiple, One
-- **Collection Enumerators**: Chronological, Shuffled, Random
-- **Block Scheduling**: Time-based programming blocks
-- **Filler System**: Pre-roll, mid-roll, post-roll, fallback
+Per-channel restart protection. States: CLOSED → OPEN → HALF_OPEN. See [Platform Guide §2](../PLATFORM_GUIDE.md#circuitbreaker-behavior).
 
-### 4. FFmpeg Pipeline (`exstreamtv/ffmpeg/`)
+### Session Manager (`exstreamtv/streaming/session_manager.py`)
 
-Hardware-accelerated transcoding pipeline:
+Tracks client connections per channel. Idle timeout, cleanup, error counting.
 
-- **Hardware Detection**: Auto-detect VideoToolbox, NVENC, QSV, VAAPI, AMF
-- **Encoder Selection**: Choose optimal encoder based on capabilities
-- **Filter Chains**: Scale, pad, overlay, deinterlace, watermark
-- **Profile System**: Saved encoding presets
+### Stream Throttler (`exstreamtv/streaming/throttler.py`)
 
-### 5. Media Scanner (`exstreamtv/media/scanner/`)
+Rate-limits MPEG-TS delivery. Modes: realtime, burst, adaptive, disabled.
 
-Local media library management:
+### Playout Engine (`exstreamtv/scheduling/`)
 
-- **Library Sources**: Plex, Jellyfin, Emby, local folders
-- **Metadata Providers**: TVDB, TMDB, local NFO files
-- **Collection Building**: Automatic show/season/episode grouping
-- **Change Detection**: Efficient incremental scanning
+Schedule modes (Flood, Duration, Multiple, One), block scheduling, filler. See [Advanced Scheduling](../guides/ADVANCED_SCHEDULING.md).
 
-### 6. AI Agent (`exstreamtv/ai_agent/`)
+### FFmpeg Pipeline (`exstreamtv/ffmpeg/`)
 
-Intelligent log analysis and error detection:
+Hardware detection (VideoToolbox, NVENC, QSV, VAAPI, AMF), encoder selection, filter chains, profiles.
 
-- **Pattern Matching**: Detect FFmpeg, network, auth errors
-- **Fix Suggestions**: Recommend solutions for common issues
-- **Auto-Fix Mode**: Optional automatic remediation
-- **Learning**: Improve suggestions based on outcomes
+### AI Agent (`exstreamtv/ai_agent/`)
 
-### 7. Session Manager (`exstreamtv/streaming/session_manager.py`) - NEW in v2.6.0
+Bounded loop, tool registry, grounded envelope, containment. See [Platform Guide §5](../PLATFORM_GUIDE.md#5-ai-agent--safety-model).
 
-Tunarr-style client session tracking:
+### Media Scanner (`exstreamtv/media/scanner/`)
 
-- **StreamSession**: Individual client connection tracking
-- **SessionManager**: Centralized session lifecycle management
-- **Health Monitoring**: Error counting, restart tracking
-- **Idle Cleanup**: Automatic cleanup of inactive sessions
-
-### 8. Stream Throttler (`exstreamtv/streaming/throttler.py`) - NEW in v2.6.0
-
-dizqueTV-style rate limiting for MPEG-TS delivery:
-
-- **Rate Limiting**: Match target bitrate to prevent buffer overruns
-- **Multiple Modes**: realtime, burst, adaptive, disabled
-- **Keepalive**: Packet support during stream stalls
-
-### 9. Error Screen Generator (`exstreamtv/streaming/error_screens.py`) - NEW in v2.6.0
-
-dizqueTV-style fallback streams during failures:
-
-- **Visual Modes**: text, static, test_pattern, slate
-- **Audio Modes**: silent, sine_wave, white_noise, beep
-- **FFmpeg Integration**: Generate MPEG-TS error streams
-
-### 10. AI Self-Healing System - NEW in v2.6.0
-
-Enhanced AI capabilities for autonomous issue resolution:
-
-- **UnifiedLogCollector**: Multi-source log aggregation with real-time streaming
-- **FFmpegAIMonitor**: Intelligent FFmpeg monitoring with error classification
-- **PatternDetector**: ML-based pattern detection and failure prediction
-- **AutoResolver**: Autonomous issue resolution with zero-downtime fixes
+Library sources (Plex, Jellyfin, Emby, local), metadata providers, collection building.
 
 ---
 
@@ -175,145 +105,56 @@ Enhanced AI capabilities for autonomous issue resolution:
 
 ### Channel
 ```python
-class Channel:
-    id: int
-    number: int
-    name: str
-    logo_url: str
-    streaming_mode: str  # "iptv" | "hdhomerun" | "both"
-    ffmpeg_profile_id: int
-    fallback_filler_id: int
-    playouts: List[Playout]
+# Simplified
+id: int
+number: int
+name: str
+streaming_mode: str  # "iptv" | "hdhomerun" | "both"
+playouts: List[Playout]
 ```
 
-### Playout (ErsatzTV-compatible)
+### Playout
 ```python
-class Playout:
-    id: int
-    channel_id: int
-    program_schedule_id: int
-    anchor: PlayoutAnchor
-    items: List[PlayoutItem]
+id: int
+channel_id: int
+program_schedule_id: int
+anchor: PlayoutAnchor
+items: List[PlayoutItem]
 ```
 
 ### PlayoutItem
 ```python
-class PlayoutItem:
-    id: int
-    playout_id: int
-    media_item_id: int
-    start_time: datetime
-    finish_time: datetime
-    in_point: timedelta
-    out_point: timedelta
-    filler_kind: str
+id: int
+playout_id: int
+media_item_id: int
+start_time: datetime
+finish_time: datetime
+in_point: timedelta
+out_point: timedelta
+filler_kind: str
 ```
 
 ### ProgramSchedule
 ```python
-class ProgramSchedule:
-    id: int
-    name: str
-    keep_multi_part_episodes: bool
-    treat_collections_as_shows: bool
-    shuffle_schedule_items: bool
-    random_start_point: bool
-    items: List[ProgramScheduleItem]
+id: int
+name: str
+items: List[ProgramScheduleItem]
+# Modes: keep_multi_part_episodes, shuffle_schedule_items, random_start_point
 ```
 
 ---
 
-## Streaming Flow
+## Streaming and Playout Flow
 
-### 1. IPTV Request Flow (v2.6.0 Enhanced)
+Stream request flow (Client → SessionManager → ChannelManager → ProcessPoolManager → FFmpeg → Throttler) and restart decision logic are in [Platform Guide §2](../PLATFORM_GUIDE.md#2-how-streaming-works).
 
-```mermaid
-flowchart LR
-    Client[Client Request]
-    SM[SessionManager]
-    CM[ChannelManager]
-    ST[StreamThrottler]
-    FFmpeg[FFmpeg Pipeline]
-    Stream[MPEG-TS Stream]
-    
-    Client --> SM
-    SM --> CM
-    CM --> FFmpeg
-    FFmpeg --> ST
-    ST --> Stream
-    Stream --> Client
-```
-
-```
-Client Request → SessionManager → Channel Manager → FFmpeg Pipeline → Throttler → MPEG-TS Stream
-```
-
-### 2. HDHomeRun Flow
-```
-Plex/Jellyfin → SSDP Discovery → HDHomeRun API → Channel Manager → Stream
-```
-
-### 3. Playout Flow (v2.6.0 Enhanced)
-
-```mermaid
-flowchart LR
-    Schedule[Schedule Timer]
-    TSS[TimeSlotScheduler]
-    BS[BalanceScheduler]
-    Media[Media Selection]
-    SSP[SubtitlePicker]
-    ASP[AudioPicker]
-    FFmpeg[FFmpeg]
-    Stream[Channel Stream]
-    
-    Schedule --> TSS
-    Schedule --> BS
-    TSS --> Media
-    BS --> Media
-    Media --> SSP
-    Media --> ASP
-    SSP --> FFmpeg
-    ASP --> FFmpeg
-    FFmpeg --> Stream
-```
-
-```
-Schedule Timer → TimeSlot/Balance Scheduler → Media Selection → Subtitle/Audio Pickers → FFmpeg → Channel Stream
-```
-
-### 4. AI Self-Healing Flow (NEW v2.6.0)
-
-```mermaid
-flowchart TB
-    Logs[Application Logs]
-    FFmpegErr[FFmpeg Stderr]
-    
-    ULC[UnifiedLogCollector]
-    FFM[FFmpegAIMonitor]
-    PD[PatternDetector]
-    AR[AutoResolver]
-    
-    ESG[ErrorScreenGenerator]
-    CM[ChannelManager]
-    
-    Logs --> ULC
-    FFmpegErr --> FFM
-    ULC --> PD
-    FFM --> PD
-    PD --> AR
-    AR --> ESG
-    AR --> CM
-```
-
-```
-Logs/FFmpeg → UnifiedLogCollector → PatternDetector → AutoResolver → Error Screen/Channel Restart
-```
+Playout: Schedule Timer → TimeSlot/Balance Scheduler → Media Selection → Subtitle/Audio Pickers → FFmpeg → Channel Stream.
 
 ---
 
 ## Configuration
 
-Configuration is managed via `config.yaml` with environment variable overrides:
+`config.yaml` with `EXSTREAMTV_` environment overrides:
 
 ```yaml
 server:
@@ -321,56 +162,20 @@ server:
   port: 8411
 
 ffmpeg:
-  hardware_acceleration:
-    preferred: "auto"  # auto, nvenc, qsv, vaapi, videotoolbox
+  max_processes: 150
+  spawns_per_second: 5
+  memory_guard_threshold: 0.85
+  fd_guard_reserve: 100
 
-libraries:
-  plex:
-    enabled: true
-    url: "http://localhost:32400"
-    token: "xxx"
+hdhomerun:
+  device_id: "E5E17001"  # Must be 8 hex chars
+  tuner_count: 4
 ```
-
-Environment variables use `EXSTREAMTV_` prefix:
-```bash
-EXSTREAMTV_PORT=8411
-EXSTREAMTV_PLEX_TOKEN=xxx
-```
-
----
-
-## Security Considerations
-
-1. **API Authentication**: Optional password protection
-2. **Credential Storage**: Secure keyring for tokens
-3. **Input Validation**: Pydantic models for all inputs
-4. **Rate Limiting**: slowapi for API rate limiting
-
----
-
-## Deployment Options
-
-1. **Direct Install**: `./install_macos.sh`
-2. **Docker**: `docker-compose up`
-3. **macOS App**: `EXStreamTVApp.app` (menu bar)
-4. **Kubernetes**: Helm chart in `containers/kubernetes/`
-
----
-
-## Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2026-01-14 | Initial project structure |
-| 1.0.1 | 2026-01-14 | Config system, database foundation |
-| 2.0.0 | 2026-01-14 | Complete platform with all integrations |
-| 2.5.0 | 2026-01-17 | AI Channel Creator, Block Scheduling |
-| 2.6.0 | 2026-01-31 | Tunarr/dizqueTV integration, AI self-healing |
 
 ---
 
 ## Related Documentation
 
-- [BUILD_PROGRESS.md](../BUILD_PROGRESS.md) - Current development status
-- [TUNARR_DIZQUETV_INTEGRATION.md](./TUNARR_DIZQUETV_INTEGRATION.md) - v2.6.0 integration details
-- [API Documentation](../api/README.md) - REST API reference
+- [Platform Guide](../PLATFORM_GUIDE.md) — Full architecture, streaming, HDHomeRun, AI, observability
+- [TUNARR_DIZQUETV_INTEGRATION.md](./TUNARR_DIZQUETV_INTEGRATION.md) — v2.6 integration
+- [API Reference](../api/README.md) — REST and IPTV endpoints

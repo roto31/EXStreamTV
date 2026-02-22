@@ -1,7 +1,7 @@
 # EXStreamTV Documentation
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-21
 
 Welcome to the EXStreamTV documentation. This guide will help you set up, configure, and use EXStreamTV for your IPTV streaming needs.
 
@@ -11,6 +11,7 @@ Welcome to the EXStreamTV documentation. This guide will help you set up, config
 
 | Document | Description |
 |----------|-------------|
+| [Platform Guide](PLATFORM_GUIDE.md) | Full architecture, streaming, HDHomeRun, AI, observability |
 | [Quick Start](guides/QUICK_START.md) | Get started in 10 minutes |
 | [Installation](guides/INSTALLATION.md) | Complete installation guide |
 | [API Reference](api/README.md) | REST API documentation |
@@ -23,6 +24,11 @@ Welcome to the EXStreamTV documentation. This guide will help you set up, config
 ```
 docs/
 ├── README.md                    # This file
+├── PLATFORM_GUIDE.md            # Master platform document (architecture, streaming, AI, observability)
+├── OBSERVABILITY.md             # Prometheus metrics reference
+├── OPERATIONAL_GUIDE.md         # Diagnosis and verification
+├── INVARIANTS.md                # Formal invariants
+├── FEATURE_FLAGS.md             # Config toggles
 ├── VERSION                      # Documentation version
 ├── CHANGELOG.md                 # Documentation changes
 │

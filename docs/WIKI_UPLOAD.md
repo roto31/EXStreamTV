@@ -1,10 +1,28 @@
 # GitHub Wiki Upload Instructions
 
-After pushing the main repo to https://github.com/roto31/EXStreamTV, populate the Wiki as follows.
+The Wiki at https://github.com/roto31/EXStreamTV/wiki currently has only a placeholder page. To populate it with all documentation (26+ pages, Mermaid diagrams, screenshots):
 
-## Option A: Use the generated wiki output
+## Quick way (script does clone + copy + commit)
 
-1. Generate wiki pages (already done if you ran the script):
+From the **EXStreamTV project root**:
+
+```bash
+chmod +x scripts/push_wiki.sh
+./scripts/push_wiki.sh
+```
+
+Then push (you must do this yourself so Git can use your credentials):
+
+```bash
+cd EXStreamTV.wiki
+git push origin main
+```
+
+After the push, the wiki Home will be [Home](https://github.com/roto31/EXStreamTV/wiki/Home) and the sidebar will list all pages.
+
+## Option A: Manual steps
+
+1. Generate wiki pages (if needed):
    ```bash
    python scripts/sync_docs_to_wiki.py --wiki-dir wiki_out
    ```

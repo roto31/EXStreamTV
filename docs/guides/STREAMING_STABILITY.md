@@ -1,15 +1,16 @@
 # Streaming Stability Guide
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-01-31
+**Last Updated:** 2026-02-21
 
-This guide covers the streaming stability features introduced in EXStreamTV v2.6.0, including session management, stream throttling, and error handling.
+This guide covers streaming stability: session management, stream throttling, error screens, ProcessPoolManager, CircuitBreaker, and restart safety. For full architecture and restart decision logic, see the [Platform Guide](../PLATFORM_GUIDE.md#2-how-streaming-works).
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [ProcessPoolManager & Restart Safety](#processpoolmanager--restart-safety)
 - [Session Management](#session-management)
 - [Stream Throttling](#stream-throttling)
 - [Error Screens](#error-screens)
@@ -81,6 +82,36 @@ flowchart TB
     
     FFmpeg -.-> ESG
 ```
+
+---
+
+## ProcessPoolManager & Restart Safety
+
+### ProcessPoolManager
+
+All FFmpeg processes are spawned through the ProcessPoolManager. It enforces:
+
+- **Global process cap** — From config, memory, and file descriptor limits
+- **Rate limiting** — Token bucket (default 5 spawns per second)
+- **Guards** — Memory (85% threshold), FD reserve (100) before each spawn
+- **Zombie detection** — Background task checks every 30 seconds
+- **Long-run guard** — Processes running > 24 hours are released
+
+When a spawn is rejected (memory, FD, or capacity), the circuit breaker may record a failure for that channel.
+
+### Circuit Breaker
+
+Per-channel protection. After 5 failures in a 300-second window, restarts are blocked for 120 seconds. States: CLOSED → OPEN → HALF_OPEN. See [Platform Guide §2](../PLATFORM_GUIDE.md#circuitbreaker-behavior).
+
+### Restart Guards
+
+Three mechanisms prevent restart storms:
+
+1. **Global throttle** — Max 10 restarts in any 60-second window
+2. **Per-channel cooldown** — 30 seconds between restarts for the same channel
+3. **Circuit breaker** — Blocks when OPEN for that channel
+
+All restart requests (health task, AI agent) go through `request_channel_restart`, which applies these checks. See [Platform Guide §2](../PLATFORM_GUIDE.md#restart-decision-flow).
 
 ---
 
@@ -451,7 +482,8 @@ sequenceDiagram
 
 ## Related Documentation
 
-- [System Design](../architecture/SYSTEM_DESIGN.md) - Overall architecture
-- [Tunarr/dizqueTV Integration](../architecture/TUNARR_DIZQUETV_INTEGRATION.md) - Technical details
-- [AI Setup Guide](AI_SETUP.md) - AI configuration
-- [Hardware Transcoding](HW_TRANSCODING.md) - FFmpeg optimization
+- [Platform Guide](../PLATFORM_GUIDE.md) — Full streaming lifecycle and restart logic
+- [System Design](../architecture/SYSTEM_DESIGN.md) — Overall architecture
+- [Tunarr/dizqueTV Integration](../architecture/TUNARR_DIZQUETV_INTEGRATION.md) — Technical details
+- [AI Setup Guide](AI_SETUP.md) — AI configuration
+- [Hardware Transcoding](HW_TRANSCODING.md) — FFmpeg optimization

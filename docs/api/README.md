@@ -1,6 +1,6 @@
 # EXStreamTV API Documentation
 
-Welcome to the EXStreamTV API documentation. This guide explains how to use the API to control your streaming server, manage channels, organize content, and build custom schedules.
+Welcome to the EXStreamTV API documentation. This guide explains how to use the API to control your streaming server, manage channels, organize content, and build custom schedules. For HDHomeRun emulation, streaming lifecycle, and observability, see the [Platform Guide](../PLATFORM_GUIDE.md).
 
 ## Table of Contents
 
@@ -1614,19 +1614,41 @@ GET /iptv/xmltv.xml?hours=24
 
 ### HDHomeRun Emulation
 
-EXStreamTV can emulate an HDHomeRun device for compatibility with Plex, Jellyfin, and Emby.
+EXStreamTV emulates an HDHomeRun device for Plex, Jellyfin, and Emby. DeviceID must be 8 hex chars. See [Platform Guide §3](../PLATFORM_GUIDE.md#3-hdhomrun-emulation).
 
 #### Device Discovery
 
 ```
-GET /discover.json
+GET /hdhomerun/discover.json
+GET /discover.json  (redirects to /hdhomerun/discover.json)
 ```
+
+Returns: FriendlyName, ModelNumber, DeviceID, BaseURL, LineupURL, GuideURL, TunerCount.
 
 #### Channel Lineup
 
 ```
-GET /lineup.json
+GET /hdhomerun/lineup.json
+GET /lineup.json  (redirects to /hdhomerun/lineup.json)
 ```
+
+Returns: Array of { GuideNumber, GuideName, URL } for enabled channels.
+
+#### Tuner Stream
+
+```
+GET /hdhomerun/tuner{N}/stream?channel=auto:v{channel_number}
+```
+
+Streams MPEG-TS for the tuned channel. Plex uses the `url` parameter; EXStreamTV supports both.
+
+### Prometheus Metrics
+
+```
+GET /metrics
+```
+
+Returns Prometheus text exposition format. See [Observability](../OBSERVABILITY.md) for metric reference.
 
 ---
 
