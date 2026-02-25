@@ -139,56 +139,57 @@ class PlexResolver(BaseResolver):
                         info["rating_key"] = match.group(1)
                         break
         
-        # Try to extract from URL
+        # Extract rating_key and server_url from the stored URL.
+        # The token extracted here is from import time and likely EXPIRED,
+        # so we store it separately and only use it as a last resort.
         url = self._get_url(media_item)
+        url_token = None
         if url:
             import re
-            # Match /library/metadata/{rating_key}
             match = re.search(r"/library/metadata/(\d+)", url)
             if match:
                 info["rating_key"] = match.group(1)
             
-            # Extract server URL
             match = re.search(r"(https?://[^/]+)", url)
-            if match:
+            if match and not info.get("server_url"):
                 info["server_url"] = match.group(1)
             
-            # Extract token
+            # Save URL-embedded token separately — it's stale from import time
             match = re.search(r"X-Plex-Token=([^&]+)", url)
             if match:
-                info["token"] = match.group(1)
+                url_token = match.group(1)
         
-        # FALLBACK 1: Try library_id to look up Plex library connection info from cache
-        if not info.get("server_url") or not info.get("token"):
-            # Ensure cache is loaded
-            _load_plex_library_cache()
-            
-            library_id = getattr(media_item, "library_id", None)
-            if library_id and library_id in _plex_library_cache:
-                lib_info = _plex_library_cache[library_id]
-                if not info.get("server_url"):
-                    info["server_url"] = lib_info["server_url"]
-                if not info.get("token"):
-                    info["token"] = lib_info["token"]
-                logger.debug(f"Using Plex credentials from cached library {library_id}: {lib_info['name']}")
+        # Now look for FRESH tokens from authoritative sources (library cache,
+        # global config). These are maintained by the user and take priority
+        # over expired tokens embedded in imported URLs.
         
-        # FALLBACK 2: Try first available Plex library from cache
-        if not info.get("server_url") or not info.get("token"):
+        # Source 1: Library cache (per-library server_url + token)
+        _load_plex_library_cache()
+        
+        library_id = getattr(media_item, "library_id", None)
+        if library_id and library_id in _plex_library_cache:
+            lib_info = _plex_library_cache[library_id]
+            if not info.get("server_url"):
+                info["server_url"] = lib_info["server_url"]
+            if not info.get("token"):
+                info["token"] = lib_info["token"]
+            logger.debug(f"Using Plex credentials from cached library {library_id}: {lib_info['name']}")
+        
+        # Source 2: First available Plex library from cache
+        if not info.get("token"):
             if _plex_first_library_cache:
                 lib_info = _plex_first_library_cache
                 if not info.get("server_url"):
                     info["server_url"] = lib_info["server_url"]
-                if not info.get("token"):
-                    info["token"] = lib_info["token"]
+                info["token"] = lib_info["token"]
                 logger.debug(f"Using Plex credentials from first cached library: {lib_info['name']}")
         
-        # FALLBACK 3: If still missing, try global config
-        if not info.get("server_url") or not info.get("token"):
+        # Source 3: Global config
+        if not info.get("token"):
             try:
                 from exstreamtv.config import get_config
                 config = get_config()
                 
-                # Try plex section first
                 plex_config = getattr(config, 'plex', None)
                 if plex_config:
                     if not info.get("server_url"):
@@ -196,7 +197,6 @@ class PlexResolver(BaseResolver):
                     if not info.get("token"):
                         info["token"] = getattr(plex_config, 'token', '')
                 
-                # Also try libraries.plex
                 libraries_plex = getattr(getattr(config, 'libraries', None), 'plex', None)
                 if libraries_plex:
                     if not info.get("server_url"):
@@ -204,10 +204,15 @@ class PlexResolver(BaseResolver):
                     if not info.get("token"):
                         info["token"] = getattr(libraries_plex, 'token', '')
                 
-                if info.get("server_url") or info.get("token"):
-                    logger.debug(f"Using Plex credentials from global config")
+                if info.get("token"):
+                    logger.debug("Using Plex credentials from global config")
             except Exception as e:
                 logger.warning(f"Failed to load Plex config: {e}")
+        
+        # Last resort: use the token embedded in the stored URL (likely expired)
+        if not info.get("token") and url_token:
+            info["token"] = url_token
+            logger.debug("Using Plex token from stored URL (may be expired)")
         
         return info
     
@@ -347,8 +352,16 @@ class PlexResolver(BaseResolver):
             self.cache_url(media_item, resolved)
             return resolved
         
+        missing = []
+        if not server_url:
+            missing.append("server_url (set libraries.plex.url in config.yaml)")
+        if not token:
+            missing.append("token (set libraries.plex.token in config.yaml)")
+        if not rating_key:
+            missing.append("rating_key (media item has no Plex rating key)")
+        
         raise ResolverError(
-            "Missing Plex connection info (server_url, token, or rating_key)",
+            f"Cannot resolve Plex stream — missing: {', '.join(missing)}",
             source_type=SourceType.PLEX,
             is_retryable=False,
         )
