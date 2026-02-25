@@ -322,15 +322,6 @@ async def get_epg(
                     channel.playout_mode = PlayoutMode.CONTINUOUS
 
         logger.info(f"Generating XMLTV EPG for {len(channels)} channels")
-        
-        # #region agent log
-        try:
-            import json
-            channel_ids_in_epg = [str(c.number).strip() for c in channels]
-            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                f.write(json.dumps({"location":"iptv.py:xmltv:start","message":"XMLTV EPG generation started","data":{"channel_count":len(channels),"channel_ids":channel_ids_in_epg[:10],"client_ip":request.client.host if request and request.client else "unknown"},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H2-H4"}) + "\n")
-        except: pass
-        # #endregion
 
         # Always derive base_url from the incoming request so icon URLs work for Plex
         # Never use localhost - Plex accesses from different machine
@@ -381,15 +372,6 @@ async def get_epg(
         now = datetime.utcnow()
         build_days = config.playout.build_days
         end_time = now + timedelta(days=build_days)
-        
-        # #region agent log
-        try:
-            import json
-            now_str = now.strftime("%Y%m%d%H%M%S +0000")
-            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                f.write(json.dumps({"location":"iptv.py:xmltv:time_base","message":"EPG time base","data":{"now_utc":now_str,"now_iso":now.isoformat(),"build_days":build_days,"end_time":end_time.isoformat()},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H1-H5"}) + "\n")
-        except: pass
-        # #endregion
 
         # Build XML header; optionally include XSL stylesheet for browsers
         xml_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -548,13 +530,6 @@ async def get_epg(
                 )
 
             if schedule_file:
-                # #region agent log
-                try:
-                    import json as _j
-                    with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                        f.write(_j.dumps({"location":"iptv.py:xmltv:schedule_file_found","message":"Channel has schedule file - falling back to DB","data":{"channel_number":str(channel.number),"schedule_file":str(schedule_file)},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H6"}) + "\n")
-                except: pass
-                # #endregion
                 try:
                     parsed_schedule = ScheduleParser.parse_file(schedule_file, schedule_file.parent)
                     # NOTE: ScheduleEngine expects sync Session, but we have AsyncSession
@@ -586,10 +561,6 @@ async def get_epg(
                             current_item_index = last_item_index_raw % len(schedule_items)
                         else:
                             current_item_index = 0
-                        
-                        # #region agent log
-                        import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H3","location":"iptv.py:get_epg:using_last_item_index","message":"EPG using last_item_index from DB","data":{"channel_number":channel.number,"last_item_index_raw":last_item_index_raw,"wrapped_index":current_item_index,"schedule_items_count":len(schedule_items)},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-                        # #endregion
                         
                         logger.info(
                             f"Channel {channel.number}: EPG using actual last_item_index {last_item_index_raw} from database (wrapped to {current_item_index} for {len(schedule_items)} items, ErsatzTV-style)"
@@ -885,14 +856,6 @@ async def get_epg(
                 logger.debug(
                     f"Channel {channel.number} ({channel.name}): Found {len(playouts)} active playouts"
                 )
-                # #region agent log
-                try:
-                    import json as _j
-                    with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                        f.write(_j.dumps({"location":"iptv.py:xmltv:playouts_query","message":"Queried playouts for channel","data":{"channel_number":str(channel.number),"channel_name":channel.name,"num_playouts":len(playouts)},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H6"}) + "\n")
-                except: pass
-                # #endregion
-
                 # Get playout items if we have playouts
                 if playouts:
                     playout = playouts[0]  # Use first active playout
@@ -936,14 +899,6 @@ async def get_epg(
                         # CRITICAL FIX: For continuous channels, recalculate EPG times based on
                         # current playback position rather than using old playout_item times
                         # This ensures EPG shows what's playing NOW and in the future
-                        
-                        # #region agent log
-                        try:
-                            import json as _j
-                            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                                f.write(_j.dumps({"location":"iptv.py:xmltv:epg_calc_start","message":"Starting EPG time calculation","data":{"channel_number":str(channel.number),"channel_name":channel.name,"num_playout_items":len(playout_items),"now":now.isoformat()},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H8-H9-H10"}) + "\n")
-                        except: pass
-                        # #endregion
                         
                         # Calculate total cycle duration (sum of all item durations)
                         total_cycle_duration = 0
@@ -1011,13 +966,6 @@ async def get_epg(
                 logger.warning(
                     f"No schedule items found for channel {channel.number} ({channel.name}) - adding placeholder"
                 )
-                # #region agent log
-                try:
-                    import json as _j
-                    with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                        f.write(_j.dumps({"location":"iptv.py:xmltv:no_schedule_items","message":"Channel has no schedule items - using placeholder","data":{"channel_number":str(channel.number),"channel_name":channel.name,"channel_id":channel.id},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H6"}) + "\n")
-                except: pass
-                # #endregion
                 # Add a placeholder programme for the full EPG build period to ensure Plex shows something
                 # Use the full end_time instead of just 24 hours to cover the entire EPG period
                 start_str = now.strftime("%Y%m%d%H%M%S +0000")
@@ -1264,14 +1212,6 @@ async def get_epg(
                 # This should rarely happen since items were already filtered
                 if end_time_prog < now or start_time > end_time:
                     should_include = False
-                    # #region agent log
-                    if programme_count == 0:  # Only log first excluded item per channel
-                        try:
-                            import json as _j
-                            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                                f.write(_j.dumps({"location":"iptv.py:xmltv:item_excluded","message":"Programme excluded - outside time window","data":{"channel_number":str(channel.number),"item_start":start_time.isoformat() if start_time else None,"item_end":end_time_prog.isoformat() if end_time_prog else None,"now":now.isoformat(),"epg_end":end_time.isoformat(),"reason":"end < now" if end_time_prog < now else "start > end_time","title":title[:50] if title else None},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H7"}) + "\n")
-                        except: pass
-                    # #endregion
                 
                 if should_include:
                     programme_count += 1
@@ -1333,15 +1273,6 @@ async def get_epg(
                         f'    <title lang="{language_code}">{_xml(final_title)}</title>\n'
                     )
                     
-                    # #region agent log
-                    if programme_count <= 3:  # Only log first 3 programmes per channel
-                        try:
-                            import json as json_mod
-                            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-                                f.write(json_mod.dumps({"location":"iptv.py:xmltv:programme","message":"EPG programme created","data":{"channel_id":channel_id,"channel_name":channel.name,"start":start_str,"stop":end_str,"title":final_title[:60],"programme_num":programme_count},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H1-H2-H5"}) + "\n")
-                        except: pass
-                    # #endregion
-
                     # Add sub-title if we have episode-specific information
                     # This helps Plex display episode details better
                     if season_num is not None and episode_num is not None:

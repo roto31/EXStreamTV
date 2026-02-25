@@ -327,10 +327,6 @@ class MPEGTSStreamer:
             cmd.extend(["-ss", str(int(seek_offset_to_use))])
             logger.info(f"Seeking to {seek_offset_to_use:.1f}s into the stream (input seek - fast mode)")
             
-            # #region agent log
-            import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H6","location":"mpegts_streamer.py:build_command:seek","message":"FFmpeg input seek applied","data":{"seek_offset":seek_offset_to_use,"input_url":input_url[:80] if len(input_url)>80 else input_url},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-            # #endregion
-            
             self._pending_seek_offset = 0  # Reset
         
         # Input URL
@@ -460,10 +456,6 @@ class MPEGTSStreamer:
             ])
             sync_mode = "full_transcode"
             logger.debug("Added A/V sync flags (full transcode)")
-        
-        # #region agent log
-        import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H3","location":"mpegts_streamer.py:build_command","message":"FFmpeg sync mode","data":{"sync_mode":sync_mode,"can_copy_video":can_copy_video,"can_copy_audio":can_copy_audio,"use_hwaccel":use_hwaccel,"input_url":input_url[:80] if len(input_url)>80 else input_url},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-        # #endregion
         
         # MPEG-TS output format
         cmd.extend([
