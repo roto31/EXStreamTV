@@ -641,7 +641,14 @@ class ChannelStream:
             }
             
         except Exception as e:
-            logger.error(f"Error getting next playout item: {e}")
+            logger.error(
+                f"Error getting next playout item at index {self._current_item_index} "
+                f"for channel {self.channel_number}: {e}"
+            )
+            # Advance to the next item so we don't retry the same broken item forever.
+            # Without this, a single bad URL (e.g. expired Plex token) blocks the
+            # entire channel and causes Plex "Could not tune channel" errors.
+            self._current_item_index += 1
             return None
         finally:
             db.close()
@@ -696,30 +703,38 @@ class ChannelStream:
         """Inner streaming loop."""
         from exstreamtv.tasks.health_tasks import update_channel_metric
         
+        consecutive_empty = 0
+        
         while self._is_running:
             # Get next playout item from schedule
             playout_item = await self._get_next_playout_item()
             
             if playout_item is None:
+                consecutive_empty += 1
                 # Try to get filler content
                 filler_item = await self._get_filler_item()
                 if filler_item:
                     playout_item = filler_item
+                    consecutive_empty = 0
                     logger.debug(f"Using filler for channel {self.channel_number}")
                 else:
                     # No content available - send keep-alive packets so connected
                     # clients don't time out, then wait before retrying.
                     # Broadcast null TS packets to prevent Plex "Could not tune channel"
                     # errors that occur when no data arrives within its timeout window.
-                    logger.debug(
-                        f"No content for channel {self.channel_number}, "
-                        f"sending keep-alive and waiting..."
-                    )
+                    if consecutive_empty <= 3 or consecutive_empty % 20 == 0:
+                        logger.warning(
+                            f"Channel {self.channel_number}: no playable content "
+                            f"(attempt {consecutive_empty}). If all items fail, check "
+                            f"media source connectivity (Plex token, server URL, etc.)"
+                        )
                     null_packet = bytes([0x47, 0x1F, 0xFF, 0x10] + [0xFF] * 184)
                     for _ in range(7):
                         await self._broadcast_chunk(null_packet)
                     await asyncio.sleep(5.0)
                     continue
+            
+            consecutive_empty = 0
             
             logger.info(
                 f"Channel {self.channel_number} playing: {playout_item.get('title')}"
