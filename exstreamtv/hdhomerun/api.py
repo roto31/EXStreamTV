@@ -662,15 +662,6 @@ async def lineup(request: Request, db: AsyncSession = Depends(get_db)):
 
         lineup_data.append(channel_entry)
 
-    # #region agent log
-    try:
-        import json
-        lineup_guide_numbers = [entry["GuideNumber"] for entry in lineup_data[:10]]
-        with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-            f.write(json.dumps({"location":"hdhomerun/api.py:lineup","message":"HDHomeRun lineup generated","data":{"channel_count":len(lineup_data),"guide_numbers":lineup_guide_numbers,"first_entry":lineup_data[0] if lineup_data else None},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H2"}) + "\n")
-    except: pass
-    # #endregion
-    
     return lineup_data
 
 @hdhomerun_router.get("/lineup_status.json")
@@ -691,15 +682,6 @@ async def get_epg_data(request: Request = None, db: AsyncSession = Depends(get_d
     This is the endpoint that Plex DVR automatically fetches for guide data
     when using HDHomeRun tuners. This matches ErsatzTV's approach.
     """
-    # #region agent log
-    try:
-        import json
-        client_ip = request.client.host if request and request.client else "unknown"
-        with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-            f.write(json.dumps({"location":"hdhomerun/api.py:epg","message":"HDHomeRun EPG endpoint called","data":{"client_ip":client_ip,"user_agent":request.headers.get("user-agent","unknown") if request else "unknown"},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H4"}) + "\n")
-    except: pass
-    # #endregion
-    
     # Import the XMLTV generation from iptv module
     from ..api.iptv import get_epg
     
@@ -859,7 +841,12 @@ async def stream_channel(
                     # Raising here causes Plex to show "Error tuning channel"
                     return
                 finally:
-                    _release_tuner(tuner_index)
+                    _release_tuner(owned_tuner)
+
+            # The generator's finally block owns tuner release from here on.
+            # Clear tuner_index so the outer finally doesn't double-release.
+            owned_tuner = tuner_index
+            tuner_index = None
 
             return StreamingResponse(
                 generate(),
@@ -874,85 +861,15 @@ async def stream_channel(
                 },
             )
         else:
-
-            async def generate():
-                chunk_count = 0
-                try:
-                    logger.debug(f"Starting stream generation for channel {channel_number}")
-
-                    # Get or create the ChannelStream for this channel
-                    channel_stream = await channel_manager.get_channel_stream(
-                        channel.id,
-                        int(channel.number),
-                        channel.name
-                    )
-                    
-                    # Get the async stream generator from ChannelStream
-                    async for chunk in channel_stream.get_stream():
-                        chunk_count += 1
-
-                        # Validate first chunk is valid MPEG-TS
-                        if chunk_count == 1:
-                            if _validate_mpegts_chunk(chunk):
-                                logger.info(
-                                    f"First chunk validated for channel {channel_number} ({len(chunk)} bytes, valid MPEG-TS)"
-                                )
-                            else:
-                                # Check if sync byte exists anywhere in chunk (might have leading data)
-                                sync_byte = 0x47
-                                sync_pos = chunk.find(sync_byte)
-                                if sync_pos >= 0:
-                                    logger.debug(
-                                        f"First chunk for channel {channel_number} has sync byte at position {sync_pos} "
-                                        f"(not at start), but continuing - likely initialization data"
-                                )
-                                else:
-                                    logger.warning(
-                                            f"First chunk for channel {channel_number} may not be valid MPEG-TS "
-                                            f"(no sync byte 0x47 found in {len(chunk)} bytes), but continuing..."
-                                    )
-
-                        yield chunk
-
-                    logger.info(
-                        f"Stream generation completed for channel {channel_number} ({chunk_count} chunks total)"
-                    )
-                except asyncio.CancelledError:
-                    # Client disconnected - this is normal, don't log as error
-                    logger.debug(
-                        f"Stream cancelled for channel {channel_number} (client disconnected)"
-                    )
-                    return
-                except Exception as e:
-
-                    error_context = {
-                        "endpoint": "stream_channel",
-                        "channel_number": channel_number,
-                        "chunk_count": chunk_count,
-                        "error_type": type(e).__name__,
-                    }
-                    error_handler.handle_error(e, error_context)
-                    logger.error(
-                        f"Error in continuous stream for channel {channel_number}: {e}",
-                        exc_info=True,
-                    )
-                    # Don't raise - let the client handle the connection error gracefully
-                    # Raising here causes Plex to show "Error tuning channel"
-                    return
-                finally:
-                    _release_tuner(tuner_index)
-
-            return StreamingResponse(
-                generate(),
-                media_type="video/mp2t",  # MPEG-TS MIME type
-                headers={
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-                    "Cache-Control": "no-cache, no-store, must-revalidate, private",
-                    "Connection": "keep-alive",
-                    "X-Accel-Buffering": "no",  # Disable buffering (nginx)
-                    "Transfer-Encoding": "chunked",  # Chunked transfer for streaming
-                },
+            logger.error(
+                f"ChannelManager not available for channel {channel_number} - "
+                f"cannot stream without channel manager"
+            )
+            _release_tuner(tuner_index)
+            tuner_index = None
+            raise HTTPException(
+                status_code=503,
+                detail="Streaming service not ready - channel manager not initialized"
             )
 
     except RuntimeError as e:

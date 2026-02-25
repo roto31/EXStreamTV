@@ -277,10 +277,6 @@ class ChannelStream:
                     
                     self._current_item_index = calculated_index
                     
-                    # #region agent log
-                    import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H2","location":"channel_manager.py:_load_or_initialize_position","message":"ErsatzTV-style position calculation","data":{"channel_id":self.channel_id,"channel_number":self.channel_number,"anchor_time":str(self._playout_start_time),"elapsed_seconds":elapsed,"cycle_position":cycle_position,"total_duration":total_duration,"calculated_index":calculated_index,"item_count":item_count,"seek_offset":self._seek_offset},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-                    # #endregion
-                    
                     logger.info(
                         f"Resuming channel {self.channel_number} at calculated index "
                         f"{self._current_item_index} (elapsed: {elapsed:.0f}s, seek: {self._seek_offset:.0f}s, anchor: {self._playout_start_time})"
@@ -313,10 +309,6 @@ class ChannelStream:
                     )
                     db.add(position)
                 db.commit()
-                
-                # #region agent log
-                import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H2","location":"channel_manager.py:_load_or_initialize_position","message":"New anchor created","data":{"channel_id":self.channel_id,"channel_number":self.channel_number,"anchor_time":str(self._playout_start_time)},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-                # #endregion
                 
                 logger.info(
                     f"Starting channel {self.channel_number} from beginning with anchor: "
@@ -368,10 +360,6 @@ class ChannelStream:
         from exstreamtv.database.models import ChannelPlaybackPosition
         from sqlalchemy import select
         
-        # #region agent log
-        import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H1","location":"channel_manager.py:_save_position:entry","message":"Saving position to DB","data":{"channel_id":self.channel_id,"channel_number":self.channel_number,"current_item_index":self._current_item_index},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-        # #endregion
-        
         try:
             db = self.db_session_factory()
             try:
@@ -401,10 +389,6 @@ class ChannelStream:
                     db.add(position)
                 
                 db.commit()
-                
-                # #region agent log
-                import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H1","location":"channel_manager.py:_save_position:success","message":"Position saved successfully","data":{"channel_id":self.channel_id,"saved_index":self._current_item_index},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-                # #endregion
                 
                 logger.debug(
                     f"Saved position for channel {self.channel_number}: "
@@ -723,10 +707,17 @@ class ChannelStream:
                     playout_item = filler_item
                     logger.debug(f"Using filler for channel {self.channel_number}")
                 else:
-                    # No content available - show offline slate or wait
+                    # No content available - send keep-alive packets so connected
+                    # clients don't time out, then wait before retrying.
+                    # Broadcast null TS packets to prevent Plex "Could not tune channel"
+                    # errors that occur when no data arrives within its timeout window.
                     logger.debug(
-                        f"No content for channel {self.channel_number}, waiting..."
+                        f"No content for channel {self.channel_number}, "
+                        f"sending keep-alive and waiting..."
                     )
+                    null_packet = bytes([0x47, 0x1F, 0xFF, 0x10] + [0xFF] * 184)
+                    for _ in range(7):
+                        await self._broadcast_chunk(null_packet)
                     await asyncio.sleep(5.0)
                     continue
             
@@ -736,10 +727,6 @@ class ChannelStream:
             
             # Get seek offset from playout item (ErsatzTV-style)
             seek_offset = playout_item.get("seek_offset", 0.0)
-            
-            # #region agent log
-            import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H4","location":"channel_manager.py:_stream_loop:playing","message":"Now playing item","data":{"channel_number":self.channel_number,"current_item_index":self._current_item_index,"title":playout_item.get("title"),"seek_offset":seek_offset},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-            # #endregion
             
             # Update current item tracking
             self._current_item_start_time = datetime.utcnow()
