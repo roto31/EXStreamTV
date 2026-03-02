@@ -270,3 +270,5 @@ async def acquire(self) -> None:
 | _trigger_channel_restart | `exstreamtv/tasks/health_tasks.py` | 165-239 |
 | _stream_loop | `exstreamtv/streaming/channel_manager.py` | 732-843 |
 | rebuild_playouts_task | `exstreamtv/tasks/playout_tasks.py` | 14-112 |
+
+**Last Revised:** 2026-03-01

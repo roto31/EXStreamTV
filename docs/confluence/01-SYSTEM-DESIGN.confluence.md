@@ -395,3 +395,5 @@ h2. Related Documentation
 * [BUILD_PROGRESS|EXStreamTV:Build Progress] - Current development status
 * [TUNARR_DIZQUETV_INTEGRATION|EXStreamTV:Tunarr Integration] - v2.6.0 integration details
 * [API Documentation|EXStreamTV:API Reference] - REST API reference
+
+**Last Revised:** 2026-03-01

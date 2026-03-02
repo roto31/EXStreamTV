@@ -109,3 +109,5 @@ On failure → returns `(False, reason)` and aborts.
 - Runs only when enabled and all guardrails pass
 - Triggers: EPG early warning, Troubleshooting metadata queries, or 5-min schedule when ratio > 0.2
 - Duplicate prevention, cooldown, and failure memory limit run frequency and avoid ineffective loops
+
+**Last Revised:** 2026-03-01

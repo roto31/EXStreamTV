@@ -76,3 +76,5 @@ When you change channels, schedules, or playouts in EXStreamTV:
 - EXStreamTV IPTV endpoints: `/iptv/channels.m3u`, `/iptv/xmltv.xml`
 - Plex DVR guide reload (EXStreamTV API): `POST /api/settings/plex/reload-guide`
 - Plan: EPG and Plex Integration (best practices from ErsatzTV, Tunarr, dizqueTV)
+
+**Last Revised:** 2026-03-01

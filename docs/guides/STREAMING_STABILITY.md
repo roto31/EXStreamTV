@@ -487,3 +487,5 @@ sequenceDiagram
 - [Tunarr/dizqueTV Integration](../architecture/TUNARR_DIZQUETV_INTEGRATION.md) — Technical details
 - [AI Setup Guide](AI_SETUP.md) — AI configuration
 - [Hardware Transcoding](HW_TRANSCODING.md) — FFmpeg optimization
+
+**Last Revised:** 2026-03-01

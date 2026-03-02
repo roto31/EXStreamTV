@@ -2,6 +2,8 @@
 
 All notable changes to the Documentation component will be documented in this file.
 
+**Last Revised:** 2026-03-01
+
 ## [2.6.0] - 2026-01-31
 ### Added - Tunarr/dizqueTV Integration Documentation
 - **Architecture Documentation**

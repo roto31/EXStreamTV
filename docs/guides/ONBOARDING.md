@@ -378,3 +378,5 @@ After completing onboarding:
 2. [Configure AI in detail](AI_SETUP.md)
 3. [Enable hardware transcoding](HW_TRANSCODING.md)
 4. [Set up schedules](../api/README.md)
+
+**Last Revised:** 2026-03-01

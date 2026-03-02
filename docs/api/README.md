@@ -1897,3 +1897,5 @@ POST /api/database/restore
 - Read the [Tunarr/dizqueTV Integration](../architecture/TUNARR_DIZQUETV_INTEGRATION.md)
 - Use the interactive docs at `/api/docs`
 - View streaming logs at `/logs`
+
+**Last Revised:** 2026-03-01

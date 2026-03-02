@@ -512,3 +512,5 @@ After installation:
 3. [macOS App Guide](MACOS_APP_GUIDE.md) - Use the menu bar app
 4. [Configure Hardware Transcoding](HW_TRANSCODING.md) - Enable GPU acceleration
 5. [Add Local Media](LOCAL_MEDIA.md) - Connect your media libraries
+
+**Last Revised:** 2026-03-01

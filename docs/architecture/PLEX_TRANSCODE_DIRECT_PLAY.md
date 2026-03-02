@@ -57,3 +57,5 @@ The actual codecs/containers depend on the channel’s source (Plex library, You
 - Plex: [Supported media formats](https://support.plex.tv/articles/203824396-what-media-formats-are-supported/)
 - EXStreamTV: EPG/playout alignment contract – `docs/architecture/EPG_PLAYOUT_ALIGNMENT.md`
 - EXStreamTV: Plex setup – `docs/guides/PLEX_SETUP.md`
+
+**Last Revised:** 2026-03-01

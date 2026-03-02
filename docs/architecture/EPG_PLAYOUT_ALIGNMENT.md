@@ -1,5 +1,42 @@
 # EPG and Playout Alignment (Broadcast Contract)
 
+## XMLTV Generation Pipeline
+
+```mermaid
+flowchart TD
+    subgraph Auth [BroadcastScheduleAuthority]
+        GetTL[get_timeline]
+        Clock[ChannelClock]
+        TL[CanonicalTimelineItem]
+        GetTL --> TL
+        Clock --> GetTL
+    end
+    subgraph Build [Build]
+        BuildProg[build_programmes_from_clock]
+        Prog[ClockProgramme]
+        BuildProg --> Prog
+    end
+    subgraph Verify [Validation Pipeline]
+        Norm[normalize]
+        Repair[repair]
+        Sym[symbolic]
+        Sim[simulation]
+        Fuzz[fuzz]
+        SMT[SMT z3]
+        Norm --> Repair --> Sym --> Sim --> Fuzz --> SMT
+    end
+    subgraph Gate [Export Gate]
+        Check{VERIFIED?}
+        Export[XMLTV export]
+        Fallback[Fallback 24h]
+        Check -->|Yes| Export
+        Check -->|No| Fallback
+    end
+    Auth --> Build
+    Prog --> Verify
+    SMT --> Check
+```
+
 ## Contract
 
 **EPG reflects playout; playout is the source of truth.**
@@ -25,12 +62,14 @@ The single source of truth for "what is playing now and when each programme star
 
 ## Where EPG Gets Timeline Data
 
+EPG derives exclusively from `BroadcastScheduleAuthority.get_timeline(channel_id)` (CanonicalTimelineItem). No alternate schedule reconstruction. Before export, interval verification runs: normalize→repair→symbolic→simulation→fuzz→SMT (z3). Export only if VERIFIED.
+
 | EPG path | Timeline source | Alignment |
 |----------|-----------------|-----------|
-| **iptv.py `get_epg`** (main XMLTV) | Reads `ChannelPlaybackPosition` (playout_start_time, current_item_start_time, elapsed_seconds_in_item, last_item_index) and builds programme start/stop from active Playout/PlayoutItems. | ✓ Same DB and anchor as channel manager. |
-| **epg_generator_v2.py** | Uses schedule file + `ScheduleEngineV2.generate_timeline()`. | Use for schedule-file–driven channels only; for DB playout channels, the main EPG is iptv.py. |
+| **iptv.py `get_epg`** (main XMLTV) | `build_epg_from_clock` uses `auth.get_timeline(channel_id)` + `build_programmes_from_clock`. SMT gate before emit. | ✓ Clock authority, zero-drift. |
+| **Fallback** | Single 24h placeholder when clock path yields no programmes. | Trivially verified. |
 
-For channels that use **database playout** (Playout/PlayoutItem), the main EPG endpoint `/iptv/xmltv.xml` (iptv.py) must be used so the guide matches the stream. For channels driven only by a **schedule file**, EPGGeneratorV2 can be used; its timeline is then the authority for that channel.
+**Last Revised:** 2026-03-01
 
 ## Validation
 

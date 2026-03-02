@@ -104,3 +104,5 @@ When the UI changes:
 ---
 
 *Note: Screenshots should be captured from a demo environment with realistic but non-sensitive data.*
+
+**Last Revised:** 2026-03-01

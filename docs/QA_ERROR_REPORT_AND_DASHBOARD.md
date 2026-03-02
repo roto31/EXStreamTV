@@ -236,3 +236,5 @@ pie
 - Re-run the **Progress Tracker** pie chart with updated Pending / In Progress / Resolved counts.
 - Re-run **Errors by Severity** if new issues are added or severities change.
 - Update **Total estimated effort** as items are closed (reduce remaining effort).
+
+**Last Revised:** 2026-03-01

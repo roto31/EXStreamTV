@@ -1,7 +1,7 @@
 # EXStreamTV Platform Guide
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-02-21
+**Last Updated:** 2026-03-01
 
 This guide explains what EXStreamTV is, how it works, and how to operate it safely. It is written for technically literate readers who may not be familiar with streaming internals, AI agent architectures, or HDHomeRun protocols.
 
@@ -328,7 +328,7 @@ The AI agent’s metadata tools require a minimum confidence (default 0.3) befor
 
 ### XMLTV Generation
 
-The XMLTV generator produces standard XMLTV for the EPG. It validates before emitting:
+Programmes derive from `BroadcastScheduleAuthority.get_timeline`. Interval verification (normalize→repair→symbolic→simulation→fuzz→SMT) must return VERIFIED before emit.
 
 - **Monotonic times** — `start_time < stop_time` for each programme.
 - **No overlaps** — `programme[i].stop_time <= programme[i+1].start_time`.
@@ -338,6 +338,7 @@ The XMLTV generator produces standard XMLTV for the EPG. It validates before emi
 ```mermaid
 flowchart TB
     Input[Channels + Programmes]
+    SMTGate[SMT Interval Verify]
     Validate[Validate]
     Monotonic{start < stop?}
     Overlap{No overlaps?}
@@ -346,7 +347,9 @@ flowchart TB
     Emit[Emit XMLTV]
     Error[XMLTVValidationError]
     
-    Input --> Validate
+    Input --> SMTGate
+    SMTGate -->|VERIFIED| Validate
+    SMTGate -->|FAILED| Error
     Validate --> Monotonic
     Monotonic -->|No| Error
     Monotonic -->|Yes| Overlap

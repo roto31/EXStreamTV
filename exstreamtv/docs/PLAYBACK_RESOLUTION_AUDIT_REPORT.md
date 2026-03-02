@@ -229,3 +229,5 @@ curl -s "http://192.168.1.120:8411/api/logs/entries?lines=2000" | python3 -m jso
 # Plex logs (via EXStreamTV)
 curl -s "http://192.168.1.120:8411/api/logs/plex/logs/entries?lines=1000" | python3 -m json.tool > plex_logs.json
 ```
+
+**Last Revised:** 2026-03-01

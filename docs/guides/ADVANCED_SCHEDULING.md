@@ -502,3 +502,5 @@ stats = scheduler.get_stats(channel_id=1)
 - [Tunarr/dizqueTV Integration](../architecture/TUNARR_DIZQUETV_INTEGRATION.md) - Technical details
 - [Streaming Stability](STREAMING_STABILITY.md) - Streaming features
 - [API Reference](../api/README.md) - Complete API documentation
+
+**Last Revised:** 2026-03-01

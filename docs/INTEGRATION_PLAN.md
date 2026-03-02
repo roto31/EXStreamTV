@@ -1940,3 +1940,5 @@ Both dizqueTV and Tunarr use the zlib license, which is permissive and compatibl
 
 *Document Version: 1.0*  
 *Last Updated: January 31, 2026*
+
+**Last Revised:** 2026-03-01

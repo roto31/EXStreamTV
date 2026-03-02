@@ -507,3 +507,5 @@ ls -la /path/to/media
 - [Quick Start Guide](QUICK_START.md)
 - [Hardware Transcoding](HW_TRANSCODING.md)
 - [API Reference](../api/README.md)
+
+**Last Revised:** 2026-03-01

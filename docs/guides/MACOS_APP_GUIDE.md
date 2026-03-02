@@ -409,3 +409,5 @@ To restart the setup wizard:
 - [AI Setup Guide](AI_SETUP.md) - Detailed AI configuration
 - [Quick Start Guide](QUICK_START.md) - Create your first channel
 - [Installation Guide](INSTALLATION.md) - Platform-specific setup
+
+**Last Revised:** 2026-03-01

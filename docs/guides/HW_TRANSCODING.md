@@ -533,3 +533,5 @@ watch -n 1 cat /sys/class/drm/card0/device/gpu_busy_percent
 - [FFmpeg Hardware Acceleration Wiki](https://trac.ffmpeg.org/wiki/HWAccelIntro)
 - [NVIDIA Video Codec SDK](https://developer.nvidia.com/nvidia-video-codec-sdk)
 - [Intel Media Driver](https://github.com/intel/media-driver)
+
+**Last Revised:** 2026-03-01

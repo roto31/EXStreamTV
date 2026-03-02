@@ -4,3 +4,5 @@
 2. **Phase 2:** Enable `metadata_self_resolution_enabled` on single-channel pilot; monitor 48h.
 3. **Phase 3:** Enable globally; keep `metadata_self_resolution_cooldown_sec = 300`; monitor Prometheus alerts.
 4. **Rollback:** Set `metadata_self_resolution_enabled = False`; restart or config reload. No DB migration required.
+
+**Last Revised:** 2026-03-01

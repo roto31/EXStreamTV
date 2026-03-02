@@ -9,3 +9,5 @@
 | Type/strict mypy breaks builds         | Incremental adoption; exclude non-core modules initially.                                   |
 
 **Out of scope (per constraints):** No streaming pipeline changes; no restart path logic changes; no new unbounded loops; no DB schema changes.
+
+**Last Revised:** 2026-03-01

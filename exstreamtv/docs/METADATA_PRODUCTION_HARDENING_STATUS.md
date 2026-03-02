@@ -112,3 +112,5 @@
 | No health_tasks cadence change| Yes — reuse existing |
 | No ProcessPoolManager change   | Yes |
 | No log flooding               | Yes — single warning per cycle |
+
+**Last Revised:** 2026-03-01

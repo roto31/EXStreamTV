@@ -64,3 +64,5 @@ This document lists major features from ErsatzTV, Tunarr, and dizqueTV and how E
 - ErsatzTV: https://github.com/ErsatzTV/ErsatzTV  
 - dizqueTV: https://github.com/vexorian/dizquetv  
 - EXStreamTV EPG and Plex integration plan (sections 2–8)
+
+**Last Revised:** 2026-03-01

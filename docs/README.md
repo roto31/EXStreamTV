@@ -1,5 +1,7 @@
 # EXStreamTV Documentation
 
+Architecture diagrams: [docs/architecture/DIAGRAMS.md](architecture/DIAGRAMS.md) — Mermaid-only, 14 standardized diagrams.
+
 **Version:** 2.6.0  
 **Last Updated:** 2026-02-21
 
@@ -320,3 +322,5 @@ See `confluence/README.md` for detailed instructions.
 - [CHANGELOG](../CHANGELOG.md) - Version history
 - [CONTRIBUTING](../CONTRIBUTING.md) - Contribution guidelines
 - [LICENSE](../LICENSE) - MIT license
+
+**Last Revised:** 2026-03-01

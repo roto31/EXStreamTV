@@ -58,6 +58,10 @@ This document states the invariants the system enforces. For context and diagram
 | M1 | XMLTV validation runs before emit; invalid programmes raise XMLTVValidationError |
 | M2 | Placeholder titles (Item \d+) are never emitted; fallbacks used |
 | M3 | Drift detection does not block EPG generation or streaming |
+| M4 | EPG derives exclusively from BroadcastScheduleAuthority.get_timeline |
+| M5 | Interval verification (normalize→repair→symbolic→simulation→fuzz→SMT) must VERIFY before XMLTV export |
+
+**Last Revised:** 2026-03-01
 
 ---
 

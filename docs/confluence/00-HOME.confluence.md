@@ -253,3 +253,5 @@ h2. Related Resources
 * [CHANGELOG|EXStreamTV:Changelog] - Version history
 * [CONTRIBUTING|EXStreamTV:Contributing] - Contribution guidelines
 * [LICENSE|EXStreamTV:License] - MIT license
+
+**Last Revised:** 2026-03-01

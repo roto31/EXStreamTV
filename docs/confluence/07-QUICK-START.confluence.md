@@ -223,3 +223,5 @@ h2. Related Documentation
 * [AI Setup Guide|EXStreamTV:AI Setup] - Configure AI providers
 * [Streaming Stability|EXStreamTV:Streaming Stability] - v2.6.0 streaming features
 * [API Reference|EXStreamTV:API Reference] - REST API documentation
+
+**Last Revised:** 2026-03-01

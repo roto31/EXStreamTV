@@ -240,3 +240,5 @@ containment_mode = (
 4. **Implement envelope first** — Phase 0 yields value without agent risk.
 5. **Persona YAML** — Load at startup; extend PersonaManager.
 6. **No OpenClaw** — Fully Python-native.
+
+**Last Revised:** 2026-03-01

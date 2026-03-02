@@ -114,3 +114,5 @@ uv sync
 - **Server not listed**: Ensure the path in `args` / `cwd` is the **project root** (where `README.md`, `exstreamtv/`, `mcp_server/`, and `docs/` live).
 - **Import errors**: Run from project root and install `mcp[cli]` (or full `requirements-dev.txt`).
 - **No tools in client**: Restart the client after changing MCP config; ensure the server process starts (check Cursor/Claude logs for MCP errors).
+
+**Last Revised:** 2026-03-01

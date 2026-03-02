@@ -1,7 +1,7 @@
 # Observability
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-02-21
+**Last Updated:** 2026-03-01
 
 This document lists all Prometheus metrics and alert thresholds. For architecture and monitoring philosophy, see [Platform Guide §6](../PLATFORM_GUIDE.md#6-observability--monitoring).
 
@@ -75,6 +75,9 @@ Returns Prometheus text exposition format. Compatible with Prometheus scrape con
 | `exstreamtv_ai_metadata_resolution_attempt_total` | counter | AI resolution attempts |
 | `exstreamtv_ai_metadata_resolution_success_total` | counter | AI resolution successes |
 | `exstreamtv_ai_metadata_resolution_abort_total` | counter | AI resolution aborts |
+| `exstreamtv_smt_verified_total` | counter | SMT interval verifications passed |
+| `exstreamtv_smt_failed_total` | counter | SMT verification failures |
+| `exstreamtv_smt_timeout_total` | counter | SMT timeouts |
 
 ---
 

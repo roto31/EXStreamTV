@@ -108,3 +108,5 @@
 | Early warning on thresholds     | Yes — structured warning, no per-item logging                                 |
 
 
+
+**Last Revised:** 2026-03-01

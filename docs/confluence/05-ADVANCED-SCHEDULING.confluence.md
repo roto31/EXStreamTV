@@ -484,3 +484,5 @@ h2. Related Documentation
 * [Tunarr/dizqueTV Integration|EXStreamTV:Tunarr Integration] - Technical details
 * [Streaming Stability|EXStreamTV:Streaming Stability] - Streaming features
 * [API Reference|EXStreamTV:API Reference] - Complete API documentation
+
+**Last Revised:** 2026-03-01
