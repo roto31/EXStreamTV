@@ -96,6 +96,12 @@ Use `uv run scripts/publish_confluence_wiki_tree.py --dry-run` to list planned p
 
 **If every attachment fails with HTTP 415:** the Confluence `httpx` client must not use a default `Content-Type: application/json` header when the same client uploads files (multipart). See **LL-034** in `docs/LESSONS_LEARNED.md` and **RULE DOC-05** in `.cursor/rules/exstreamtv-confluence.mdc`.
 
+**If Mermaid diagrams show as broken images** (empty box where a diagram was): the page body references `mermaid-*.svg` attachments that never uploaded (e.g. before the 415 fix) or were removed. **Republish** after fixing uploads (`uv run scripts/publish_confluence_wiki_tree.py`). The publisher now **aborts** if any Mermaid SVG upload fails so the body is not left pointing at missing files. Optionally delete orphaned `mermaid-*.svg` attachments on that page in Confluence, then republish.
+
+**If you see Mermaid source in a code block instead of a diagram:** Kroki could not render that block (network, timeout, or unsupported syntax for the Kroki Mermaid version). Check the publish log for `Kroki Mermaid render failed`. Install a Confluence **Mermaid** app, or simplify the diagram, or set `CONFLUENCE_KROKI_URL` to a reachable Kroki instance.
+
+**Confluence shows “JavaScript load error” or login wall:** the site cannot load Atlassian scripts (network, VPN, blocker). Fix the browser environment; otherwise pages may not render attachments or macros correctly ([Atlassian troubleshooting](https://support.atlassian.com/)).
+
 **Last Revised:** 2026-03-22
 
 ---
