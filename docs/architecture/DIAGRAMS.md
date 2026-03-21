@@ -314,3 +314,58 @@ flowchart TD
     CE -->|invalid| Slate
     SS --> FF
 ```
+
+---
+
+## 16. FFmpeg Command Builder Safety Layer (2026-03 remediation — LL-002 to LL-016)
+
+All FFmpeg command builders import flags from a single constants module. No flag string is
+hardcoded in individual builder files. This eliminates the class of bugs where two builders
+used different loudnorm targets, different fflags, or omitted required bitstream filters.
+
+```mermaid
+flowchart TD
+    C[ffmpeg/constants.py]
+    C --> |FFLAGS_STREAMING| B1
+    C --> |LOUDNORM_FILTER| B1
+    C --> |BSF_H264_ANNEXB| B1
+    C --> |PIX_FMT| B1
+    C --> |FFLAGS_STREAMING| B2
+    C --> |LOUDNORM_FILTER| B2
+    C --> |PIX_FMT| B2
+    subgraph Builders
+        B1[ffmpeg_builder.py]
+        B2[pipeline.py]
+    end
+    B1 --> FF[FFmpeg process]
+    B2 --> FF
+    FF --> MPEGTS[MPEG-TS output]
+    note1["❌ -flags +low_delay (drops B-frames)"]
+    note2["❌ +fastseek (masks missing +igndts)"]
+    note3["✅ +igndts +genpts +discardcorrupt"]
+    note4["✅ h264_mp4toannexb on COPY path"]
+```
+
+---
+
+## 17. Async Lock Collect-Then-Act Pattern (2026-03 remediation — LL-013)
+
+The process watchdog previously held its lock during 5-second kill operations, deadlocking
+all callers. The fix: collect work items inside the lock (fast), execute outside it (slow).
+This pattern applies to any async lock guarding I/O-heavy operations.
+
+```mermaid
+sequenceDiagram
+    participant Check as check_all()
+    participant Lock as asyncio.Lock
+    participant Kill as _kill_process()
+
+    Check->>Lock: acquire
+    Note over Lock: Collect timed-out PIDs only (fast)
+    Check->>Lock: release
+    loop for each timed-out process
+        Check->>Kill: await _kill_process() [OUTSIDE LOCK]
+        Note over Kill: wait_for(timeout=5s) — can block
+    end
+    Note over Check: Other coroutines can acquire lock<br/>during kill operations
+```
