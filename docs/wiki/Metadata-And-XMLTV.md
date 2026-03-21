@@ -22,4 +22,4 @@ The canonical XMLTV timestamp format for this codebase is:
 
 No dashes, no colons, literal `+0000` offset (not `%z` which may produce empty string on naive datetimes). See [`docs/LESSONS_LEARNED.md`](../LESSONS_LEARNED.md) entries LL-007 through LL-009.
 
-**Last Revised:** 2026-03-20
+**Last Revised:** 2026-03-21

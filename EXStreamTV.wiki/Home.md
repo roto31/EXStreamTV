@@ -1,7 +1,9 @@
 # EXStreamTV Documentation
 
+Architecture diagrams: [docs/architecture/DIAGRAMS.md](Architecture-Diagrams) — Mermaid-only, **18** standardized diagrams (includes six-layer AI/coding safety, §18).
+
 **Version:** 2.6.0  
-**Last Updated:** 2026-02-21
+**Last Updated:** 2026-03-21
 
 Welcome to the EXStreamTV documentation. This guide will help you set up, configure, and use EXStreamTV for your IPTV streaming needs.
 
@@ -50,6 +52,7 @@ docs/
 │
 ├── architecture/                # Architecture Documentation
 │   ├── SYSTEM_DESIGN.md        # System architecture
+│   ├── DIAGRAMS.md             # 18 Mermaid diagrams (canonical)
 │   └── TUNARR_DIZQUETV_INTEGRATION.md # v2.6.0 integration (NEW)
 │
 ├── development/                 # Development Documentation
@@ -320,3 +323,7 @@ See `confluence/README.md` for detailed instructions.
 - [CHANGELOG](Documentation-Changelog) - Version history
 - [CONTRIBUTING](../CONTRIBUTING.md) - Contribution guidelines
 - [LICENSE](../LICENSE) - MIT license
+
+**Last Revised:** 2026-03-21
+
+Repo root [AGENTS.md](../AGENTS.md) and per-module `exstreamtv/*/AGENTS.md` complement `.cursor/rules/` for human and AI contributors. Wiki pages are synced from `docs/` with `scripts/sync_docs_to_wiki.py`.

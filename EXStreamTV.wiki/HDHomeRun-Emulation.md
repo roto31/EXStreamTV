@@ -4,4 +4,4 @@ See [Platform Guide](Platform-Guide#3-hdhomrun-emulation) for discover.json, lin
 
 DeviceID must be 8 hex chars. Invalid IDs cause "Could not Tune Channel."
 
-**Last Revised:** 2026-03-20
+**Last Revised:** 2026-03-21

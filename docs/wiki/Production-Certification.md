@@ -21,6 +21,8 @@ Full detail in [`docs/LESSONS_LEARNED.md`](../LESSONS_LEARNED.md).
 | 🟡 Low | 1 | Documented (intentional design, comment added) |
 | Retracted | 1 | Confirmed false positive |
 
-**Cursor safety enforcement:** `.cursor/rules/exstreamtv-safety.mdc` (RULE 01–18) is auto-applied to all Python files in this project to prevent recurrence.
+**Cursor safety enforcement:** `.cursor/rules/exstreamtv-safety.mdc` (RULE 01–18) and `.cursor/rules/exstreamtv-critical.mdc` (8 rules) are auto-applied to Python files; root `AGENTS.md` and `exstreamtv/*/AGENTS.md` add path-local checks (see [Architecture Diagrams §18](../architecture/DIAGRAMS.md#18-six-layer-ai--coding-safety-enforcement-2026-03--post-merge-main)).
 
-**Last Revised:** 2026-03-20
+**Branch alignment:** Certification assumes the audited tree on **`main`** (post-merge 2026-03-21).
+
+**Last Revised:** 2026-03-21

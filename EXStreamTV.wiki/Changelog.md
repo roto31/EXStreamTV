@@ -1486,5 +1486,3 @@ prompt = sports["build_prompt"](user_message, history, media)
 [1.0.2]: https://github.com/roto31/EXStreamTV/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/roto31/EXStreamTV/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/roto31/EXStreamTV/releases/tag/v1.0.0
-
-**Last Revised:** 2026-03-20

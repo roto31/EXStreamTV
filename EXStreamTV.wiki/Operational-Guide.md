@@ -108,3 +108,5 @@ ai_agent:
 - [Platform Guide](Platform-Guide) — Full operational context
 - [Observability](Observability) — Metrics reference
 - [Feature Flags](Feature-Flags) — Config toggles
+
+**Last Revised:** 2026-03-20

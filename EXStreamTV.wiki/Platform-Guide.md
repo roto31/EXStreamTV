@@ -1,7 +1,7 @@
 # EXStreamTV Platform Guide
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-03-20
+**Last Updated:** 2026-03-21
 
 This guide explains what EXStreamTV is, how it works, and how to operate it safely. It is written for technically literate readers who may not be familiar with streaming internals, AI agent architectures, or HDHomeRun protocols.
 
@@ -328,7 +328,7 @@ The AI agent’s metadata tools require a minimum confidence (default 0.3) befor
 
 ### XMLTV Generation
 
-The XMLTV generator produces standard XMLTV for the EPG. Programmes derive exclusively from `BroadcastScheduleAuthority.get_timeline`. Before emit, interval verification runs: normalize→repair→symbolic→simulation→fuzz→SMT (z3). Export only if SMT returns VERIFIED.
+Programmes derive from `BroadcastScheduleAuthority.get_timeline`. Interval verification (normalize→repair→symbolic→simulation→fuzz→SMT) must return VERIFIED before emit.
 
 - **Monotonic times** — `start_time < stop_time` for each programme.
 - **No overlaps** — `programme[i].stop_time <= programme[i+1].start_time`.
@@ -687,9 +687,21 @@ In metadata self-resolution, metrics before and after an attempt are compared. I
 
 ---
 
+## 11. Documentation, Wiki, and Branch Alignment
+
+- **Canonical diagrams:** [Architecture Diagrams](Architecture-Diagrams) — 18 Mermaid diagrams (system overview, FFmpeg constants layer, async lock pattern, six-layer AI/coding safety, etc.).
+- **Wiki:** Source markdown lives under `docs/wiki/` and main guides under `docs/`. Regenerate the GitHub Wiki tree with:
+  `python scripts/sync_docs_to_wiki.py --wiki-dir EXStreamTV.wiki`
+  then commit and push `EXStreamTV.wiki/` (or copy `wiki_out/` into your wiki clone).
+- **Default branch:** `main` includes the full 2026-03 remediation merge (`2026-02-21-ufnw`); keep docs, wiki exports, and code on the same branch for audits and certification.
+- **Contributor guardrails:** Root `AGENTS.md`, path-local `exstreamtv/*/AGENTS.md`, `.cursor/rules/exstreamtv-safety.mdc`, and `.cursor/rules/exstreamtv-critical.mdc` overlap by design (see DIAGRAMS §18).
+
+---
+
 ## Related Documentation
 
 - [README](Home) — Quick start and overview.
+- [Architecture Diagrams](Architecture-Diagrams) — All Mermaid architecture diagrams.
 - [System Design](System-Design) — Architecture details.
 - [Streaming Stability](Streaming-Stability) — Session management, throttling, error screens.
 - [AI Setup](AI-Setup) — AI configuration and bounded agent.

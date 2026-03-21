@@ -77,7 +77,7 @@ Returns Prometheus text exposition format. Compatible with Prometheus scrape con
 | `exstreamtv_ai_metadata_resolution_abort_total` | counter | AI resolution aborts |
 | `exstreamtv_smt_verified_total` | counter | SMT interval verifications passed |
 | `exstreamtv_smt_failed_total` | counter | SMT verification failures |
-| `exstreamtv_smt_timeout_total` | counter | SMT timeouts (100ms) |
+| `exstreamtv_smt_timeout_total` | counter | SMT timeouts |
 
 ---
 

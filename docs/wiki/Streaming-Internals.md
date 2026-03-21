@@ -18,4 +18,4 @@ The following bugs in the streaming layer were confirmed and fixed during the 20
 
 See [Architecture Diagram 17](../architecture/DIAGRAMS.md#17-async-lock-collect-then-act-pattern-2026-03-remediation--ll-013) for the collect-then-act lock pattern.
 
-**Last Revised:** 2026-03-20
+**Last Revised:** 2026-03-21

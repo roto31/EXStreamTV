@@ -2,7 +2,19 @@
 
 All notable changes to the Documentation component will be documented in this file.
 
-**Last Revised:** 2026-03-20
+**Last Revised:** 2026-03-21
+
+## [2.6.0] - 2026-03-21 (documentation, Mermaid, wiki sync)
+
+### Changed
+- `docs/architecture/DIAGRAMS.md` — Diagram 18 (six-layer AI/coding safety); diagram 16 note nodes wired to graph; **Last Revised** 2026-03-21
+- `docs/README.md`, `docs/PLATFORM_GUIDE.md` — §11 documentation/wiki/merge alignment; diagram count **18**; dates refreshed
+- `docs/wiki/*.md` — **Last Revised** 2026-03-21; Architecture / Production-Certification / AI-Agent updates for `exstreamtv-critical.mdc`, merge to `main`, diagram 18 cross-links
+- `scripts/sync_docs_to_wiki.py` — Wiki source **Architecture-Diagrams** → `docs/architecture/DIAGRAMS.md`; `_Sidebar.md` entry under Reference
+- `EXStreamTV.wiki/` — regenerated via `python scripts/sync_docs_to_wiki.py --wiki-dir EXStreamTV.wiki`
+
+### Context
+- Default branch **`main`** includes merged remediation work from `2026-02-21-ufnw` (GitHub, local clones, and wiki copies stay aligned).
 
 ## [2.6.0] - 2026-03-20 (full codebase remediation + audit)
 

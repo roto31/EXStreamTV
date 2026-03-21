@@ -1,7 +1,7 @@
 # Formal Invariants
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-03-20
+**Last Updated:** 2026-02-21
 
 This document states the invariants the system enforces. For context and diagrams, see [Platform Guide §7](Platform-Guide#7-formal-invariants).
 
@@ -59,12 +59,9 @@ This document states the invariants the system enforces. For context and diagram
 | M2 | Placeholder titles (Item \d+) are never emitted; fallbacks used |
 | M3 | Drift detection does not block EPG generation or streaming |
 | M4 | EPG derives exclusively from BroadcastScheduleAuthority.get_timeline |
-| M5 | Interval verification pipeline (normalize→repair→symbolic→simulation→fuzz→SMT) must return VERIFIED before XMLTV export |
+| M5 | Interval verification (normalize→repair→symbolic→simulation→fuzz→SMT) must VERIFY before XMLTV export |
 
----
-
-**Last Revised:** 2026-03-20  
-**Revision Summary:** Added M4 (CanonicalTimelineItem-only derivation); M5 (SMT verification gate).
+**Last Revised:** 2026-03-20
 
 ---
 

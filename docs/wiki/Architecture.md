@@ -13,6 +13,8 @@ All FFmpeg command builders import flags from `exstreamtv/ffmpeg/constants.py`. 
 - `LOUDNORM_FILTER` — `loudnorm=I=-16:TP=-1.5:LRA=11` (EBU R128)
 - `PIX_FMT`, `MPEGTS_FLAGS`, `PCR_PERIOD_MS`, `AUDIO_SAMPLE_RATE`, `AUDIO_CHANNELS`
 
-See [Architecture Diagram 16](../architecture/DIAGRAMS.md#16-ffmpeg-command-builder-safety-layer-2026-03-remediation--ll-002-to-ll-016).
+See [Architecture Diagram 16](../architecture/DIAGRAMS.md#16-ffmpeg-command-builder-safety-layer-2026-03-remediation--ll-002-to-ll-016) and [Diagram 18 — six-layer AI/coding safety](../architecture/DIAGRAMS.md#18-six-layer-ai--coding-safety-enforcement-2026-03--post-merge-main).
 
-**Last Revised:** 2026-03-20
+**Default branch:** `main` carries the merged remediation from `2026-02-21-ufnw`; keep architecture docs and code on the same branch for audits.
+
+**Last Revised:** 2026-03-21

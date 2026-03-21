@@ -10,4 +10,4 @@ The process watchdog previously called `_kill_process()` while holding `self._lo
 
 **Fix:** processes to kill are collected inside the lock (instantaneous), then killed outside it (slow). See [Architecture Diagram 17](../architecture/DIAGRAMS.md#17-async-lock-collect-then-act-pattern-2026-03-remediation--ll-013).
 
-**Last Revised:** 2026-03-20
+**Last Revised:** 2026-03-21

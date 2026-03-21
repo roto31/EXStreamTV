@@ -21,6 +21,7 @@
 **Reference**
 * [[API-Reference]]
 * [[System-Design]]
+* [[Architecture-Diagrams]]
 * [[Architecture]]
 * [[Streaming-Internals]]
 * [[HDHomeRun-Emulation]]
@@ -51,5 +52,3 @@
 * [[Platform-Comparison]]
 * [[MCP-Server]]
 * [[Documentation-Changelog]]
-
-**Last Revised:** 2026-03-20

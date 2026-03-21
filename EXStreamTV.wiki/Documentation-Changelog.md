@@ -2,11 +2,63 @@
 
 All notable changes to the Documentation component will be documented in this file.
 
-## [2.6.0] - 2026-03-20
+**Last Revised:** 2026-03-21
+
+## [2.6.0] - 2026-03-21 (documentation, Mermaid, wiki sync)
+
 ### Changed
-- Synchronized with repo `docs/` and `EXStreamTV.wiki/` for GitHub push
-- `DIAGRAMS.md`: added diagram 15 (stream resolution safety contract); 15 total Mermaid architecture diagrams
-- Wiki `Architecture.md`: fixed diagram link to `roto31/EXStreamTV`, noted diagram count
+- `docs/architecture/DIAGRAMS.md` — Diagram 18 (six-layer AI/coding safety); diagram 16 note nodes wired to graph; **Last Revised** 2026-03-21
+- `docs/README.md`, `docs/PLATFORM_GUIDE.md` — §11 documentation/wiki/merge alignment; diagram count **18**; dates refreshed
+- `docs/wiki/*.md` — **Last Revised** 2026-03-21; Architecture / Production-Certification / AI-Agent updates for `exstreamtv-critical.mdc`, merge to `main`, diagram 18 cross-links
+- `scripts/sync_docs_to_wiki.py` — Wiki source **Architecture-Diagrams** → `docs/architecture/DIAGRAMS.md`; `_Sidebar.md` entry under Reference
+- `EXStreamTV.wiki/` — regenerated via `python scripts/sync_docs_to_wiki.py --wiki-dir EXStreamTV.wiki`
+
+### Context
+- Default branch **`main`** includes merged remediation work from `2026-02-21-ufnw` (GitHub, local clones, and wiki copies stay aligned).
+
+## [2.6.0] - 2026-03-20 (full codebase remediation + audit)
+
+### Code Fixes — 30 confirmed bugs across 18 files (see `docs/LESSONS_LEARNED.md`)
+
+**Critical fixes:**
+- `playout/scheduler.py` — infinite loop guard when `_schedule_item()` returns empty (LL-001)
+- `streaming/channel_manager.py` — tz-aware datetime helpers (`_utcnow`, `_ensure_utc`), `run_in_executor` for DB writes, corrected `async for` body indentation (LL-002, LL-003, LL-026)
+- `transcoding/ffmpeg_builder.py` — removed `-flags +low_delay`, `+fastseek→+igndts`, H.264 Annex-B BSF on COPY path, `int()` muxrate cast (LL-004, LL-005, LL-006, LL-016)
+- `ffmpeg/pipeline.py` — `hwdownload` before CPU filters for HW decode, unified constants (LL-011, LL-012)
+- `api/iptv.py` — XMLTV timestamp format, `None` guard before `strftime()`, loop variable shadowing fix (LL-007, LL-008, LL-009)
+- `hdhomerun/api.py` — `int()` channel number cast with HTTP 400, structured HD flag logic (LL-010, LL-017)
+- `streaming/process_watchdog.py` — kill outside lock (deadlock), tz-aware datetime (LL-013, LL-015)
+- `streaming/throttler.py` — MPEG-TS trim aligned to `0x47` sync byte (LL-014)
+- `ffmpeg/process_pool.py` — correct semaphore `try/except` acquire (LL-021)
+- `scheduling/parser.py` — bare-integer duration parsing, removed `mn-olympics-` prefix (LL-018, LL-023)
+- `scheduling/engine.py` and `engine_v2.py` — tz-aware datetime throughout (LL-020)
+- `api/epg_generator_v2.py` — tz-aware datetime, correct XMLTV timestamp format (LL-007)
+
+**New file:**
+- `exstreamtv/ffmpeg/constants.py` — single source of truth for all FFmpeg flags (LL-011)
+
+**Security:**
+- `exstreamtv.db.backup.*` removed from git; `.gitignore` extended (LL-027)
+
+### Documentation Added / Updated
+- `docs/LESSONS_LEARNED.md` — v1.0: 30 confirmed issues (LL-001–LL-030) with root cause, symptom, fix, and prevention rule for each
+- `docs/CHANGELOG.md` — this entry
+- `docs/architecture/DIAGRAMS.md` — Diagrams 16 (FFmpeg constants safety layer) and 17 (async lock collect-then-act)
+- `docs/wiki/Streaming-Internals.md` — updated with remediation notes
+- `docs/wiki/Restart-Safety-Model.md` — updated with watchdog deadlock fix (LL-013)
+- `docs/wiki/Metadata-And-XMLTV.md` — updated with XMLTV format fixes (LL-007, LL-008, LL-009)
+- `docs/wiki/Architecture.md` — updated with FFmpeg constants reference
+- `docs/wiki/Production-Certification.md` — updated with audit reference
+
+### Cursor Tooling
+- `.cursor/rules/exstreamtv-safety.mdc` — RULE 01–18, auto-applied to all Python files
+- `.cursor/skills/exstreamtv-expert/SKILL.md` — Safety Patterns section with ErsatzTV port checklist
+
+## [2.6.0] - 2026-03-20 (documentation sync)
+### Changed
+- `architecture/DIAGRAMS.md` — added diagram 15 (stream resolution safety contract); revised date
+- `README.md`, `VERSION` — documentation metadata refresh
+- `guides/PLEX_SETUP.md` — guide updates (committed with codebase sync)
 
 ## [2.6.0] - 2026-01-31
 ### Added - Tunarr/dizqueTV Integration Documentation
@@ -71,5 +123,3 @@ All notable changes to the Documentation component will be documented in this fi
 ### Added
 - Initial documentation structure
 - System architecture documentation
-
-**Last Revised:** 2026-03-20
