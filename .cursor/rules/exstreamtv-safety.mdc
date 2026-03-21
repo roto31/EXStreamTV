@@ -1,64 +1,378 @@
 ---
-description: Safety rules for EXStreamTV Python code — auto-attached to all .py files
-globs: ["**/*.py"]
+description: EXStreamTV safety rules — auto-attached to all Python files. Enforces patterns learned from 30 confirmed bugs found in the codebase. Must be invoked for ALL Python edits in this project including ErsatzTV-ported code.
+globs: ["exstreamtv/**/*.py", "tests/**/*.py"]
 alwaysApply: true
 ---
 
 # EXStreamTV Safety Rules
 
-These rules are derived from 24 confirmed bugs found during the 2026-03 remediation.
-See `docs/LESSONS_LEARNED.md` for full details on each issue.
+These rules are derived from confirmed bugs found during a full codebase audit.
+Every rule has a corresponding Lesson Learned entry in `docs/LESSONS_LEARNED.md`.
+**All rules apply equally to ErsatzTV-ported code and new code.**
 
-## Datetime
+---
 
-- NEVER use `datetime.utcnow()`. Always use `datetime.now(tz=timezone.utc)`.
-- Normalise all DB-sourced datetimes with `_ensure_utc()` before arithmetic.
-- All datetime comparisons must be between same-awareness types.
+## RULE 01 — Datetime: Always Timezone-Aware (LL-002, LL-015)
 
-## Asyncio / Concurrency
+**NEVER use `datetime.utcnow()` or `datetime.now()` without `tz=timezone.utc`.**
 
-- NEVER call synchronous I/O (DB, file, network) inside `async def`. Use `run_in_executor`.
-- NEVER perform I/O or long operations while holding an `asyncio.Lock`.
-- Collect work items under lock; execute outside lock.
-- Use `try: acquire_nowait() except` for semaphores, not `if not locked()`.
+```python
+# WRONG
+now = datetime.utcnow()
+ts = datetime.now()
 
-## FFmpeg Flags
+# CORRECT
+from datetime import datetime, timezone
+now = datetime.now(tz=timezone.utc)
+```
 
-- Import all FFmpeg flags from `exstreamtv/ffmpeg/constants.py`. Never hardcode flag strings.
-- NEVER use `-flags +low_delay` for pre-recorded content.
-- NEVER use `+fastseek` in fflags for pipe output.
-- Always add `-bsf:v h264_mp4toannexb` when remuxing H.264 into MPEG-TS (copy path).
-- Always prepend `hwdownload` before CPU filters when hardware acceleration is active.
-- Loudnorm target is `-16 LUFS` (EBU R128). Never use `-24` (ATSC A/85).
+When reading datetimes from SQLite (which stores them as naive strings without
+`PARSE_DECLTYPES`), always normalise before arithmetic:
 
-## MPEG-TS
+```python
+def _ensure_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+```
 
-- Buffer trim operations must align to 0x47 sync byte (188-byte packet boundary).
-- Null TS packet for keepalive: `0x47 0x1F 0xFF 0x10` + 184 × `0xFF`.
+Never subtract a DB-sourced datetime from a `datetime.now(tz=timezone.utc)` without
+first calling `_ensure_utc()` on the DB value.
 
-## Type Safety
+---
 
-- Always cast path parameters to DB column type before comparison (e.g., `int(channel_number)`).
-- Always cast user-supplied numeric fields to `int()`/`float()` at point of use.
+## RULE 02 — FFmpeg Flags: Use constants.py (LL-004, LL-005, LL-006, LL-018)
 
-## Loops
+**NEVER hardcode FFmpeg flags inline. Always import from `exstreamtv/ffmpeg/constants.py`.**
 
-- Every `while` loop depending on external input must have monotonic progress or bounded iterations.
-- Never reuse outer-scope variable names in inner loops; use `_ci`, `_i` for throwaway counters.
+```python
+# WRONG
+cmd.extend(["-fflags", "+genpts+discardcorrupt+fastseek"])
+cmd.extend(["-flags", "+low_delay"])
+cmd.extend(["-af", "loudnorm=I=-24:TP=-2:LRA=7"])
 
-## Caching
+# CORRECT
+from exstreamtv.ffmpeg.constants import FFLAGS_STREAMING, LOUDNORM_FILTER
+cmd.extend(["-fflags", FFLAGS_STREAMING])
+cmd.extend(["-af", LOUDNORM_FILTER])
+```
 
-- All caches must have a TTL or explicit invalidation path. Never cache forever.
+**Specifically forbidden flags:**
+- `-flags +low_delay` — drops B-frames on pre-recorded content → A/V desync
+- `+fastseek` in `-fflags` — seek optimisation, not for pipe output, masks missing `+igndts`
+- `loudnorm=I=-24` — wrong loudness target; always use `-16 LUFS` (EBU R128)
 
-## YAML / Config
+---
 
-- Always use `yaml.safe_load()`. Never use `FullLoader` or `UnsafeLoader`.
+## RULE 03 — H.264 COPY Path: Always Add Bitstream Filter (LL-006)
 
-## EPG / Standards
+Whenever writing `-c:v copy` for H.264 content destined for MPEG-TS output, you MUST
+add the `h264_mp4toannexb` bitstream filter. No exceptions.
 
-- Use ISO 8601 (`%Y-%m-%dT%H:%M:%SZ`) for all machine-readable timestamps.
-- Guard nullable `start_time`/`end_time` before `.strftime()`.
+```python
+from exstreamtv.ffmpeg.constants import BSF_H264_ANNEXB
 
-## HD Flag
+if video_format == VideoFormat.COPY:
+    cmd.extend(["-c:v", "copy"])
+    cmd.extend(["-bsf:v", BSF_H264_ANNEXB])  # REQUIRED — not optional
+```
 
-- Prefer DB field (`is_hd`) → resolution field → name heuristic. Never rely solely on name matching.
+Without this filter, H.264 from Plex/MP4 (AVCC format) is written into MPEG-TS
+without Annex B start codes. The first GOP is corrupted or black on all decoders.
+
+---
+
+## RULE 04 — Hardware Accel Filter Chain: hwdownload Before format= (LL-012)
+
+When hardware decoding is active and a CPU-side filter (`format=`, `scale=`, `crop=`)
+is in the filter chain, you MUST prepend `hwdownload` to move the frame off the GPU
+surface first.
+
+```python
+# WRONG — crashes with "Impossible to convert between the formats"
+filters = ["scale=1920:1080", "format=yuv420p"]
+
+# CORRECT
+if is_hardware_decode_active:
+    filters = ["hwdownload", "scale=1920:1080", "format=yuv420p"]
+else:
+    filters = ["scale=1920:1080", "format=yuv420p"]
+```
+
+---
+
+## RULE 05 — Scheduler Loops: Always Guard Against Empty Output (LL-001)
+
+Any `while` loop that advances a time cursor or schedule index based on items produced
+by an inner function MUST have an else branch that advances the index unconditionally
+if no items were produced. Without this guard, an empty collection causes an infinite loop.
+
+```python
+# WRONG
+while current_time < end:
+    items = get_items(...)
+    if items:
+        current_time = items[-1].finish
+    # NO ELSE — infinite loop if items is empty
+
+# CORRECT
+while current_time < end:
+    items = get_items(...)
+    if items:
+        current_time = items[-1].finish
+    else:
+        index += 1           # advance unconditionally
+        if index >= max_index:
+            break
+        continue
+```
+
+---
+
+## RULE 06 — Database Sessions: Never Block the Event Loop (LL-003, LL-013)
+
+**NEVER call synchronous SQLAlchemy `.execute()` or `.commit()` directly inside an
+`async def` function.** It blocks the entire asyncio event loop.
+
+```python
+# WRONG
+async def save_something(self) -> None:
+    db = self.db_session_factory()  # sync session
+    result = db.execute(stmt)        # BLOCKS EVENT LOOP
+
+# CORRECT
+async def save_something(self) -> None:
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, self._save_something_sync)
+
+def _save_something_sync(self) -> None:
+    db = self.db_session_factory()
+    try:
+        result = db.execute(stmt)
+        db.commit()
+    finally:
+        db.close()
+```
+
+Always pair every `db = factory()` with `finally: db.close()`. No exceptions.
+
+---
+
+## RULE 07 — XMLTV Timestamps: Exactly One Format (LL-007)
+
+All XMLTV `<programme start="...">` and `stop` attributes MUST use:
+`%Y%m%d%H%M%S +0000`
+
+No dashes, no colons, no "UTC" suffix. The XMLTV spec is strict. Plex silently
+rejects any programme element with a non-conforming timestamp.
+
+```python
+# WRONG
+start_str = dt.strftime("%Y-%m-%d %H:%M:%S UTC")   # XMLTV-invalid
+start_str = dt.strftime("%Y-%m-%dT%H:%M:%SZ")       # ISO 8601, not XMLTV
+
+# CORRECT
+start_str = dt.strftime("%Y%m%d%H%M%S +0000")
+```
+
+---
+
+## RULE 08 — EPG Variables: Guard None Before strftime (LL-008)
+
+Any `start_time`, `end_time`, or similar variable used in `.strftime()` during EPG
+generation MUST be checked for `None` before use. Position tracking has many branches
+that can leave these as `None`.
+
+```python
+# WRONG
+start_str = start_time.strftime("%Y%m%d%H%M%S +0000")  # AttributeError if None
+
+# CORRECT
+if start_time is None:
+    logger.warning(f"start_time is None for channel {channel_id}, using now")
+    start_time = datetime.now(tz=timezone.utc)
+start_str = start_time.strftime("%Y%m%d%H%M%S +0000")
+```
+
+---
+
+## RULE 09 — Loop Variables: Never Shadow Outer Counters (LL-009)
+
+In EPG generation and schedule engine code, loop variable names `idx`, `i`, `index`
+are frequently used as outer counters. Inner loops MUST use distinct names to prevent
+shadowing.
+
+```python
+# WRONG — shadows outer current_item_index
+for idx in range(current_item_index):
+    item = schedule_items[idx]
+
+# CORRECT
+for _ci in range(current_item_index):
+    item = schedule_items[_ci]
+```
+
+---
+
+## RULE 10 — Channel Number: Always Cast to int (LL-010)
+
+FastAPI path parameters arrive as `str`. Database `Channel.number` is `int`. Always
+cast before comparison. Never rely on SQLite coercion.
+
+```python
+# WRONG
+stmt = select(Channel).where(Channel.number == channel_number)  # str vs int
+
+# CORRECT
+stmt = select(Channel).where(Channel.number == int(channel_number))
+```
+
+Wrap in try/except and raise `HTTPException(400)` on `ValueError`.
+
+---
+
+## RULE 11 — Async Locks: Never Await Blocking I/O Inside Lock (LL-013)
+
+`async with self._lock:` must contain only fast, non-blocking operations. Never
+`await` a subprocess kill, a sleep, a network call, or a DB write inside a lock.
+Collect work under the lock, execute it outside.
+
+```python
+# WRONG
+async with self._lock:
+    for item in self._items:
+        await self._kill_process(item)  # can block for 5s — deadlocks everything
+
+# CORRECT
+to_kill = []
+async with self._lock:
+    for item in list(self._items):
+        if item.needs_kill:
+            to_kill.append(item)
+            del self._items[item.id]
+
+for item in to_kill:          # outside the lock
+    await self._kill_process(item)
+```
+
+---
+
+## RULE 12 — MPEG-TS Buffer Operations: Align to Sync Byte (LL-014)
+
+Any operation that trims, slices, or seeks in an MPEG-TS byte buffer MUST align the
+result to the nearest `0x47` sync byte. Dropping bytes mid-packet produces broken
+framing that manifests as freezes and corruption artefacts in Plex.
+
+```python
+# WRONG
+trimmed = buffer[-max_size:]
+
+# CORRECT
+trimmed = buffer[-max_size:]
+sync_pos = trimmed.find(0x47)
+if sync_pos > 0:
+    trimmed = trimmed[sync_pos:]
+elif sync_pos == -1:
+    trimmed = b""   # no sync — discard entirely
+```
+
+---
+
+## RULE 13 — Muxrate: Always Explicit int Cast (LL-016)
+
+Muxrate calculations combining profile fields MUST use explicit `int()` casts.
+Profile fields may be stored as strings in the database.
+
+```python
+# WRONG
+f"{profile.video_bitrate + profile.audio_bitrate}k"  # silent str concat
+
+# CORRECT
+f"{int(profile.video_bitrate) + int(profile.audio_bitrate)}k"
+```
+
+---
+
+## RULE 14 — YAML: Always Use safe_load (LL-022)
+
+Never use `yaml.load()` with `FullLoader` or no loader on user-controlled files.
+
+```python
+# WRONG
+data = yaml.load(f, Loader=yaml.FullLoader)
+
+# CORRECT
+data = yaml.safe_load(f)
+```
+
+---
+
+## RULE 15 — Caches: Always Include TTL (LL-019)
+
+Module-level caches for external resources (Plex credentials, library info, etc.)
+MUST include a TTL. A perpetually-valid cache means credential changes are invisible
+for the entire process lifetime.
+
+```python
+import time as _time
+_cache_loaded_at: float = 0.0
+_CACHE_TTL: int = 300   # 5 minutes
+
+def _load_cache(force: bool = False) -> None:
+    if not force and (_time.monotonic() - _cache_loaded_at) < _CACHE_TTL:
+        return
+    # ... load ...
+    _cache_loaded_at = _time.monotonic()
+```
+
+---
+
+## RULE 16 — ErsatzTV Ports: Verify Flag Semantics Before Porting (LL-004, LL-005)
+
+When porting code from ErsatzTV (C#), every FFmpeg flag must be individually verified
+against the FFmpeg documentation for the Python/pipe output context. C# string
+concatenation of flag names is not equivalent to Python list arguments. Flags that
+are valid in ErsatzTV's HLS output context may be harmful in MPEG-TS pipe context.
+
+Specifically check:
+- Is this flag appropriate for pre-recorded (not live) content?
+- Is this flag appropriate for pipe output (`-`) vs file output?
+- Does this flag interact with hardware decode surfaces?
+
+---
+
+## RULE 17 — duration: parse_duration Handles Bare Integers (LL-018)
+
+`ScheduleParser.parse_duration()` must handle bare integer strings (`"30"`, `"1800"`)
+by treating them as seconds. Never assume the input will always have a unit suffix.
+
+---
+
+## RULE 18 — Semaphore: Use try/except for acquire_nowait (LL-021)
+
+```python
+# WRONG
+if not semaphore.locked():
+    semaphore.acquire_nowait()
+
+# CORRECT
+try:
+    semaphore.acquire_nowait()
+except asyncio.QueueFull:
+    return None  # pool full
+```
+
+---
+
+## ErsatzTV-Specific Invocation
+
+These rules apply with **extra emphasis** when working on any code path that:
+- Is marked with a comment containing `ErsatzTV`, `Ported from ErsatzTV`, or `ErsatzTV-compatible`
+- Lives in `playout/`, `scheduling/`, `transcoding/`, or `ffmpeg/`
+- Involves XMLTV generation, playout building, schedule anchor timing, or FFmpeg command construction
+
+When editing ErsatzTV-ported code, explicitly confirm before saving:
+1. All datetime values are tz-aware
+2. No FFmpeg flags are hardcoded (use constants.py)
+3. No scheduler while-loop lacks an empty-output guard
+4. No XMLTV timestamp uses a non-standard format

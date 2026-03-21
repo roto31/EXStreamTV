@@ -789,22 +789,22 @@ class ChannelStream:
                         seek_offset=seek_offset,
                     )
                 async for chunk in stream_iter:
-                        self._last_output_time = _utcnow()
-                        self._bytes_streamed += len(chunk)
-                        if update_channel_metric:
-                            update_channel_metric(
-                                self.channel_id,
-                                "last_output_time",
-                                self._last_output_time,
-                            )
-                        if watchdog:
-                            watchdog.report_output(
-                                str(self.channel_id),
-                                bytes_count=len(chunk),
-                            )
-                        await self._broadcast_chunk(chunk)
-                        if not self._is_running:
-                            break
+                    self._last_output_time = _utcnow()
+                    self._bytes_streamed += len(chunk)
+                    if update_channel_metric:
+                        update_channel_metric(
+                            self.channel_id,
+                            "last_output_time",
+                            self._last_output_time,
+                        )
+                    if watchdog:
+                        watchdog.report_output(
+                            str(self.channel_id),
+                            bytes_count=len(chunk),
+                        )
+                    await self._broadcast_chunk(chunk)
+                    if not self._is_running:
+                        break
             except Exception as e:
                 logger.error(
                     f"Error streaming item on channel {self.channel_number}: {e}"

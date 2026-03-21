@@ -1,7 +1,7 @@
 """XMLTV EPG generation v2 - Proper program mapping and metadata from schedule data"""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from xml.sax.saxutils import escape as xml_escape
 
@@ -65,7 +65,7 @@ class EPGGeneratorV2:
         Returns:
             XMLTV XML string
         """
-        start_time = start_time or datetime.utcnow()
+        start_time = start_time or datetime.now(tz=timezone.utc)
         end_time = start_time + timedelta(hours=duration_hours)
 
         # Initialize schedule engine if needed
@@ -171,15 +171,15 @@ class EPGGeneratorV2:
         if not media_item:
             return None
 
-        start_time = item.get("start_time", datetime.utcnow())
+        start_time = item.get("start_time", datetime.now(tz=timezone.utc))
         end_time = item.get("end_time")
         if not end_time:
             duration = timedelta(seconds=media_item.duration or 3600)
             end_time = start_time + duration
 
-        # Format times for XMLTV
-        start_str = start_time.strftime("%Y%m%d%H%M%S %z")
-        stop_str = end_time.strftime("%Y%m%d%H%M%S %z")
+        # Format times for XMLTV (spec requires no dashes/colons and explicit +0000 offset)
+        start_str = start_time.strftime("%Y%m%d%H%M%S +0000")
+        stop_str = end_time.strftime("%Y%m%d%H%M%S +0000")
 
         # Get title (use AI-enhanced if available)
         title = media_item.ai_enhanced_title or media_item.title or "Untitled"

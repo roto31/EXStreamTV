@@ -98,30 +98,222 @@ Apply this workflow on every EXStreamTV change so that existing code and tests r
 
 ---
 
-## Known Bug Patterns (2026-03 Remediation)
+## Safety Patterns (Derived from 2026-03 Audit — 30 Confirmed Bugs)
 
-The following patterns were confirmed as bugs across the codebase. When editing these files,
-verify these fixes remain intact:
+The following patterns are **mandatory** when working on EXStreamTV. They are derived
+from bugs found in a full codebase audit. The corresponding Cursor rules are in
+`.cursor/rules/exstreamtv-safety.mdc` and are auto-applied to all Python files.
 
-| File | Bug | Fix |
-|------|-----|-----|
-| `playout/scheduler.py` | Infinite loop on empty collection | `else` branch advances index; full-wrap abort |
-| `streaming/channel_manager.py` | `datetime.utcnow()` naive/aware mismatch | `_utcnow()` + `_ensure_utc()` helpers |
-| `streaming/channel_manager.py` | Sync DB in async context | `_save_position_sync` via `run_in_executor` |
-| `transcoding/ffmpeg_builder.py` | `-flags +low_delay` drops B-frames | Removed; uses `FFLAGS_STREAMING` constant |
-| `transcoding/ffmpeg_builder.py` | Missing `h264_mp4toannexb` on COPY | Added `-bsf:v` on copy path |
-| `transcoding/ffmpeg_builder.py` | Muxrate string concatenation | `int()` cast before addition |
-| `ffmpeg/pipeline.py` | Missing `hwdownload` before format= | Prepend when HW accel active |
-| `ffmpeg/pipeline.py` | Loudnorm -24 vs -16 mismatch | Uses `LOUDNORM_FILTER` constant |
-| `api/iptv.py` | `None.strftime()` in EPG emission | None guard with fallback |
-| `api/iptv.py` | `idx` loop variable shadow | Renamed to `_ci` |
-| `hdhomerun/api.py` | String/int channel number mismatch | `int(channel_number)` cast |
-| `streaming/resolvers/plex.py` | Cache never expires | 5-minute TTL via `monotonic()` |
-| `streaming/process_watchdog.py` | Kill inside lock → deadlock | Kill collected outside lock |
-| `streaming/throttler.py` | Buffer trim breaks MPEG-TS framing | Align to 0x47 sync byte |
-| `ffmpeg/process_pool.py` | `locked()` before `acquire_nowait()` | try/except pattern |
-| `scheduling/parser.py` | Bare integer duration returns None | `isdigit()` check added |
-| `scheduling/engine.py` | `datetime.utcnow()` deprecated | `_utcnow()` helper |
+---
 
-**Constants file:** `exstreamtv/ffmpeg/constants.py` — single source of truth for FFmpeg flags.
-Import from here; never hardcode flag values in individual builders.
+### Datetime — Always Tz-Aware
+
+```python
+# ✅ Correct
+from datetime import datetime, timezone
+now = datetime.now(tz=timezone.utc)
+
+# ❌ Never use
+now = datetime.utcnow()   # naive — causes TypeError on subtraction with DB values
+now = datetime.now()      # local time — wrong for UTC-anchored schedules
+```
+
+SQLite does not store timezone info. Any datetime loaded from the DB via the sync
+engine is naive. Normalise before arithmetic:
+```python
+def _ensure_utc(dt):
+    if dt is None: return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+```
+
+---
+
+### FFmpeg Flags — Always From constants.py
+
+```python
+from exstreamtv.ffmpeg.constants import (
+    FFLAGS_STREAMING,   # "+genpts+discardcorrupt+igndts"
+    BSF_H264_ANNEXB,    # "h264_mp4toannexb"
+    LOUDNORM_FILTER,    # "loudnorm=I=-16:TP=-1.5:LRA=11"
+    PIX_FMT,            # "yuv420p"
+    MPEGTS_FLAGS,       # "resend_headers"
+    PCR_PERIOD_MS,      # "40"
+    AUDIO_SAMPLE_RATE,  # "48000"
+    AUDIO_CHANNELS,     # "2"
+)
+```
+
+**Never hardcode these values.** The constants file is the single source of truth.
+
+**Specifically banned flags:**
+- `-flags +low_delay` — drops B-frames on pre-recorded content
+- `+fastseek` in `-fflags` — wrong context, masks missing `+igndts`
+- `loudnorm=I=-24` — wrong target; use `-16 LUFS` (EBU R128)
+
+---
+
+### H.264 COPY → MPEG-TS Always Needs bsf
+
+```python
+if video_format == VideoFormat.COPY:
+    cmd.extend(["-c:v", "copy"])
+    cmd.extend(["-bsf:v", BSF_H264_ANNEXB])   # Non-optional. Always required.
+```
+
+---
+
+### Hardware Decode → CPU Filter Chain Needs hwdownload
+
+```python
+if is_hardware_decode_active:
+    filters.insert(0, "hwdownload")
+filters.append(f"format={PIX_FMT}")
+```
+
+---
+
+### Scheduler While Loops Need Empty-Output Guard
+
+```python
+while current_time < end:
+    items = get_items(...)
+    if items:
+        current_time = items[-1].finish
+    else:
+        index = (index + 1) % total
+        if index == start_index:
+            break   # full wrap with no output — abort
+        continue
+```
+
+---
+
+### Async Functions: Never Call Sync DB Directly
+
+```python
+# ✅ Correct pattern
+async def save(self):
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, self._save_sync)
+
+def _save_sync(self):
+    db = self.db_session_factory()
+    try:
+        db.execute(...)
+        db.commit()
+    finally:
+        db.close()
+```
+
+---
+
+### Async Locks: Collect Then Act
+
+```python
+to_process = []
+async with self._lock:
+    for item in list(self._items):
+        if item.needs_action:
+            to_process.append(item)
+# ← lock released here
+for item in to_process:
+    await item.action()   # long-running outside lock
+```
+
+---
+
+### XMLTV Timestamps: One Format Only
+
+```python
+# ✅ Correct
+ts = dt.strftime("%Y%m%d%H%M%S +0000")
+
+# ❌ Wrong
+ts = dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+ts = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+```
+
+---
+
+### EPG Values: Guard None Before strftime
+
+```python
+if start_time is None:
+    start_time = datetime.now(tz=timezone.utc)
+if end_time is None or end_time <= start_time:
+    end_time = start_time + timedelta(seconds=1800)
+start_str = start_time.strftime("%Y%m%d%H%M%S +0000")
+```
+
+---
+
+### Channel Number: Cast to int
+
+```python
+try:
+    ch = int(channel_number)
+except (ValueError, TypeError):
+    raise HTTPException(400, detail=f"Invalid channel number: {channel_number!r}")
+stmt = select(Channel).where(Channel.number == ch)
+```
+
+---
+
+### MPEG-TS Buffer Trim: Align to 0x47
+
+```python
+trimmed = buffer[-max_size:]
+pos = trimmed.find(0x47)
+trimmed = trimmed[pos:] if pos > 0 else (b"" if pos == -1 else trimmed)
+```
+
+---
+
+### Muxrate: Always int()
+
+```python
+rate = int(profile.video_bitrate) + int(profile.audio_bitrate)
+cmd.extend(["-muxrate", f"{rate}k"])
+```
+
+---
+
+### YAML: Always safe_load
+
+```python
+data = yaml.safe_load(f)   # never yaml.load(f, Loader=yaml.FullLoader)
+```
+
+---
+
+### Caches: TTL Required
+
+```python
+import time as _time
+_loaded_at = 0.0
+_TTL = 300
+
+def _load(force=False):
+    global _loaded_at
+    if not force and (_time.monotonic() - _loaded_at) < _TTL:
+        return
+    # ... load ...
+    _loaded_at = _time.monotonic()
+```
+
+---
+
+### ErsatzTV Port Checklist
+
+Before committing any code ported from ErsatzTV (C#):
+
+- [ ] All datetime values are tz-aware (`datetime.now(tz=timezone.utc)`)
+- [ ] No FFmpeg flags hardcoded — imported from constants.py
+- [ ] No `+low_delay`, no `+fastseek`
+- [ ] H.264 COPY path includes `h264_mp4toannexb`
+- [ ] Scheduler while-loops have empty-output guard
+- [ ] XMLTV timestamps use `%Y%m%d%H%M%S +0000`
+- [ ] No sync DB calls inside async functions
+- [ ] No long-running awaits inside async locks
+- [ ] MPEG-TS buffer trims aligned to `0x47`
+- [ ] Muxrate uses explicit `int()` cast
