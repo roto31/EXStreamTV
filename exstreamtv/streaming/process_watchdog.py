@@ -8,10 +8,14 @@ channel hangs and resource exhaustion.
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def _now() -> datetime:
+    return datetime.now(tz=timezone.utc)
 
 
 @dataclass
@@ -20,8 +24,8 @@ class WatchedProcess:
     
     channel_id: str
     process: asyncio.subprocess.Process
-    registered_at: datetime = field(default_factory=datetime.utcnow)
-    last_output_at: datetime = field(default_factory=datetime.utcnow)
+    registered_at: datetime = field(default_factory=_now)
+    last_output_at: datetime = field(default_factory=_now)
     bytes_output: int = 0
     restart_count: int = 0
     on_timeout: Optional[Callable] = None
@@ -29,7 +33,7 @@ class WatchedProcess:
     @property
     def seconds_since_output(self) -> float:
         """Seconds since last output was received."""
-        return (datetime.utcnow() - self.last_output_at).total_seconds()
+        return (_now() - self.last_output_at).total_seconds()
     
     @property
     def is_running(self) -> bool:
@@ -128,7 +132,7 @@ class FFmpegWatchdog:
         """
         if channel_id in self._processes:
             watched = self._processes[channel_id]
-            watched.last_output_at = datetime.utcnow()
+            watched.last_output_at = _now()
             watched.bytes_output += bytes_count
     
     async def unregister_process(self, channel_id: str) -> None:
@@ -144,52 +148,42 @@ class FFmpegWatchdog:
                 logger.debug(f"Unregistered FFmpeg process for channel {channel_id}")
     
     async def check_all(self) -> dict[str, Any]:
-        """
-        Check all registered processes and kill unresponsive ones.
-        
-        Returns:
-            Statistics about the check
-        """
-        stats = {
-            "checked": 0,
-            "healthy": 0,
-            "killed": 0,
-            "already_dead": 0,
-        }
-        
+        """Check all registered processes; kill unresponsive ones outside the lock."""
+        stats = {"checked": 0, "healthy": 0, "killed": 0, "already_dead": 0}
+        to_kill: list[tuple[str, WatchedProcess]] = []
+
         async with self._lock:
             for channel_id, watched in list(self._processes.items()):
                 stats["checked"] += 1
-                
-                # Check if process has already exited
                 if not watched.is_running:
                     stats["already_dead"] += 1
+                    del self._processes[channel_id]
                     continue
-                
-                # Check timeout
                 if watched.seconds_since_output > self._timeout:
                     logger.warning(
                         f"FFmpeg for channel {channel_id} timed out "
                         f"({watched.seconds_since_output:.1f}s since last output)"
                     )
-                    
-                    await self._kill_process(watched)
-                    stats["killed"] += 1
-                    self._kills += 1
-                    self._timeouts += 1
-                    
-                    # Trigger callback
-                    if watched.on_timeout:
-                        try:
-                            if asyncio.iscoroutinefunction(watched.on_timeout):
-                                await watched.on_timeout(channel_id)
-                            else:
-                                watched.on_timeout(channel_id)
-                        except Exception as e:
-                            logger.error(f"Timeout callback error: {e}")
+                    to_kill.append((channel_id, watched))
                 else:
                     stats["healthy"] += 1
-        
+
+        for channel_id, watched in to_kill:
+            await self._kill_process(watched)
+            async with self._lock:
+                self._processes.pop(channel_id, None)
+            stats["killed"] += 1
+            self._kills += 1
+            self._timeouts += 1
+            if watched.on_timeout:
+                try:
+                    if asyncio.iscoroutinefunction(watched.on_timeout):
+                        await watched.on_timeout(channel_id)
+                    else:
+                        watched.on_timeout(channel_id)
+                except Exception as e:
+                    logger.error(f"on_timeout callback failed for {channel_id}: {e}")
+
         return stats
     
     async def _kill_process(self, watched: WatchedProcess) -> None:

@@ -95,3 +95,33 @@ For a detailed map and dependency notes, see [reference.md](reference.md).
 - **After:** Lint → type check → pytest (full or focused) → smoke if needed.
 
 Apply this workflow on every EXStreamTV change so that existing code and tests remain intact.
+
+---
+
+## Known Bug Patterns (2026-03 Remediation)
+
+The following patterns were confirmed as bugs across the codebase. When editing these files,
+verify these fixes remain intact:
+
+| File | Bug | Fix |
+|------|-----|-----|
+| `playout/scheduler.py` | Infinite loop on empty collection | `else` branch advances index; full-wrap abort |
+| `streaming/channel_manager.py` | `datetime.utcnow()` naive/aware mismatch | `_utcnow()` + `_ensure_utc()` helpers |
+| `streaming/channel_manager.py` | Sync DB in async context | `_save_position_sync` via `run_in_executor` |
+| `transcoding/ffmpeg_builder.py` | `-flags +low_delay` drops B-frames | Removed; uses `FFLAGS_STREAMING` constant |
+| `transcoding/ffmpeg_builder.py` | Missing `h264_mp4toannexb` on COPY | Added `-bsf:v` on copy path |
+| `transcoding/ffmpeg_builder.py` | Muxrate string concatenation | `int()` cast before addition |
+| `ffmpeg/pipeline.py` | Missing `hwdownload` before format= | Prepend when HW accel active |
+| `ffmpeg/pipeline.py` | Loudnorm -24 vs -16 mismatch | Uses `LOUDNORM_FILTER` constant |
+| `api/iptv.py` | `None.strftime()` in EPG emission | None guard with fallback |
+| `api/iptv.py` | `idx` loop variable shadow | Renamed to `_ci` |
+| `hdhomerun/api.py` | String/int channel number mismatch | `int(channel_number)` cast |
+| `streaming/resolvers/plex.py` | Cache never expires | 5-minute TTL via `monotonic()` |
+| `streaming/process_watchdog.py` | Kill inside lock → deadlock | Kill collected outside lock |
+| `streaming/throttler.py` | Buffer trim breaks MPEG-TS framing | Align to 0x47 sync byte |
+| `ffmpeg/process_pool.py` | `locked()` before `acquire_nowait()` | try/except pattern |
+| `scheduling/parser.py` | Bare integer duration returns None | `isdigit()` check added |
+| `scheduling/engine.py` | `datetime.utcnow()` deprecated | `_utcnow()` helper |
+
+**Constants file:** `exstreamtv/ffmpeg/constants.py` — single source of truth for FFmpeg flags.
+Import from here; never hardcode flag values in individual builders.

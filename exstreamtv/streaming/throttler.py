@@ -198,11 +198,23 @@ class StreamThrottler:
         
         # Check if buffer exceeds max
         if len(self._buffer) > self._config.max_buffer_bytes:
-            logger.warning(
-                f"Channel {self._channel_id}: Buffer overflow, "
-                f"dropping {len(self._buffer) - self._config.max_buffer_bytes} bytes"
-            )
-            self._buffer = self._buffer[-self._config.max_buffer_bytes:]
+            trimmed = self._buffer[-self._config.max_buffer_bytes:]
+            sync_pos = trimmed.find(0x47)
+            if sync_pos > 0:
+                trimmed = trimmed[sync_pos:]
+            elif sync_pos == -1:
+                logger.error(
+                    f"Throttler: no MPEG-TS sync byte found in "
+                    f"{len(trimmed)} bytes — discarding buffer entirely"
+                )
+                trimmed = b""
+            dropped = len(self._buffer) - len(trimmed)
+            if dropped > 0:
+                logger.warning(
+                    f"Throttler buffer overflow: dropped {dropped} bytes "
+                    f"(buffer was {len(self._buffer)}, max {self._config.max_buffer_bytes})"
+                )
+            self._buffer = trimmed
         
         # Calculate how much we can send
         while len(self._buffer) >= self._config.min_buffer_bytes:

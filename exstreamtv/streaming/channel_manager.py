@@ -13,12 +13,26 @@ Enhanced with Tunarr/dizqueTV integrations:
 import asyncio
 import logging
 from collections.abc import AsyncIterator, Callable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow() -> datetime:
+    """Return current UTC time as tz-aware."""
+    return datetime.now(tz=timezone.utc)
+
+
+def _ensure_utc(dt: datetime | None) -> datetime | None:
+    """Normalise a datetime from SQLite (may be naive) to tz-aware UTC."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def _duration_to_seconds(duration: Any) -> int:
@@ -257,11 +271,10 @@ class ChannelStream:
             result = db.execute(stmt)
             position = result.scalar_one_or_none()
             
-            now = datetime.utcnow()
+            now = _utcnow()
             
             if position and position.playout_start_time:
-                # Use saved anchor time (ErsatzTV-style)
-                self._playout_start_time = position.playout_start_time
+                self._playout_start_time = _ensure_utc(position.playout_start_time)
                 
                 # Calculate current position based on elapsed time
                 if total_duration > 0:
@@ -338,7 +351,7 @@ class ChannelStream:
                 f"Error loading position for channel {self.channel_number}: {e}",
                 exc_info=True
             )
-            self._playout_start_time = datetime.utcnow()
+            self._playout_start_time = _utcnow()
             self._current_item_index = 0
         finally:
             db.close()
@@ -375,10 +388,15 @@ class ChannelStream:
             )
 
     async def _save_position(self) -> None:
-        """Save current playback position for resume."""
+        """Save current playback position (non-blocking via thread pool)."""
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self._save_position_sync)
+
+    def _save_position_sync(self) -> None:
+        """Synchronous DB write — always called via run_in_executor."""
         from exstreamtv.database.models import ChannelPlaybackPosition
         from sqlalchemy import select
-        
+
         try:
             db = self.db_session_factory()
             try:
@@ -387,59 +405,33 @@ class ChannelStream:
                 )
                 result = db.execute(stmt)
                 position = result.scalar_one_or_none()
-                
-                now_utc = datetime.utcnow()
-                elapsed_in_item = 0
-                if self._current_item_start_time:
-                    elapsed_in_item = max(
-                        0,
-                        int((now_utc - self._current_item_start_time).total_seconds()),
-                    )
+
+                now = _utcnow()
 
                 if position:
-                    # Update existing position
-                    # CRITICAL: Update BOTH current_index and last_item_index
-                    # current_index is used by channel_manager for resume
-                    # last_item_index is used by EPG for guide display
                     position.current_index = self._current_item_index
                     position.last_item_index = self._current_item_index
-                    position.last_played_at = now_utc
-                    # EPG sync: when the current item started and how far in we are
+                    position.last_played_at = now
                     position.current_item_start_time = self._current_item_start_time
-                    position.elapsed_seconds_in_item = elapsed_in_item
-                    if self._playout_start_time:
-                        position.playout_start_time = self._playout_start_time
+                    position.playout_start_time = self._playout_start_time
+                    position.elapsed_seconds_in_item = (
+                        (now - _ensure_utc(self._current_item_start_time)).total_seconds()
+                        if self._current_item_start_time else 0
+                    )
                 else:
-                    # Create new position record
                     position = ChannelPlaybackPosition(
                         channel_id=self.channel_id,
-                        channel_number=str(self.channel_number),
                         current_index=self._current_item_index,
                         last_item_index=self._current_item_index,
-                        last_played_at=now_utc,
-                        current_item_start_time=self._current_item_start_time,
-                        elapsed_seconds_in_item=elapsed_in_item,
+                        last_played_at=now,
                         playout_start_time=self._playout_start_time,
                     )
                     db.add(position)
-                
                 db.commit()
-
-                logger.debug(
-                    f"Saved position for channel {self.channel_number}: "
-                    f"index {self._current_item_index}"
-                )
-            except Exception as e:
-                db.rollback()
-                logger.error(
-                    f"Error saving position for channel {self.channel_number}: {e}"
-                )
             finally:
                 db.close()
         except Exception as e:
-            logger.error(
-                f"Error saving position on stop for channel {self.channel_number}: {e}"
-            )
+            logger.error(f"Error saving position for channel {self.channel_id}: {e}")
 
     async def _get_current_position(self) -> dict[str, Any]:
         """Get current playback position."""
@@ -760,7 +752,7 @@ class ChannelStream:
             seek_offset = playout_item.get("seek_offset", 0.0)
 
             # Update current item tracking (EPG uses this for guide alignment)
-            self._current_item_start_time = datetime.utcnow()
+            self._current_item_start_time = _utcnow()
 
             # Save position at start of item so EPG sees current programme and start time
             await self._save_position()
@@ -797,7 +789,7 @@ class ChannelStream:
                         seek_offset=seek_offset,
                     )
                 async for chunk in stream_iter:
-                        self._last_output_time = datetime.utcnow()
+                        self._last_output_time = _utcnow()
                         self._bytes_streamed += len(chunk)
                         if update_channel_metric:
                             update_channel_metric(
@@ -838,7 +830,7 @@ class ChannelStream:
             f"(attempt {self._restart_count}/{self._max_restarts}) in {delay:.1f}s"
         )
         
-        self._last_restart_time = datetime.utcnow()
+        self._last_restart_time = _utcnow()
         
         # Broadcast error screen during restart delay if available
         if self._use_error_screens:
@@ -1067,8 +1059,8 @@ class ChannelStream:
                 from exstreamtv.ai_agent.unified_log_collector import LogEvent, LogLevel
                 
                 event = LogEvent(
-                    event_id=f"ch_{self.channel_id}_{datetime.utcnow().timestamp()}",
-                    timestamp=datetime.utcnow(),
+                    event_id=f"ch_{self.channel_id}_{_utcnow().timestamp()}",
+                    timestamp=_utcnow(),
                     source=LogSource.APPLICATION,
                     level=LogLevel(level),
                     message=message,

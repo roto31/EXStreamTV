@@ -3,10 +3,14 @@
 import json
 import logging
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
+
+
+def _utcnow() -> datetime:
+    return datetime.now(tz=timezone.utc)
 
 from exstreamtv.database import Channel, Collection, CollectionItem, MediaItem, Playlist, PlaylistItem
 
@@ -452,7 +456,7 @@ class ScheduleEngine:
         pre_roll_sequence = None
         mid_roll_sequence = None
         post_roll_sequence = None
-        current_time = datetime.utcnow()
+        current_time = _utcnow()
 
         # Process sequence items in order (ErsatzTV processes sequentially)
         for item in sequence:

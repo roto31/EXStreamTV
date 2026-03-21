@@ -834,8 +834,8 @@ async def get_epg(
                             current_time_in_cycle = 0
                             current_item_start_in_cycle = 0
                             # Use the current_item_index already calculated above (line 471-484)
-                            for idx in range(current_item_index):
-                                item = schedule_items[idx]
+                            for _ci in range(current_item_index):
+                                item = schedule_items[_ci]
                                 media_item = item.get("media_item")
                                 if not media_item:
                                     continue
@@ -868,8 +868,8 @@ async def get_epg(
                         if current_item_index > 0:
                             # Calculate how much time has elapsed before current_item_index
                             time_before_current = 0
-                            for idx in range(current_item_index):
-                                item = schedule_items[idx]
+                            for _ci in range(current_item_index):
+                                item = schedule_items[_ci]
                                 media_item = item.get("media_item")
                                 if media_item:
                                     time_before_current += media_item.duration or 1800
@@ -1468,6 +1468,15 @@ async def get_epg(
 
                 if should_include:
                     programme_count += 1
+                    if start_time is None:
+                        logger.warning(
+                            f"Channel {channel.number}: start_time is None "
+                            f"at EPG programme emission — using 'now' as fallback."
+                        )
+                        start_time = now
+                    if end_time_prog is None or end_time_prog <= start_time:
+                        end_time_prog = start_time + timedelta(seconds=1800)
+
                     start_str = start_time.strftime("%Y%m%d%H%M%S +0000")
                     end_str = end_time_prog.strftime("%Y%m%d%H%M%S +0000")
 
@@ -1823,7 +1832,7 @@ async def get_epg(
             headers={
                 "Content-Disposition": "inline; filename=xmltv.xml",
                 "Cache-Control": "public, max-age=300",  # Cache for 5 minutes
-                "X-Generated-At": now.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "X-Generated-At": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "X-Generation-Time": f"{generation_time:.2f}s",
             },
         )

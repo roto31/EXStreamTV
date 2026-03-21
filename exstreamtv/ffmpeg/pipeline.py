@@ -13,6 +13,7 @@ from typing import Optional
 
 from exstreamtv.config import get_config
 from exstreamtv.ffmpeg.capabilities import HardwareCapabilities, detect_hardware_acceleration
+from exstreamtv.ffmpeg.constants import FFLAGS_STREAMING, LOUDNORM_FILTER, PIX_FMT
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,7 @@ class FFmpegPipeline:
         # Bug Fix: Error tolerance for corrupt streams
         if self.use_error_tolerance:
             cmd.extend([
-                "-fflags", "+genpts+discardcorrupt+igndts",
+                "-fflags", FFLAGS_STREAMING,
                 "-err_detect", "ignore_err",
             ])
         
@@ -157,7 +158,7 @@ class FFmpegPipeline:
         
         # Audio normalization
         if settings.normalize_audio:
-            cmd.extend(["-af", "loudnorm=I=-24:TP=-2:LRA=7"])
+            cmd.extend(["-af", LOUDNORM_FILTER])
         
         # Output format
         cmd.extend(["-f", output_format])
@@ -217,12 +218,21 @@ class FFmpegPipeline:
         return flags
     
     def _build_filter_chain(self, settings: OutputSettings) -> str:
-        """Build video filter chain."""
+        """Build video filter chain, handling hardware surface download correctly."""
+        from exstreamtv.ffmpeg.capabilities import HardwareAccelType
+
         filters = []
-        
         width, height = settings.resolution
-        
-        # Scaling with padding
+
+        is_hw = (
+            hasattr(self, 'capabilities')
+            and self.capabilities is not None
+            and self.capabilities.preferred_method not in (HardwareAccelType.NONE, None)
+        )
+
+        if is_hw:
+            filters.append("hwdownload")
+
         if settings.scaling_mode == "pad":
             filters.append(
                 f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
@@ -235,11 +245,10 @@ class FFmpegPipeline:
                 f"scale={width}:{height}:force_original_aspect_ratio=increase,"
                 f"crop={width}:{height}"
             )
-        
-        # Format conversion for compatibility
-        filters.append("format=yuv420p")
-        
-        return ",".join(filters)
+
+        filters.append(f"format={PIX_FMT}")
+
+        return ",".join(filters) if filters else ""
     
     def probe(self, input_path: str) -> Optional[StreamInfo]:
         """

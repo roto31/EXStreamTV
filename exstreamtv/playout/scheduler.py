@@ -10,8 +10,12 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
+import logging
+
 from exstreamtv.playout.enumerators import CollectionEnumerator
 from exstreamtv.playout.state import PlayoutItem, PlayoutState
+
+logger = logging.getLogger(__name__)
 
 
 class ScheduleMode(Enum):
@@ -129,6 +133,18 @@ class PlayoutScheduler:
             if items_result.items:
                 last_item = items_result.items[-1]
                 current_time = last_item.finish
+            else:
+                logger.warning(
+                    f"schedule_item index {schedule_index} produced no items "
+                    f"(empty/broken collection?), advancing to prevent infinite loop."
+                )
+                schedule_index = (schedule_index + 1) % len(self.schedule_items)
+                if schedule_index == state.schedule_item_index:
+                    logger.error(
+                        "All schedule items produced no output — aborting playout build."
+                    )
+                    break
+                continue
 
             # Update anchor state
             result.new_anchors.update(items_result.new_anchors)

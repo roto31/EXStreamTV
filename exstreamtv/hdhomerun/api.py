@@ -657,11 +657,22 @@ async def lineup(request: Request, db: AsyncSession = Depends(get_db)):
         # Plex/Emby/Jellyfin can handle HLS
         stream_url = f"{base_url}/hdhomerun/auto/v{channel.number}"
 
+        is_hd = (
+            getattr(channel, 'is_hd', None)
+            or getattr(channel, 'hd', None)
+            or (
+                getattr(channel, 'resolution', None) in ('1920x1080', '1280x720', '1080p', '720p')
+            )
+            or (
+                'HD' in channel.name.upper()
+                and 'SD' not in channel.name.upper()
+            )
+        )
         channel_entry = {
             "GuideNumber": str(guide_number),
             "GuideName": guide_name,
             "URL": stream_url,
-            "HD": 1 if "HD" in channel.name.upper() else 0,
+            "HD": 1 if is_hd else 0,
         }
 
         lineup_data.append(channel_entry)
@@ -736,12 +747,22 @@ async def stream_channel(
     # Query channel with error handling
     channel = None
     try:
+        try:
+            channel_num_int = int(channel_number)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid channel number: {channel_number!r}"
+            )
+
         stmt = select(Channel).where(
-            Channel.number == channel_number,
+            Channel.number == channel_num_int,
             Channel.enabled == True
         )
         result = await db.execute(stmt)
         channel = result.scalar_one_or_none()
+    except HTTPException:
+        raise
     except Exception as e:
         error_context = {
             "endpoint": "stream_channel",

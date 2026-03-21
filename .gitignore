@@ -134,7 +134,8 @@ EXStreamTVApp/.build/
 # Local database backups (not for VCS)
 backups/
 
-# Project specific
+# Database files and backups
+*.db.backup.*
 *.db
 *.db-shm
 *.db-wal

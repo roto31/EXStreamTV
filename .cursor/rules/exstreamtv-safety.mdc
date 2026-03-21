@@ -1,0 +1,64 @@
+---
+description: Safety rules for EXStreamTV Python code — auto-attached to all .py files
+globs: ["**/*.py"]
+alwaysApply: true
+---
+
+# EXStreamTV Safety Rules
+
+These rules are derived from 24 confirmed bugs found during the 2026-03 remediation.
+See `docs/LESSONS_LEARNED.md` for full details on each issue.
+
+## Datetime
+
+- NEVER use `datetime.utcnow()`. Always use `datetime.now(tz=timezone.utc)`.
+- Normalise all DB-sourced datetimes with `_ensure_utc()` before arithmetic.
+- All datetime comparisons must be between same-awareness types.
+
+## Asyncio / Concurrency
+
+- NEVER call synchronous I/O (DB, file, network) inside `async def`. Use `run_in_executor`.
+- NEVER perform I/O or long operations while holding an `asyncio.Lock`.
+- Collect work items under lock; execute outside lock.
+- Use `try: acquire_nowait() except` for semaphores, not `if not locked()`.
+
+## FFmpeg Flags
+
+- Import all FFmpeg flags from `exstreamtv/ffmpeg/constants.py`. Never hardcode flag strings.
+- NEVER use `-flags +low_delay` for pre-recorded content.
+- NEVER use `+fastseek` in fflags for pipe output.
+- Always add `-bsf:v h264_mp4toannexb` when remuxing H.264 into MPEG-TS (copy path).
+- Always prepend `hwdownload` before CPU filters when hardware acceleration is active.
+- Loudnorm target is `-16 LUFS` (EBU R128). Never use `-24` (ATSC A/85).
+
+## MPEG-TS
+
+- Buffer trim operations must align to 0x47 sync byte (188-byte packet boundary).
+- Null TS packet for keepalive: `0x47 0x1F 0xFF 0x10` + 184 × `0xFF`.
+
+## Type Safety
+
+- Always cast path parameters to DB column type before comparison (e.g., `int(channel_number)`).
+- Always cast user-supplied numeric fields to `int()`/`float()` at point of use.
+
+## Loops
+
+- Every `while` loop depending on external input must have monotonic progress or bounded iterations.
+- Never reuse outer-scope variable names in inner loops; use `_ci`, `_i` for throwaway counters.
+
+## Caching
+
+- All caches must have a TTL or explicit invalidation path. Never cache forever.
+
+## YAML / Config
+
+- Always use `yaml.safe_load()`. Never use `FullLoader` or `UnsafeLoader`.
+
+## EPG / Standards
+
+- Use ISO 8601 (`%Y-%m-%dT%H:%M:%SZ`) for all machine-readable timestamps.
+- Guard nullable `start_time`/`end_time` before `.strftime()`.
+
+## HD Flag
+
+- Prefer DB field (`is_hd`) → resolution field → name heuristic. Never rely solely on name matching.

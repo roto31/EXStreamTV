@@ -33,6 +33,12 @@ class ScheduleParser:
         if not duration_str:
             return None
 
+        duration_str = str(duration_str).strip()
+
+        if duration_str.isdigit():
+            val = int(duration_str)
+            return val if val > 0 else None
+
         try:
             # Handle ISO 8601 format (PT3M44S) if needed
             if duration_str.startswith("PT"):
@@ -221,10 +227,10 @@ class ScheduleParser:
 
         # Try to find matching schedule file
         possible_names = [
-            f"mn-olympics-{channel_number}.yml",
-            f"mn-olympics-{channel_number}.yaml",
             f"{channel_number}.yml",
             f"{channel_number}.yaml",
+            f"channel-{channel_number}.yml",
+            f"channel-{channel_number}.yaml",
         ]
 
         for name in possible_names:
