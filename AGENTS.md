@@ -32,3 +32,5 @@ Subdirectory-specific rules are in:
 - exstreamtv/scheduling/AGENTS.md   (datetime and scheduler loop rules)
 - exstreamtv/streaming/AGENTS.md    (async lock, sync DB, MPEG-TS rules)
 - exstreamtv/transcoding/AGENTS.md  (ErsatzTV port checklist)
+
+Confluence / GitHub wiki mirror (REST vs MCP, uv, titles, attachment uploads): `.cursor/rules/exstreamtv-confluence.mdc` · lessons **LL-031–LL-034** in `docs/LESSONS_LEARNED.md` · skill `.cursor/skills/exstreamtv-confluence-publish/SKILL.md`

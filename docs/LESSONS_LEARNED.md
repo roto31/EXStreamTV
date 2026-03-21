@@ -1,9 +1,9 @@
 # EXStreamTV — Lessons Learned
 
-**Document version:** 1.0  
-**Audit date:** 2026-03-20  
-**Scope:** Full codebase audit — 30 confirmed issues across 18 files  
-**Status:** Active — rules and skills derived from this document are enforced via `.cursor/rules/exstreamtv-safety.mdc`
+**Document version:** 1.2  
+**Audit date:** 2026-03-20 (codebase); **LL-031–033** added 2026-03-21; **LL-034** added 2026-03-21 (Confluence attachment uploads)  
+**Scope:** Full codebase audit — 30 confirmed issues across 18 files; plus 4 documentation/tooling lessons (LL-031–034)  
+**Status:** Active — rules and skills derived from this document are enforced via `.cursor/rules/exstreamtv-safety.mdc` (runtime) and `.cursor/rules/exstreamtv-confluence.mdc` (docs/Confluence paths)
 
 ---
 
@@ -412,17 +412,72 @@ Each entry follows the format:
 
 ---
 
+## LL-031 — Atlassian MCP Confluence Create Page Uses ADF (Not Storage)
+
+| Field | Detail |
+|---|---|
+| **Severity** | 🟡 Medium |
+| **Area** | Documentation tooling / Confluence |
+| **Root Cause** | Cursor **Atlassian MCP** `createConfluencePage` accepts **ADF** JSON in `body`. Passing HTML/storage or expecting automatic Mermaid from raw Markdown does not apply. Workflows that embed the whole wiki in a single **Markdown code block** in ADF do not execute Mermaid or render Markdown as on GitHub. |
+| **Symptom** | Confluence pages show a giant Markdown code fence; diagrams are not interactive. Expectation mismatch vs GitHub wiki rendering. |
+| **Fix Applied** | Added `scripts/publish_confluence_wiki_tree.py` (and existing `publish_confluence_mirror.py`) using **Confluence REST API** with `body.storage` and `{code:language=mermaid}` macros via shared `confluence_markdown_storage.py`. |
+| **Prevention Rule** | RULE DOC-01 — Confluence: Choose Storage REST vs ADF MCP |
+
+---
+
+## LL-032 — PEP 723 Script Dependencies Require `uv run scripts/…`, Not `uv run python scripts/…`
+
+| Field | Detail |
+|---|---|
+| **Severity** | 🟡 Medium |
+| **Area** | Tooling / uv |
+| **Root Cause** | Inline `# /// script` dependencies in `scripts/publish_confluence_*.py` are honored when **uv** executes the **script path** as the entrypoint. Running `uv run python scripts/foo.py` uses the project interpreter without necessarily attaching the script’s declared dependencies (e.g. `markdown`), causing `ModuleNotFoundError`. |
+| **Symptom** | Local or CI publish commands fail on `import markdown` despite the script header listing it. |
+| **Fix Applied** | Documented correct invocation: `uv run scripts/publish_confluence_wiki_tree.py` (and same pattern for `publish_confluence_mirror.py`). |
+| **Prevention Rule** | RULE DOC-02 — uv: Invoke PEP 723 Scripts by Path |
+
+---
+
+## LL-033 — Confluence Duplicate Page Titles in One Space (Landing vs Wiki File)
+
+| Field | Detail |
+|---|---|
+| **Severity** | 🟡 Medium |
+| **Area** | Documentation / Confluence |
+| **Root Cause** | Confluence requires **unique page titles per space**. A root landing page titled `EXStreamTV` cannot coexist with a child from `EXStreamTV.wiki/EXStreamTV.md` if both use the same title. |
+| **Symptom** | API create/update fails with title conflict, or accidental overwrite/confusion in navigation. |
+| **Fix Applied** | `wiki_sidebar_order.confluence_wiki_child_title()` maps stem `EXStreamTV` → **`EXStreamTV Wiki`** for the wiki-backed child only; root stays **`EXStreamTV`**. |
+| **Prevention Rule** | RULE DOC-03 — Confluence: Avoid Title Collisions |
+
+---
+
+## LL-034 — httpx Default `Content-Type: application/json` Breaks Confluence Attachment Uploads (HTTP 415)
+
+| Field | Detail |
+|---|---|
+| **Severity** | 🟡 Medium |
+| **Area** | Documentation tooling / Confluence REST |
+| **File(s)** | `scripts/publish_confluence_wiki_tree.py`, `scripts/publish_confluence_mirror.py` (`httpx.Client` default headers) |
+| **Root Cause** | A shared **`httpx.Client`** was constructed with default headers **`Content-Type: application/json`**. Confluence’s **`POST …/content/{id}/child/attachment`** expects **`multipart/form-data`** (file field). The client-wide JSON content type is applied to multipart requests as well, so the server responds **415 Unsupported Media Type**. This is **not** specific to SVG — the same bug breaks **all** attachment uploads (Kroki **mermaid-*.svg**, wiki **screenshots** `.png`/`.gif`, etc.). |
+| **Symptom** | Publish run completes page body updates but logs many lines: `Attachment failed <name>: 415`. Mermaid diagrams referenced via `ri:attachment` are missing; screenshot images in wiki pages do not attach. |
+| **Fix Applied** | Removed **`Content-Type`** from the Confluence client’s default headers; keep **`Accept: application/json`**. Requests using **`json=…`** still get the correct JSON content type from httpx; **`files=…`** uploads receive proper **`multipart/form-data`** with a boundary. |
+| **Prevention Rule** | RULE DOC-05 — Confluence REST: Never Default `Content-Type: application/json` on Clients Used for Multipart |
+
+**Reference log (2026-03-21):** First full tree publish after introducing the JSON default — dozens of `Attachment failed mermaid-….svg: 415` and screenshot `415` lines; landing and page bodies still “Published … Done.”
+
+---
+
 ## Summary Statistics
 
 | Severity | Count |
 |---|---|
 | 🔴 Critical | 14 |
 | 🟡 High | 9 |
-| 🟡 Medium | 6 |
+| 🟡 Medium | 10 |
 | 🟡 Low | 1 |
 | 🔴 Security | 1 |
 | Retracted | 1 |
-| **Total confirmed** | **30** |
+| **Total confirmed** | **34** |
 
 | Category | Count |
 |---|---|
@@ -435,3 +490,4 @@ Each entry follows the format:
 | Resource management | 3 |
 | Dead code | 2 |
 | Security | 1 |
+| Documentation / Confluence / uv | 4 |

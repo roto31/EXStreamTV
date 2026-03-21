@@ -1,0 +1,37 @@
+---
+description: Confluence wiki mirror, REST storage vs Atlassian MCP ADF, uv script invocation
+globs: scripts/publish_confluence*.py,scripts/confluence_*.py,scripts/wiki_sidebar_order.py,scripts/build_*confluence*.py,scripts/build_atlassian_adf_manifest.py,docs/confluence/**,EXStreamTV.wiki/**
+alwaysApply: false
+---
+
+# EXStreamTV — Confluence & Wiki Publishing
+
+Full lessons: **LL-031–LL-034** in `docs/LESSONS_LEARNED.md`
+
+## RULE DOC-01 — Confluence: Storage REST vs ADF MCP
+
+- **Rendered Markdown + visible diagrams**: use **Confluence REST** + `scripts/confluence_markdown_storage.py`. **`publish_confluence_wiki_tree.py`** POSTs each Mermaid block to **[Kroki](https://kroki.io)**, uploads returned **SVG** as a page attachment, and references it with **`ri:attachment`** (no Mermaid marketplace app required). `CONFLUENCE_SKIP_KROKI=1` falls back to the **code** macro (`language=mermaid`) only.
+- **`publish_confluence_mirror.py`** (single page) still uses the code macro for Mermaid unless extended.
+- **Atlassian MCP** `createConfluencePage`: body must be **ADF JSON** — not a substitute for the storage + Kroki path above.
+
+## RULE DOC-02 — uv: Invoke PEP 723 Scripts by Path
+
+- Run: `uv run scripts/publish_confluence_wiki_tree.py` and `uv run scripts/publish_confluence_mirror.py` (script path as argument to `uv run`).
+- Do **not** use `uv run python scripts/...` for those files if they declare `# /// script` dependencies — `markdown` may be missing (LL-032).
+
+## RULE DOC-03 — Confluence: Avoid Title Collisions
+
+- Titles must be **unique within the space**.
+- Root landing **`EXStreamTV`** + wiki file `EXStreamTV.md`: use **`confluence_wiki_child_title()`** from `wiki_sidebar_order.py` (child → **EXStreamTV Wiki**).
+
+## RULE DOC-04 — Wiki Sidebar & Legacy Titles
+
+- Sidebar order: single source **`SIDBAR_STEMS`** in `scripts/wiki_sidebar_order.py` (used by mirror builders and wiki tree publisher).
+- Reusing pages from an old **“Mirror — …”** tree: `publish_confluence_wiki_tree.py` matches legacy titles and renames on update — do not reintroduce the **Mirror —** prefix for new publishes.
+
+## RULE DOC-05 — Confluence REST: No Default `Content-Type: application/json` on Multipart-Capable Clients
+
+- **`POST …/wiki/rest/api/content/{id}/child/attachment`** requires **`multipart/form-data`** (file field `file`).  
+- **Never** set **`Content-Type: application/json`** on the **`httpx.Client`** default headers used for both JSON API calls **and** file uploads — Confluence returns **415** for every attachment (Kroki **mermaid-*.svg**, wiki screenshots, etc.).  
+- **Correct pattern:** default headers = **`Accept: application/json`** only; use **`json=…`** on `post`/`put` for JSON (httpx sets JSON content type per request); use **`files=…`** for attachments (httpx sets multipart + boundary).  
+- **Lesson:** LL-034.
