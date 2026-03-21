@@ -87,7 +87,8 @@ export CONFLUENCE_USER=your@email
 export CONFLUENCE_API_TOKEN=your_token
 export CONFLUENCE_SPACE_KEY=ESTV
 # optional: export CONFLUENCE_PARENT_PAGE_ID=123456
-# optional: reuse existing root (e.g. after a first run): export CONFLUENCE_ROOT_PAGE_ID=425987
+# optional: pin root (faster): export CONFLUENCE_ROOT_PAGE_ID=327995
+# If unset, the script finds an existing page titled EXStreamTV in the space and reuses it.
 uv run scripts/publish_confluence_wiki_tree.py
 ```
 
@@ -95,7 +96,7 @@ Use `uv run scripts/publish_confluence_wiki_tree.py --dry-run` to list planned p
 
 **If every attachment fails with HTTP 415:** the Confluence `httpx` client must not use a default `Content-Type: application/json` header when the same client uploads files (multipart). See **LL-034** in `docs/LESSONS_LEARNED.md` and **RULE DOC-05** in `.cursor/rules/exstreamtv-confluence.mdc`.
 
-**Last Revised:** 2026-03-21
+**Last Revised:** 2026-03-22
 
 ---
 

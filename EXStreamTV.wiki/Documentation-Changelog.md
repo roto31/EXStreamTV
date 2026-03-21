@@ -2,7 +2,19 @@
 
 All notable changes to the Documentation component will be documented in this file.
 
-**Last Revised:** 2026-03-21
+**Last Revised:** 2026-03-22
+
+## [2.6.0] - 2026-03-22 (Confluence publishers, lessons LL-031–LL-035, wiki sync)
+
+### Documentation / tooling
+- **`docs/LESSONS_LEARNED.md`** — **LL-031–LL-035**: Confluence REST vs Atlassian MCP (ADF), **`uv run scripts/…`** (PEP 723), duplicate page titles (**EXStreamTV** vs **EXStreamTV Wiki**), attachment **HTTP 415** (httpx default `Content-Type: application/json` vs multipart), duplicate root **HTTP 400** + title lookup reuse / **`CONFLUENCE_ROOT_PAGE_ID`**. Summary **35** confirmed lessons; doc version **1.3**.
+- **`EXStreamTV.wiki/Lessons-Learned.md`** — full sync from repo + wiki mirror banner linking to canonical `docs/LESSONS_LEARNED.md`.
+- **`scripts/publish_confluence_wiki_tree.py`** / **`publish_confluence_mirror.py`** — multipart-safe httpx headers; repo **`.env`** load; **`CONFLUENCE_USERNAME`** alias; root page discovery when id env unset.
+- **`docs/confluence/README.md`** — 415 troubleshooting, root id / auto-reuse; **`.env.example`** Confluence keys.
+- **Cursor:** `.cursor/rules/exstreamtv-confluence.mdc` (**RULE DOC-05**, **DOC-06**), `.cursor/skills/exstreamtv-confluence-publish/SKILL.md`, **`AGENTS.md`** pointers.
+
+### Confluence Cloud (ESTV)
+- Refresh pages after pulling: `uv run scripts/publish_confluence_wiki_tree.py` (credentials in **`.env`** or env). Ensures Mermaid SVG attachments and stakeholder HTML land in the space.
 
 ## [2.6.0] - 2026-03-21 (documentation, Mermaid, wiki sync)
 

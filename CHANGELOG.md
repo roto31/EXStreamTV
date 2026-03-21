@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation & Confluence tooling
+- **Lessons learned** extended through **LL-035** in `docs/LESSONS_LEARNED.md` (Confluence REST vs MCP, `uv run scripts/…`, wiki/landing title split, attachment **HTTP 415** fix for httpx multipart, root page **HTTP 400** + title reuse / `CONFLUENCE_ROOT_PAGE_ID`). GitHub Wiki **`Lessons-Learned`** kept in sync with the repo file.
+- **Publishers** (`scripts/publish_confluence_wiki_tree.py`, `publish_confluence_mirror.py`): do not set default `Content-Type: application/json` on the Confluence `httpx.Client` used for file uploads; load **`.env`**; optional root discovery by title.
+- **Changelogs** (`CHANGELOG.md`, `docs/CHANGELOG.md`, `EXStreamTV.wiki/Documentation-Changelog.md`) and **`docs/confluence/README.md`** updated for the above. **Republish ESTV** with `uv run scripts/publish_confluence_wiki_tree.py` after pull to refresh Confluence content.
+
 ---
 
 ## [2.6.0] - 2026-01-31

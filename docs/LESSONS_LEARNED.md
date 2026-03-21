@@ -1,8 +1,8 @@
 # EXStreamTV — Lessons Learned
 
-**Document version:** 1.2  
-**Audit date:** 2026-03-20 (codebase); **LL-031–033** added 2026-03-21; **LL-034** added 2026-03-21 (Confluence attachment uploads)  
-**Scope:** Full codebase audit — 30 confirmed issues across 18 files; plus 4 documentation/tooling lessons (LL-031–034)  
+**Document version:** 1.3  
+**Audit date:** 2026-03-20 (codebase); **LL-031–035** Confluence / publishing (2026-03-21 – 2026-03-22)  
+**Scope:** Full codebase audit — 30 confirmed issues across 18 files; plus 5 documentation/tooling lessons (LL-031–035)  
 **Status:** Active — rules and skills derived from this document are enforced via `.cursor/rules/exstreamtv-safety.mdc` (runtime) and `.cursor/rules/exstreamtv-confluence.mdc` (docs/Confluence paths)
 
 ---
@@ -467,17 +467,31 @@ Each entry follows the format:
 
 ---
 
+## LL-035 — Wiki Tree Publisher Attempts Second Root Page With Same Title (HTTP 400)
+
+| Field | Detail |
+|---|---|
+| **Severity** | 🟡 Medium |
+| **Area** | Documentation tooling / Confluence REST |
+| **File(s)** | `scripts/publish_confluence_wiki_tree.py` |
+| **Root Cause** | On a **second** publish run, if **`CONFLUENCE_ROOT_PAGE_ID`** was unset, the script always **`POST`**ed a new page with the root title (**`EXStreamTV`**). Confluence enforces **unique page titles per space**, so the create fails after the first successful run. |
+| **Symptom** | `400 Bad Request` — *A page with this title already exists: A page already exists with the same TITLE in this space*. |
+| **Fix Applied** | Before create, **`GET …/content?spaceKey=&title=&type=page&status=current`** (with **`expand=ancestors`**) to reuse an existing root id when **`parent_id`** matches (or a single unambiguous hit). Users may still set **`CONFLUENCE_ROOT_PAGE_ID`** to skip lookup. |
+| **Prevention Rule** | RULE DOC-06 — Confluence: Reuse Root Page or Set `CONFLUENCE_ROOT_PAGE_ID` |
+
+---
+
 ## Summary Statistics
 
 | Severity | Count |
 |---|---|
 | 🔴 Critical | 14 |
 | 🟡 High | 9 |
-| 🟡 Medium | 10 |
+| 🟡 Medium | 11 |
 | 🟡 Low | 1 |
 | 🔴 Security | 1 |
 | Retracted | 1 |
-| **Total confirmed** | **34** |
+| **Total confirmed** | **35** |
 
 | Category | Count |
 |---|---|
@@ -490,4 +504,4 @@ Each entry follows the format:
 | Resource management | 3 |
 | Dead code | 2 |
 | Security | 1 |
-| Documentation / Confluence / uv | 4 |
+| Documentation / Confluence / uv | 5 |

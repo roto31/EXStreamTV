@@ -19,6 +19,7 @@ description: >-
 | LL-032 | **`uv run scripts/…`** for PEP 723 deps — not `uv run python scripts/…` |
 | LL-033 | Unique titles per space — **`EXStreamTV`** root vs **`EXStreamTV Wiki`** child |
 | LL-034 | **`httpx.Client`**: no default **`Content-Type: application/json`** if the same client uploads attachments — else Confluence **415** on all files (SVG + screenshots) |
+| LL-035 | Second publish without **`CONFLUENCE_ROOT_PAGE_ID`**: do not **`POST`** duplicate root title — **400**; script reuses root via title **lookup** (or set env id) |
 
 ## When to Use Which Publisher
 
@@ -58,6 +59,7 @@ export CONFLUENCE_SPACE_KEY=ESTV
 3. **Titles**: any new wiki stem that equals root title? Extend `confluence_wiki_child_title` if needed.
 4. **Sidebar**: add stems only in `wiki_sidebar_order.SIDEBAR_STEMS` once.
 5. **Attachments / httpx**: Confluence `httpx.Client` must **not** set default **`Content-Type: application/json`** when `post(..., files=…)` is used — only **`Accept: application/json`** (RULE DOC-05, LL-034). If publishes log **`Attachment failed …: 415`**, check this first.
+6. **Root page**: Reruns need **`CONFLUENCE_ROOT_PAGE_ID`** or title-based reuse — avoid duplicate **EXStreamTV** **POST** (RULE DOC-06, LL-035).
 
 ## Verification
 

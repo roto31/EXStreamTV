@@ -308,6 +308,10 @@ All documentation is available in Confluence-ready format in the `confluence/` f
 
 See `confluence/README.md` for detailed instructions.
 
+### Automated mirror (ESTV space)
+
+The repository can push **README + this wiki** to **Confluence Cloud** (storage format, Kroki → Mermaid SVG attachments, screenshots). Runbook: **[`docs/confluence/README.md`](https://github.com/roto31/EXStreamTV/blob/main/docs/confluence/README.md)**. Pitfalls and fixes: **[Lessons Learned](Lessons-Learned)** (**LL-031–LL-035**).
+
 ---
 
 ## Support

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # EXStreamTV — Confluence & Wiki Publishing
 
-Full lessons: **LL-031–LL-034** in `docs/LESSONS_LEARNED.md`
+Full lessons: **LL-031–LL-035** in `docs/LESSONS_LEARNED.md`
 
 ## RULE DOC-01 — Confluence: Storage REST vs ADF MCP
 
@@ -35,3 +35,9 @@ Full lessons: **LL-031–LL-034** in `docs/LESSONS_LEARNED.md`
 - **Never** set **`Content-Type: application/json`** on the **`httpx.Client`** default headers used for both JSON API calls **and** file uploads — Confluence returns **415** for every attachment (Kroki **mermaid-*.svg**, wiki screenshots, etc.).  
 - **Correct pattern:** default headers = **`Accept: application/json`** only; use **`json=…`** on `post`/`put` for JSON (httpx sets JSON content type per request); use **`files=…`** for attachments (httpx sets multipart + boundary).  
 - **Lesson:** LL-034.
+
+## RULE DOC-06 — Confluence: Reuse Root Page or Set `CONFLUENCE_ROOT_PAGE_ID`
+
+- A **second** publish without **`CONFLUENCE_ROOT_PAGE_ID`** must **not** `POST` another page with the same root title — Confluence returns **400** (duplicate title in space).
+- **`publish_confluence_wiki_tree.py`** reuses an existing root by **title lookup** in the space when the env var is unset; you may still set **`CONFLUENCE_ROOT_PAGE_ID`** explicitly.
+- **Lesson:** LL-035.
