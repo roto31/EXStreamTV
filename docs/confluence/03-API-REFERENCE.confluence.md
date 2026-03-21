@@ -535,3 +535,5 @@ h2. Need Help?
 * Read the [Tunarr/dizqueTV Integration|EXStreamTV:Tunarr Integration]
 * Use the interactive docs at /api/docs
 * View streaming logs at /logs
+
+**Last Revised:** 2026-03-20

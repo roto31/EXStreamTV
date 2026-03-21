@@ -807,3 +807,5 @@ UNION ALL SELECT 'playlist_items', COUNT(*) FROM playlist_items;"
 **Document Version**: 1.0  
 **Last Updated**: 2026-01-26  
 **Author**: EXStreamTV Migration Team
+
+**Last Revised:** 2026-03-20

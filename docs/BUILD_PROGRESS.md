@@ -974,3 +974,5 @@ All 13 phases of EXStreamTV have been completed. The project is now at v2.6.0 wi
 ---
 
 *This document is automatically updated as development progresses.*
+
+**Last Revised:** 2026-03-20

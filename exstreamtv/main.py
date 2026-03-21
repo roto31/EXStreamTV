@@ -80,23 +80,37 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.warning(f"Background task scheduler initialization failed: {e}")
     
-    # Initialize FFmpeg process pool
+    # Initialize FFmpeg process pool (legacy)
     try:
         from exstreamtv.ffmpeg.process_pool import get_process_pool
         await get_process_pool()
         logger.info("FFmpeg process pool initialized")
     except Exception as e:
         logger.warning(f"FFmpeg process pool initialization failed (non-critical): {e}")
-    
+
+    # Initialize ProcessPoolManager (remediation: sole FFmpeg spawn gatekeeper)
+    process_pool_manager = None
+    try:
+        from exstreamtv.streaming.process_pool_manager import get_process_pool_manager
+        process_pool_manager = get_process_pool_manager()
+        await process_pool_manager.start()
+        app.state.process_pool_manager = process_pool_manager
+        logger.info("ProcessPoolManager initialized")
+    except Exception as e:
+        logger.warning(f"ProcessPoolManager initialization failed (non-critical): {e}")
+
     # Initialize channel manager
     try:
         from exstreamtv.streaming.channel_manager import ChannelManager
         from exstreamtv.database import get_sync_session_factory
         db_session_factory = get_sync_session_factory()
-        app.state.channel_manager = ChannelManager(db_session_factory=db_session_factory)
+        app.state.channel_manager = ChannelManager(
+            db_session_factory=db_session_factory,
+            process_pool_manager=process_pool_manager,
+        )
         await app.state.channel_manager.start()
         logger.info("Channel manager started")
-        
+
         # Register channel manager with health tasks for restart capability
         try:
             from exstreamtv.tasks.health_tasks import set_channel_manager
@@ -115,7 +129,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             
     except Exception as e:
         logger.warning(f"Channel manager initialization failed: {e}")
-    
+
     # Start SSDP discovery for HDHomeRun emulation
     if config.hdhomerun.enabled:
         try:
@@ -278,6 +292,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         except Exception as e:
             logger.warning(f"Error stopping channel manager: {e}")
     
+    # Stop ProcessPoolManager (remediation)
+    if hasattr(app.state, "process_pool_manager") and app.state.process_pool_manager:
+        try:
+            from exstreamtv.streaming.process_pool_manager import shutdown_process_pool_manager
+            await shutdown_process_pool_manager()
+            logger.info("ProcessPoolManager stopped")
+        except Exception as e:
+            logger.warning(f"Error stopping ProcessPoolManager: {e}")
+
     # Stop FFmpeg process pool
     try:
         from exstreamtv.ffmpeg.process_pool import shutdown_process_pool
@@ -353,9 +376,31 @@ def create_app() -> FastAPI:
     
     # Mount IPTV router at root level (not under /api) for StreamTV compatibility
     # This makes URLs like /iptv/xmltv.xml instead of /api/iptv/xmltv.xml
+    # Try main iptv, then iptv_v2, then minimal inline fallback so routes always exist
+    iptv_mounted = False
     if iptv_router:
         app.include_router(iptv_router, tags=["IPTV"])
-        logger.info("IPTV router mounted at root level for StreamTV compatibility")
+        logger.info("IPTV router mounted at root level for StreamTV compatibility (/iptv/channels.m3u, /iptv/xmltv.xml)")
+        iptv_mounted = True
+    if not iptv_mounted:
+        try:
+            from exstreamtv.api import iptv_v2
+            app.include_router(iptv_v2.router, tags=["IPTV"])
+            logger.info("IPTV V2 router mounted as fallback (/iptv/channels.m3u, /iptv/xmltv.xml)")
+            iptv_mounted = True
+        except Exception as e:
+            logger.warning(f"IPTV V2 fallback failed: {e}")
+    if not iptv_mounted:
+        # Last resort: inline minimal handlers so endpoints never 404
+        @app.get("/iptv/channels.m3u", include_in_schema=False)
+        async def _iptv_channels_m3u():
+            from fastapi.responses import PlainTextResponse
+            return PlainTextResponse("#EXTM3U\n", media_type="application/x-mpegURL")
+        @app.get("/iptv/xmltv.xml", include_in_schema=False)
+        async def _iptv_xmltv():
+            from fastapi.responses import PlainTextResponse
+            return PlainTextResponse('<?xml version="1.0"?><tv></tv>', media_type="application/xml")
+        logger.warning("IPTV: minimal inline fallback registered (empty M3U/XMLTV - fix iptv import)")
     
     # Try to include performance and integrations routers
     try:
@@ -430,6 +475,36 @@ def create_app() -> FastAPI:
         logger.info("AI Settings router registered")
     except ImportError as e:
         logger.warning(f"AI Settings router not available: {e}")
+
+    # Prometheus metrics exporter (GET /metrics)
+    try:
+        from exstreamtv.monitoring.prometheus_exporter import create_prometheus_router
+        from exstreamtv.streaming.process_pool_manager import get_process_pool_manager
+        from exstreamtv.monitoring.metrics import get_metrics_collector
+
+        def get_db_metrics() -> dict:
+            try:
+                from exstreamtv.database import get_connection_manager
+                cm = get_connection_manager()
+                if cm and hasattr(cm, "get_metrics"):
+                    m = cm.get_metrics()
+                    return {
+                        "checked_out": getattr(m, "checked_out", 0),
+                        "size": getattr(m, "pool_size", 0),
+                    }
+            except Exception:
+                pass
+            return {}
+
+        prom_router = create_prometheus_router(
+            get_process_pool_metrics=get_process_pool_manager,
+            get_metrics_collector=get_metrics_collector,
+            get_db_metrics=get_db_metrics,
+        )
+        app.include_router(prom_router, tags=["Monitoring"])
+        logger.info("Prometheus /metrics endpoint registered")
+    except ImportError as e:
+        logger.warning(f"Prometheus exporter not available: {e}")
     
     # Plex image proxy - forwards /library/metadata/*/thumb/* to Plex server
     @app.get("/library/metadata/{rating_key}/thumb/{thumb_id}", include_in_schema=False)
@@ -700,7 +775,17 @@ def create_app() -> FastAPI:
                 {"request": request, "version": __version__}
             )
         return RedirectResponse(url="/api/docs")
-    
+
+    @app.get("/settings/streaming", response_model=None)
+    async def settings_streaming_page(request: Request):
+        """Streaming and stream throttler settings page."""
+        if templates:
+            return templates.TemplateResponse(
+                "settings_streaming.html",
+                {"request": request, "version": __version__}
+            )
+        return RedirectResponse(url="/api/docs")
+
     @app.get("/settings/plex", response_model=None)
     async def settings_plex_page(request: Request):
         """Plex settings page."""

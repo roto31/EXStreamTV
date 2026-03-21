@@ -258,3 +258,5 @@ h2. Related Documentation
 * [Tunarr Integration|EXStreamTV:Tunarr Integration] - v2.6.0 technical details
 * [API Reference|EXStreamTV:API Reference] - Complete API documentation
 * [Changelog|EXStreamTV:Changelog] - Version history
+
+**Last Revised:** 2026-03-20

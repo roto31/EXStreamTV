@@ -13,12 +13,49 @@ Enhanced with Tunarr/dizqueTV integrations:
 import asyncio
 import logging
 from collections.abc import AsyncIterator, Callable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow() -> datetime:
+    """Return current UTC time as tz-aware."""
+    return datetime.now(tz=timezone.utc)
+
+
+def _ensure_utc(dt: datetime | None) -> datetime | None:
+    """Normalise a datetime from SQLite (may be naive) to tz-aware UTC."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _duration_to_seconds(duration: Any) -> int:
+    """Normalise int, float, timedelta, or None → integer seconds."""
+    if duration is None:
+        return 0
+    if isinstance(duration, timedelta):
+        return int(duration.total_seconds())
+    try:
+        return int(duration)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _safe_import(module_path: str, name: str) -> Optional[Any]:
+    """Import a name from a module, returning None on ImportError."""
+    try:
+        import importlib
+        mod = importlib.import_module(module_path)
+        return getattr(mod, name, None)
+    except (ImportError, AttributeError) as e:
+        logger.debug(f"Optional dependency {module_path}.{name} not available: {e}")
+        return None
 
 # Optional imports for new components (graceful fallback if not available)
 try:
@@ -83,22 +120,25 @@ class ChannelStream:
     BUFFER_SIZE = 2 * 1024 * 1024  # 2MB buffer
     CHUNK_SIZE = 64 * 1024  # 64KB read chunks
     QUEUE_MAX_SIZE = 50  # Max items in broadcast queue
+    SLOW_CLIENT_THRESHOLD = 20  # Consecutive QueueFull events before disconnection
 
     def __init__(
         self,
         channel_id: int,
-        channel_number: int,
+        channel_number: int | str,
         channel_name: str,
         db_session_factory: Callable[[], Session],
+        process_pool_manager: Optional[Any] = None,
     ):
         """
         Initialize channel stream.
-        
+
         Args:
             channel_id: Database ID of the channel.
-            channel_number: Channel number for display.
+            channel_number: Channel number for display (str or int).
             channel_name: Channel name for logging.
             db_session_factory: Factory function to create database sessions.
+            process_pool_manager: Optional ProcessPoolManager for FFmpeg lifecycle.
         """
         self.channel_id = channel_id
         self.channel_number = channel_number
@@ -108,7 +148,7 @@ class ChannelStream:
         # Stream state
         self._broadcast_queue: asyncio.Queue = asyncio.Queue(maxsize=self.QUEUE_MAX_SIZE)
         self._stream_task: asyncio.Task | None = None
-        self._client_queues: list[asyncio.Queue] = []
+        self._client_queues: list[tuple[asyncio.Queue, list[int]]] = []
         self._is_running = False
         self._lock = asyncio.Lock()
         self._client_count = 0
@@ -131,7 +171,10 @@ class ChannelStream:
         # Health tracking
         self._last_output_time: datetime | None = None
         self._bytes_streamed = 0
-        
+
+        # Process pool manager for FFmpeg lifecycle (optional)
+        self._process_pool_manager = process_pool_manager
+
         # New components from Tunarr/dizqueTV integration
         self._throttler: Optional[Any] = None
         self._use_throttling = False
@@ -218,12 +261,8 @@ class ChannelStream:
                 item_count = len(items)
                 
                 for playout_item, media_item in items:
-                    if media_item and media_item.duration:
-                        total_duration += media_item.duration
-                    elif playout_item.duration:
-                        total_duration += int(playout_item.duration.total_seconds())
-                    else:
-                        total_duration += 1800  # Default 30 min
+                    d = _duration_to_seconds(media_item.duration if media_item else None) or _duration_to_seconds(playout_item.duration)
+                    total_duration += d if d else 1800  # Default 30 min
             
             # Load or create anchor time
             stmt = select(ChannelPlaybackPosition).where(
@@ -232,11 +271,10 @@ class ChannelStream:
             result = db.execute(stmt)
             position = result.scalar_one_or_none()
             
-            now = datetime.utcnow()
+            now = _utcnow()
             
             if position and position.playout_start_time:
-                # Use saved anchor time (ErsatzTV-style)
-                self._playout_start_time = position.playout_start_time
+                self._playout_start_time = _ensure_utc(position.playout_start_time)
                 
                 # Calculate current position based on elapsed time
                 if total_duration > 0:
@@ -247,13 +285,7 @@ class ChannelStream:
                     current_time = 0
                     calculated_index = 0
                     for idx, (playout_item, media_item) in enumerate(items):
-                        if media_item and media_item.duration:
-                            item_duration = media_item.duration
-                        elif playout_item.duration:
-                            item_duration = int(playout_item.duration.total_seconds())
-                        else:
-                            item_duration = 1800
-                        
+                        item_duration = _duration_to_seconds(media_item.duration if media_item else None) or _duration_to_seconds(playout_item.duration) or 1800
                         if current_time + item_duration > cycle_position:
                             calculated_index = idx
                             # Calculate seek offset within this item
@@ -276,7 +308,7 @@ class ChannelStream:
                         self._seek_offset = 0
                     
                     self._current_item_index = calculated_index
-                    
+
                     logger.info(
                         f"Resuming channel {self.channel_number} at calculated index "
                         f"{self._current_item_index} (elapsed: {elapsed:.0f}s, seek: {self._seek_offset:.0f}s, anchor: {self._playout_start_time})"
@@ -309,7 +341,7 @@ class ChannelStream:
                     )
                     db.add(position)
                 db.commit()
-                
+
                 logger.info(
                     f"Starting channel {self.channel_number} from beginning with anchor: "
                     f"{self._playout_start_time}"
@@ -319,7 +351,7 @@ class ChannelStream:
                 f"Error loading position for channel {self.channel_number}: {e}",
                 exc_info=True
             )
-            self._playout_start_time = datetime.utcnow()
+            self._playout_start_time = _utcnow()
             self._current_item_index = 0
         finally:
             db.close()
@@ -356,10 +388,15 @@ class ChannelStream:
             )
 
     async def _save_position(self) -> None:
-        """Save current playback position for resume."""
+        """Save current playback position (non-blocking via thread pool)."""
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self._save_position_sync)
+
+    def _save_position_sync(self) -> None:
+        """Synchronous DB write — always called via run_in_executor."""
         from exstreamtv.database.models import ChannelPlaybackPosition
         from sqlalchemy import select
-        
+
         try:
             db = self.db_session_factory()
             try:
@@ -368,28 +405,30 @@ class ChannelStream:
                 )
                 result = db.execute(stmt)
                 position = result.scalar_one_or_none()
-                
+
+                now = _utcnow()
+
                 if position:
-                    # Update existing position
-                    # CRITICAL: Update BOTH current_index and last_item_index
-                    # current_index is used by channel_manager for resume
-                    # last_item_index is used by EPG for guide display
                     position.current_index = self._current_item_index
                     position.last_item_index = self._current_item_index
-                    position.last_played_at = datetime.utcnow()
+                    position.last_played_at = now
+                    position.current_item_start_time = self._current_item_start_time
+                    position.playout_start_time = self._playout_start_time
+                    position.elapsed_seconds_in_item = (
+                        (now - _ensure_utc(self._current_item_start_time)).total_seconds()
+                        if self._current_item_start_time else 0
+                    )
                 else:
-                    # Create new position record
                     position = ChannelPlaybackPosition(
                         channel_id=self.channel_id,
-                        channel_number=str(self.channel_number),
                         current_index=self._current_item_index,
                         last_item_index=self._current_item_index,
-                        last_played_at=datetime.utcnow()
+                        last_played_at=now,
+                        playout_start_time=self._playout_start_time,
                     )
                     db.add(position)
-                
                 db.commit()
-                
+
                 logger.debug(
                     f"Saved position for channel {self.channel_number}: "
                     f"index {self._current_item_index}"
@@ -402,9 +441,7 @@ class ChannelStream:
             finally:
                 db.close()
         except Exception as e:
-            logger.error(
-                f"Error saving position on stop for channel {self.channel_number}: {e}"
-            )
+            logger.error(f"Error saving position for channel {self.channel_id}: {e}")
 
     async def _get_current_position(self) -> dict[str, Any]:
         """Get current playback position."""
@@ -432,11 +469,10 @@ class ChannelStream:
         if not self._is_running:
             await self.start()
         
-        # Create client queue FIRST so we receive chunks as soon as they're broadcast
         client_queue: asyncio.Queue = asyncio.Queue(maxsize=100)
-        
+        slow_count: list[int] = [0]
         async with self._lock:
-            self._client_queues.append(client_queue)
+            self._client_queues.append((client_queue, slow_count))
             self._client_count += 1
             
         logger.info(
@@ -500,10 +536,10 @@ class ChannelStream:
             
         finally:
             async with self._lock:
-                if client_queue in self._client_queues:
-                    self._client_queues.remove(client_queue)
+                self._client_queues = [
+                    (q, sc) for q, sc in self._client_queues if q is not client_queue
+                ]
                 self._client_count -= 1
-                
             logger.debug(
                 f"Client left channel {self.channel_number}, "
                 f"remaining clients: {self._client_count}"
@@ -512,29 +548,24 @@ class ChannelStream:
     async def _resolve_media_url(self, media_item: Any) -> str:
         """
         Resolve a media item to a streamable URL using MediaURLResolver.
-        
-        Args:
-            media_item: The media item to resolve
-            
-        Returns:
-            Streamable URL string
+        Prefer script field so mpegts_streamer can run yt-dlp directly (no expiring CDN URL).
         """
+        if hasattr(media_item, "script") and media_item.script:
+            script = str(media_item.script).strip()
+            if script:
+                logger.debug(f"Using script field for media {getattr(media_item, 'id', '?')}")
+                return script
         try:
             from exstreamtv.streaming.url_resolver import get_url_resolver
-            
             resolver = get_url_resolver()
             resolved = await resolver.resolve(media_item)
-            
             logger.debug(
                 f"Resolved URL for media {getattr(media_item, 'id', 'unknown')}: "
                 f"{resolved.source_type.value}"
             )
-            
             return resolved.url
-            
         except Exception as e:
             logger.warning(f"URL resolution failed, using fallback: {e}")
-            # Fallback to direct URL/path
             if hasattr(media_item, "url") and media_item.url:
                 return media_item.url
             if hasattr(media_item, "path") and media_item.path:
@@ -588,34 +619,35 @@ class ChannelStream:
             
             # Handle case where media_item is None (source_url only items)
             if media_item:
-                # Resolve stream URL using MediaURLResolver
                 stream_url = await self._resolve_media_url(media_item)
                 title = media_item.title
-                duration = media_item.duration
+                duration = _duration_to_seconds(media_item.duration)
                 source = media_item.source
                 media_id = media_item.id
-                
-                # Log the resolved URL for debugging
                 logger.info(
                     f"Channel {self.channel_number} resolved URL for '{title}': "
                     f"{stream_url[:100]}..." if len(stream_url) > 100 else stream_url
                 )
             else:
-                # Use source_url directly from playout item
                 stream_url = playout_item.source_url
                 title = playout_item.title
-                duration = int(playout_item.duration.total_seconds()) if playout_item.duration else 0
+                duration = _duration_to_seconds(playout_item.duration)
                 source = "url"
                 media_id = None
-            
-            # Get seek offset (only for first item after position calculation)
+
+            url_lower = stream_url.lower() if stream_url else ""
+            source_type = "unknown"
+            if "archive.org" in url_lower or "yt-dlp" in url_lower:
+                source_type = "archive_org"
+            elif "youtube.com" in url_lower or "youtu.be" in url_lower:
+                source_type = "youtube"
+            elif source in ("plex",):
+                source_type = "plex"
+
             seek_offset = self._seek_offset
-            self._seek_offset = 0.0  # Reset after using
-            
-            # CRITICAL FIX: Validate seek offset doesn't exceed media duration
-            # If seek offset >= duration, FFmpeg will produce no output (seeks past EOF)
+            self._seek_offset = 0.0
             if duration and seek_offset > 0:
-                max_seek = max(0, duration - 10)  # Leave at least 10 seconds of content
+                max_seek = max(0, duration - 10)
                 if seek_offset >= duration:
                     logger.warning(
                         f"Channel {self.channel_number}: Seek offset {seek_offset:.0f}s exceeds "
@@ -628,16 +660,17 @@ class ChannelStream:
                         f"to {max_seek:.0f}s for '{title}' (duration: {duration}s)"
                     )
                     seek_offset = max_seek
-            
+
             return {
                 "media_id": media_id,
                 "media_url": stream_url,
                 "title": title,
                 "duration": duration,
                 "source": source,
+                "source_type": source_type,
                 "position": self._current_item_index,
                 "expires_at": None,
-                "seek_offset": seek_offset,  # ErsatzTV-style: seek into item
+                "seek_offset": seek_offset,
             }
             
         except Exception as e:
@@ -649,22 +682,17 @@ class ChannelStream:
     async def _run_continuous_stream(self) -> None:
         """
         Run the continuous stream loop with auto-recovery.
-        
         Continuously plays items from the schedule, broadcasting to all clients.
-        Includes automatic restart on failures with exponential backoff.
         """
         from exstreamtv.streaming.mpegts_streamer import MPEGTSStreamer
-        from exstreamtv.streaming.process_watchdog import get_ffmpeg_watchdog
-        from exstreamtv.tasks.health_tasks import update_channel_metric
-        
+        get_ffmpeg_watchdog = _safe_import("exstreamtv.streaming.process_watchdog", "get_ffmpeg_watchdog")
+        update_channel_metric = _safe_import("exstreamtv.tasks.health_tasks", "update_channel_metric")
         logger.info(f"Continuous stream loop started for channel {self.channel_number}")
-        
         streamer = MPEGTSStreamer()
-        watchdog = get_ffmpeg_watchdog()
-        
+        watchdog = get_ffmpeg_watchdog() if get_ffmpeg_watchdog else None
         while self._is_running:
             try:
-                await self._stream_loop(streamer, watchdog)
+                await self._stream_loop(streamer, watchdog, update_channel_metric)
                 
             except asyncio.CancelledError:
                 logger.info(
@@ -692,10 +720,13 @@ class ChannelStream:
         # Signal end of stream to all clients
         await self._broadcast_end()
     
-    async def _stream_loop(self, streamer: Any, watchdog: Any) -> None:
+    async def _stream_loop(
+        self,
+        streamer: Any,
+        watchdog: Any,
+        update_channel_metric: Any = None,
+    ) -> None:
         """Inner streaming loop."""
-        from exstreamtv.tasks.health_tasks import update_channel_metric
-        
         while self._is_running:
             # Get next playout item from schedule
             playout_item = await self._get_next_playout_item()
@@ -707,17 +738,24 @@ class ChannelStream:
                     playout_item = filler_item
                     logger.debug(f"Using filler for channel {self.channel_number}")
                 else:
-                    # No content available - send keep-alive packets so connected
-                    # clients don't time out, then wait before retrying.
-                    # Broadcast null TS packets to prevent Plex "Could not tune channel"
-                    # errors that occur when no data arrives within its timeout window.
+                    # No content: optional error slate and/or null TS keep-alive so clients
+                    # (e.g. Plex) do not time out before content appears.
                     logger.debug(
                         f"No content for channel {self.channel_number}, "
                         f"sending keep-alive and waiting..."
                     )
-                    null_packet = bytes([0x47, 0x1F, 0xFF, 0x10] + [0xFF] * 184)
-                    for _ in range(7):
-                        await self._broadcast_chunk(null_packet)
+                    if self._use_error_screens:
+                        try:
+                            await self._broadcast_error_screen(
+                                title="No programming",
+                                subtitle="This channel has no content scheduled.",
+                                duration=5.0,
+                            )
+                        except Exception as e:
+                            logger.debug(f"No-programming slate failed: {e}")
+                    else:
+                        for _ in range(7):
+                            await self._broadcast_chunk(self._NULL_TS_PACKET)
                     await asyncio.sleep(5.0)
                     continue
             
@@ -727,10 +765,13 @@ class ChannelStream:
             
             # Get seek offset from playout item (ErsatzTV-style)
             seek_offset = playout_item.get("seek_offset", 0.0)
-            
-            # Update current item tracking
-            self._current_item_start_time = datetime.utcnow()
-            
+
+            # Update current item tracking (EPG uses this for guide alignment)
+            self._current_item_start_time = _utcnow()
+
+            # Save position at start of item so EPG sees current programme and start time
+            await self._save_position()
+
             # Reset failure counter on successful item start
             self._consecutive_failures = 0
             
@@ -743,25 +784,42 @@ class ChannelStream:
                     await asyncio.sleep(0.1)  # Small delay before next item
                     continue
                     
-                async for chunk in streamer.stream(media_url, seek_offset=seek_offset):
-                        # Update health metrics
-                        self._last_output_time = datetime.utcnow()
-                        self._bytes_streamed += len(chunk)
+                from exstreamtv.streaming.mpegts_streamer import StreamSource
+                source_type_str = playout_item.get("source_type", "unknown")
+                try:
+                    stream_source = StreamSource(source_type_str)
+                except ValueError:
+                    stream_source = StreamSource.UNKNOWN
+                if self._process_pool_manager:
+                    stream_iter = streamer.stream_via_pool(
+                        media_url,
+                        self.channel_id,
+                        self._process_pool_manager,
+                        seek_offset=seek_offset,
+                    )
+                else:
+                    stream_iter = streamer.stream(
+                        media_url,
+                        source=stream_source,
+                        seek_offset=seek_offset,
+                    )
+                async for chunk in stream_iter:
+                    self._last_output_time = _utcnow()
+                    self._bytes_streamed += len(chunk)
+                    if update_channel_metric:
                         update_channel_metric(
                             self.channel_id,
                             "last_output_time",
-                            self._last_output_time
+                            self._last_output_time,
                         )
-                        
-                        # Report to watchdog
+                    if watchdog:
                         watchdog.report_output(
                             str(self.channel_id),
-                            bytes_count=len(chunk)
+                            bytes_count=len(chunk),
                         )
-                        
-                        await self._broadcast_chunk(chunk)
-                        if not self._is_running:
-                            break
+                    await self._broadcast_chunk(chunk)
+                    if not self._is_running:
+                        break
             except Exception as e:
                 logger.error(
                     f"Error streaming item on channel {self.channel_number}: {e}"
@@ -787,7 +845,7 @@ class ChannelStream:
             f"(attempt {self._restart_count}/{self._max_restarts}) in {delay:.1f}s"
         )
         
-        self._last_restart_time = datetime.utcnow()
+        self._last_restart_time = _utcnow()
         
         # Broadcast error screen during restart delay if available
         if self._use_error_screens:
@@ -910,8 +968,9 @@ class ChannelStream:
                                 media.files[0].path if media.files else None
                             ),
                             "title": f"[Filler] {media.title}",
-                            "duration": media.duration,
+                            "duration": _duration_to_seconds(media.duration),
                             "source": "filler",
+                            "source_type": "unknown",
                             "is_filler": True,
                         }
                 return None
@@ -937,11 +996,11 @@ class ChannelStream:
                 "media_id": media.id,
                 "media_url": media_url,
                 "title": f"[Filler] {media.title}",
-                "duration": media.duration,
+                "duration": _duration_to_seconds(media.duration),
                 "source": "filler",
+                "source_type": "unknown",
                 "is_filler": True,
             }
-            
         except Exception as e:
             logger.warning(f"Error getting filler item: {e}")
             return None
@@ -962,19 +1021,35 @@ class ChannelStream:
             await self._send_to_clients(chunk)
     
     async def _send_to_clients(self, chunk: bytes) -> None:
-        """Send chunk to all connected client queues."""
+        """Send chunk to all connected client queues. Disconnect slow clients after threshold."""
+        slow_to_remove: list[asyncio.Queue] = []
         async with self._lock:
             if self._client_queues:
                 logger.debug(
                     f"Channel {self.channel_number}: Broadcasting {len(chunk)} bytes to {len(self._client_queues)} clients"
                 )
-            for queue in self._client_queues:
+            for queue, slow_count in self._client_queues:
                 try:
                     queue.put_nowait(chunk)
+                    slow_count[0] = 0
                 except asyncio.QueueFull:
-                    # Client can't keep up - skip this chunk for them
-                    logger.debug(f"Channel {self.channel_number}: Client queue full, skipping chunk")
-                    pass
+                    slow_count[0] += 1
+                    if slow_count[0] >= self.SLOW_CLIENT_THRESHOLD:
+                        logger.warning(
+                            f"Channel {self.channel_number}: Disconnecting slow client "
+                            f"(queue full {slow_count[0]} times)"
+                        )
+                        slow_to_remove.append(queue)
+            if slow_to_remove:
+                for queue in slow_to_remove:
+                    try:
+                        queue.put_nowait(None)
+                    except asyncio.QueueFull:
+                        pass
+                self._client_queues = [
+                    (q, sc) for q, sc in self._client_queues if q not in slow_to_remove
+                ]
+                self._client_count -= len(slow_to_remove)
     
     async def _report_to_ai_systems(
         self,
@@ -999,8 +1074,8 @@ class ChannelStream:
                 from exstreamtv.ai_agent.unified_log_collector import LogEvent, LogLevel
                 
                 event = LogEvent(
-                    event_id=f"ch_{self.channel_id}_{datetime.utcnow().timestamp()}",
-                    timestamp=datetime.utcnow(),
+                    event_id=f"ch_{self.channel_id}_{_utcnow().timestamp()}",
+                    timestamp=_utcnow(),
                     source=LogSource.APPLICATION,
                     level=LogLevel(level),
                     message=message,
@@ -1023,7 +1098,7 @@ class ChannelStream:
     async def _broadcast_end(self) -> None:
         """Signal end of stream to all clients."""
         async with self._lock:
-            for queue in self._client_queues:
+            for queue, _ in self._client_queues:
                 try:
                     queue.put_nowait(None)
                 except asyncio.QueueFull:
@@ -1047,14 +1122,20 @@ class ChannelManager:
     Provides centralized control over channel lifecycle and client connections.
     """
 
-    def __init__(self, db_session_factory: Callable[[], Session]):
+    def __init__(
+        self,
+        db_session_factory: Callable[[], Session],
+        process_pool_manager: Optional[Any] = None,
+    ):
         """
         Initialize channel manager.
-        
+
         Args:
             db_session_factory: Factory function to create database sessions.
+            process_pool_manager: Optional ProcessPoolManager for FFmpeg lifecycle.
         """
         self.db_session_factory = db_session_factory
+        self._process_pool_manager = process_pool_manager
         self._channels: dict[int, ChannelStream] = {}
         self._lock = asyncio.Lock()
         self._is_running = False
@@ -1170,7 +1251,7 @@ class ChannelManager:
     async def get_channel_stream(
         self,
         channel_id: int,
-        channel_number: int,
+        channel_number: int | str,
         channel_name: str,
     ) -> ChannelStream:
         """
@@ -1184,22 +1265,27 @@ class ChannelManager:
         Returns:
             ChannelStream for the channel.
         """
-        async with self._lock:
-            if channel_id not in self._channels:
-                channel_stream = ChannelStream(
-                    channel_id=channel_id,
-                    channel_number=channel_number,
-                    channel_name=channel_name,
-                    db_session_factory=self.db_session_factory,
-                )
-                self._channels[channel_id] = channel_stream
-                
-            return self._channels[channel_id]
+        try:
+            async with self._lock:
+                if channel_id not in self._channels:
+                    channel_stream = ChannelStream(
+                        channel_id=channel_id,
+                        channel_number=channel_number,
+                        channel_name=channel_name,
+                        db_session_factory=self.db_session_factory,
+                        process_pool_manager=self._process_pool_manager,
+                    )
+                    self._channels[channel_id] = channel_stream
+
+                stream = self._channels[channel_id]
+            return stream
+        except Exception as e:
+            raise
 
     async def start_channel(
         self,
         channel_id: int,
-        channel_number: int,
+        channel_number: int | str,
         channel_name: str,
     ) -> ChannelStream:
         """
@@ -1225,6 +1311,61 @@ class ChannelManager:
             if channel_id in self._channels:
                 await self._channels[channel_id].stop()
                 del self._channels[channel_id]
+
+    def _channel_has_streamable_content(self, channel_id: int) -> bool:
+        """
+        Check if a channel has any streamable content (active playout with items or filler).
+        Used for diagnostics when a client tunes to a channel.
+        """
+        from exstreamtv.database.models import (
+            Channel,
+            FillerPreset,
+            FillerPresetItem,
+            Playout,
+            PlayoutItem,
+        )
+        from sqlalchemy import select
+
+        db = self.db_session_factory()
+        try:
+            # Active playout with at least one item
+            playout_stmt = (
+                select(Playout.id)
+                .where(
+                    Playout.channel_id == channel_id,
+                    Playout.is_active == True,
+                )
+                .join(PlayoutItem, PlayoutItem.playout_id == Playout.id)
+                .limit(1)
+            )
+            if db.execute(playout_stmt).first():
+                return True
+            # Filler: channel has fallback_filler_id and preset has items
+            channel_stmt = select(Channel).where(Channel.id == channel_id)
+            channel = db.execute(channel_stmt).scalar_one_or_none()
+            if not channel or not channel.fallback_filler_id:
+                return False
+            filler_stmt = select(FillerPresetItem.id).where(
+                FillerPresetItem.preset_id == channel.fallback_filler_id
+            ).limit(1)
+            if db.execute(filler_stmt).first():
+                return True
+            preset_stmt = select(FillerPreset).where(
+                FillerPreset.id == channel.fallback_filler_id
+            )
+            preset = db.execute(preset_stmt).scalar_one_or_none()
+            if preset and preset.collection_id:
+                from exstreamtv.database.models import PlaylistItem
+                coll_stmt = select(PlaylistItem.id).where(
+                    PlaylistItem.playlist_id == preset.collection_id
+                ).limit(1)
+                if db.execute(coll_stmt).first():
+                    return True
+            return False
+        except Exception:
+            return False
+        finally:
+            db.close()
 
     def get_active_channels(self) -> list[int]:
         """Get list of active channel IDs."""

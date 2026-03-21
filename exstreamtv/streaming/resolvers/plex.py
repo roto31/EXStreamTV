@@ -21,17 +21,26 @@ logger = logging.getLogger(__name__)
 PLEX_URL_EXPIRY_HOURS = 2  # Refresh every 2 hours to be safe (Plex typically expires at 4 hours)
 
 # Module-level cache for Plex library info to avoid repeated DB queries
+import time as _time
+
 _plex_library_cache: dict[int, dict] = {}
 _plex_first_library_cache: Optional[dict] = None
 _plex_cache_loaded: bool = False
+_plex_cache_loaded_at: float = 0.0
+_PLEX_CACHE_TTL_SECONDS: int = 300
 
 
-def _load_plex_library_cache() -> None:
+def _load_plex_library_cache(force: bool = False) -> None:
     """Load Plex library info into memory cache."""
-    global _plex_library_cache, _plex_first_library_cache, _plex_cache_loaded
+    global _plex_library_cache, _plex_first_library_cache, _plex_cache_loaded, _plex_cache_loaded_at
     
-    if _plex_cache_loaded:
+    age = _time.monotonic() - _plex_cache_loaded_at
+    if _plex_cache_loaded and not force and age < _PLEX_CACHE_TTL_SECONDS:
         return
+    
+    _plex_cache_loaded = False
+    _plex_library_cache.clear()
+    _plex_first_library_cache = None
     
     try:
         from exstreamtv.database.session import get_sync_session
@@ -49,11 +58,12 @@ def _load_plex_library_cache() -> None:
                 if _plex_first_library_cache is None:
                     _plex_first_library_cache = _plex_library_cache[lib.id]
             
-            _plex_cache_loaded = True
             logger.info(f"Loaded {len(_plex_library_cache)} Plex libraries into cache")
     except Exception as e:
         logger.warning(f"Failed to load Plex library cache: {e}")
-        _plex_cache_loaded = True  # Don't retry on every call
+    finally:
+        _plex_cache_loaded = True
+        _plex_cache_loaded_at = _time.monotonic()
 
 
 class PlexResolver(BaseResolver):

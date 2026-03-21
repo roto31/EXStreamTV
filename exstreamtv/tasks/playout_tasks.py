@@ -29,7 +29,7 @@ async def rebuild_playouts_task() -> dict[str, Any]:
     """
     from exstreamtv.database.connection import get_sync_session
     from exstreamtv.database.models import Channel, Playout, PlayoutItem
-    from sqlalchemy import select, func
+    from sqlalchemy import select
     
     logger.info("Starting playout rebuild task")
     
@@ -73,7 +73,7 @@ async def rebuild_playouts_task() -> dict[str, Any]:
                 
                 items_result = session.execute(items_stmt)
                 upcoming_items = items_result.scalars().all()
-                
+
                 # Calculate total upcoming duration
                 total_duration = timedelta(0)
                 for item in upcoming_items:

@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-02-21T12:00:00",
+  "mode": "light",
+  "duration_seconds": 600,
+  "reconnect_count": 45,
+  "channel_switch_count": 120,
+  "errors": [],
+  "metrics": {
+    "cycles_completed": 45,
+    "switches_completed": 120
+  }
+}

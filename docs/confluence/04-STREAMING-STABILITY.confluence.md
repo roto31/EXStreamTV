@@ -445,3 +445,5 @@ h2. Related Documentation
 * [Tunarr/dizqueTV Integration|EXStreamTV:Tunarr Integration] - Technical details
 * [AI Setup Guide|EXStreamTV:AI Setup] - AI configuration
 * [Hardware Transcoding|EXStreamTV:Hardware Transcoding] - FFmpeg optimization
+
+**Last Revised:** 2026-03-20

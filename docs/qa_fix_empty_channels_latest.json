@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-02-03T04:30:51.611057+00:00",
+  "db_path": "exstreamtv.db",
+  "dry_run": false,
+  "fixed": [],
+  "fallbacks_applied": [],
+  "still_empty": [],
+  "actions": [],
+  "log": [
+    "No channels with no content; nothing to fix."
+  ]
+}

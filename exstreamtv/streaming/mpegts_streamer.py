@@ -12,17 +12,41 @@ Ported from StreamTV with all critical bug fixes preserved:
 import asyncio
 import logging
 import platform
+import shlex
 import shutil
 import subprocess
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exstreamtv.streaming.process_pool_manager import ProcessPoolManager
+from exstreamtv.streaming.process_pool_manager import SpawnRejectedError
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
 from exstreamtv.config import get_config
+from exstreamtv.streaming.error_handler import ErrorHandler as _EH
 
 logger = logging.getLogger(__name__)
+_error_handler = _EH(max_retries=3, backoff_base=1.0)
+
+
+def _is_script_field(input_url: str) -> bool:
+    """
+    Return True if input_url is a yt-dlp shell command rather than a URL or file path.
+    When True, stream() launches it as a subprocess and pipes stdout to FFmpeg (-i pipe:0).
+    """
+    stripped = input_url.strip()
+    if "yt-dlp" in stripped or "ytdlp" in stripped:
+        return True
+    if stripped.startswith("/") and not any(
+        stripped.lower().endswith(ext)
+        for ext in (".mp4", ".mkv", ".avi", ".mov", ".ts", ".m4v", ".flv", ".webm")
+    ):
+        return " " in stripped
+    return False
 
 
 class StreamSource(str, Enum):
@@ -189,6 +213,7 @@ class MPEGTSStreamer:
         source: StreamSource = StreamSource.UNKNOWN,
         original_url: str | None = None,
         seek_offset: float = 0.0,
+        is_piped_input: bool = False,
     ) -> list[str]:
         """
         Build FFmpeg command for MPEG-TS transcoding with smart codec selection.
@@ -210,7 +235,7 @@ class MPEGTSStreamer:
             FFmpeg command as list of arguments.
         """
         config = get_config()
-        
+        # Security: FFmpeg path and args must come from config or validated inputs only; no unsanitized user input.
         cmd = [self._ffmpeg_path]
         
         # ErsatzTV-style: Seek to the correct position in the stream
@@ -222,7 +247,17 @@ class MPEGTSStreamer:
         can_copy_video = codec_info.can_copy_video if codec_info else False
         can_copy_audio = codec_info.can_copy_audio if codec_info else False
         video_codec = codec_info.video_codec if codec_info else "unknown"
-        
+
+        # Determine whether source is online (Archive.org, YouTube, piped yt-dlp)
+        orig_for_online = (original_url or input_url).lower()
+        is_online_source = (
+            "archive.org" in orig_for_online
+            or "youtube.com" in orig_for_online
+            or "youtu.be" in orig_for_online
+            or is_piped_input
+        )
+        force_aresample = is_online_source or not (can_copy_video and can_copy_audio)
+
         # Detect source type from URL if not provided
         src_youtube = (
             source == StreamSource.YOUTUBE
@@ -326,7 +361,7 @@ class MPEGTSStreamer:
             # Use input seeking (fast seek to keyframe)
             cmd.extend(["-ss", str(int(seek_offset_to_use))])
             logger.info(f"Seeking to {seek_offset_to_use:.1f}s into the stream (input seek - fast mode)")
-            
+
             self._pending_seek_offset = 0  # Reset
         
         # Input URL
@@ -389,7 +424,18 @@ class MPEGTSStreamer:
         # Audio codec selection
         # NOTE: For hardware video encoding with audio copy, we may override this later
         # with audio transcoding + aresample for proper A/V sync
-        if can_copy_audio and not use_hwaccel:
+        # BUG FIX: Force aresample on online sources to correct A/V drift (Archive.org, YouTube, piped yt-dlp)
+        if force_aresample:
+            audio_filter = "aresample=async=1:min_hard_comp=0.100000:first_pts=0"
+            cmd.extend([
+                "-af", audio_filter,
+                "-c:a", "aac",
+                "-b:a", "192k",
+                "-ar", "48000",
+                "-ac", "2",
+            ])
+            logger.debug("Audio: Transcoding with aresample (online source / drift fix)")
+        elif can_copy_audio and not use_hwaccel:
             # Only copy audio if NOT using hardware video encoding
             # Hardware encoding needs audio transcoding for proper sync
             cmd.extend(["-c:a", "copy"])
@@ -415,8 +461,9 @@ class MPEGTSStreamer:
         
         # A/V sync parameters (critical for preventing audio ahead of video)
         # ErsatzTV-style: Always ensure proper timestamp handling
+        # When force_aresample we already transcoded audio — don't use copy_both
         sync_mode = "none"
-        if can_copy_video and can_copy_audio:
+        if can_copy_video and can_copy_audio and not force_aresample:
             # Both copy = need to generate proper timestamps for MPEG-TS
             cmd.extend([
                 "-vsync", "passthrough",
@@ -456,7 +503,7 @@ class MPEGTSStreamer:
             ])
             sync_mode = "full_transcode"
             logger.debug("Added A/V sync flags (full transcode)")
-        
+
         # MPEG-TS output format
         cmd.extend([
             "-f", "mpegts",
@@ -649,40 +696,75 @@ class MPEGTSStreamer:
         Yields:
             MPEG-TS data chunks.
         """
-        # Probe if no codec info provided
-        if codec_info is None:
-            codec_info = await self.probe_stream(input_url)
-        
-        # CRITICAL FIX: Validate seek_offset against probed duration
-        # If we have a duration from probing and seek is past it, FFmpeg will produce no output
-        actual_seek = seek_offset
-        if seek_offset > 0 and codec_info.duration and codec_info.duration > 0:
-            max_seek = max(0, codec_info.duration - 10)  # Leave at least 10 seconds
-            if seek_offset >= codec_info.duration:
-                logger.warning(
-                    f"Seek offset {seek_offset:.0f}s >= duration {codec_info.duration:.0f}s - resetting to 0"
+        # Detect yt-dlp script fields and launch as subprocess
+        is_script = _is_script_field(input_url)
+        ytdlp_proc = None
+        if is_script:
+            import shlex
+            ytdlp_proc = subprocess.Popen(
+                shlex.split(input_url.strip()),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                bufsize=0,
+            )
+            actual_input = "pipe:0"
+            codec_info = codec_info or CodecInfo()
+        else:
+            actual_input = input_url
+            if codec_info is None:
+                codec_info = await self.probe_stream(input_url)
+
+        if seek_offset > 0:
+            if codec_info.duration <= 0:
+                # Duration unknown (pipe input or ffprobe failure) — discard seek offset
+                # to avoid FFmpeg seeking past EOF and producing 0 bytes.
+                seek_offset = 0.0
+                logger.debug(
+                    f"seek_offset discarded: duration unknown for {input_url[:80]}"
                 )
-                actual_seek = 0.0
-            elif seek_offset > max_seek:
-                logger.info(
-                    f"Clamping seek offset from {seek_offset:.0f}s to {max_seek:.0f}s "
-                    f"(duration: {codec_info.duration:.0f}s)"
-                )
-                actual_seek = max_seek
-        
-        # Build command
-        cmd = self.build_ffmpeg_command(input_url, codec_info, source, seek_offset=actual_seek)
-        
+            else:
+                max_seek = max(0.0, codec_info.duration - 10.0)
+                if seek_offset >= codec_info.duration:
+                    logger.warning(
+                        f"seek_offset {seek_offset:.0f}s >= duration "
+                        f"{codec_info.duration:.0f}s — resetting to 0 for {input_url[:80]}"
+                    )
+                    seek_offset = 0.0
+                elif seek_offset > max_seek:
+                    seek_offset = max_seek
+
+        # Build command (use actual_input; pass original input_url for online detection when piped)
+        cmd = self.build_ffmpeg_command(
+            actual_input,
+            codec_info,
+            source,
+            original_url=input_url if is_script else None,
+            seek_offset=seek_offset,
+            is_piped_input=is_script,
+        )
+
         logger.info(f"FFmpeg command: {' '.join(cmd)}")
         logger.debug(f"Starting FFmpeg: {' '.join(cmd[:10])}...")
-        
-        # Start FFmpeg process
+
+        # Start FFmpeg process (stdin from yt-dlp when script)
         process = await asyncio.create_subprocess_exec(
             *cmd,
+            stdin=ytdlp_proc.stdout if ytdlp_proc else None,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        
+        stderr_buffer: list[bytes] = []
+        async def _drain_stderr() -> None:
+            if process.stderr:
+                try:
+                    while True:
+                        data = await process.stderr.read(8192)
+                        if not data:
+                            break
+                        stderr_buffer.append(data)
+                except (ConnectionResetError, BrokenPipeError):
+                    pass
+        drain_task = asyncio.create_task(_drain_stderr())
         chunk_count = 0
         try:
             while True:
@@ -698,6 +780,11 @@ class MPEGTSStreamer:
             raise
             
         finally:
+            drain_task.cancel()
+            try:
+                await drain_task
+            except asyncio.CancelledError:
+                pass
             # Ensure process is cleaned up
             if process.returncode is None:
                 process.terminate()
@@ -706,12 +793,118 @@ class MPEGTSStreamer:
                 except asyncio.TimeoutError:
                     process.kill()
                     await process.wait()
-            
-            # Log stderr if there were errors
+            # Clean up yt-dlp subprocess if one was launched
+            if ytdlp_proc and ytdlp_proc.poll() is None:
+                try:
+                    ytdlp_proc.terminate()
+                    ytdlp_proc.wait(timeout=5)
+                except Exception:
+                    ytdlp_proc.kill()
+            stderr_text = ""
             if process.returncode and process.returncode != 0:
-                stderr = await process.stderr.read()
-                if stderr:
-                    logger.warning(f"FFmpeg stderr: {stderr.decode('utf-8', errors='replace')[:500]}")
+                raw_stderr = await process.stderr.read()
+                if raw_stderr:
+                    stderr_text = raw_stderr.decode("utf-8", errors="replace")[:500]
+                    logger.warning(f"FFmpeg stderr ({chunk_count} chunks): {stderr_text}")
+
+            _error_handler.handle_subprocess_result(
+                ytdlp_returncode=ytdlp_proc.poll() if ytdlp_proc else None,
+                ffmpeg_returncode=process.returncode,
+                chunks_yielded=chunk_count,
+                stderr_text=stderr_text,
+                context={
+                    "url": input_url[:120],
+                    "provider": (
+                        "archive.org" if "archive.org" in input_url
+                        else "youtube" if ("youtube.com" in input_url or "youtu.be" in input_url)
+                        else "unknown"
+                    ),
+                    "is_piped": is_script,
+                },
+            )
+            logger.debug(f"Stream ended: {chunk_count} chunks for {input_url[:80]}")
+
+    async def stream_via_pool(
+        self,
+        input_url: str,
+        channel_id: int | str,
+        process_pool_manager: "ProcessPoolManager",
+        codec_info: CodecInfo | None = None,
+        source: StreamSource = StreamSource.UNKNOWN,
+        buffer_size: int = 65536,
+        seek_offset: float = 0.0,
+    ) -> AsyncIterator[bytes]:
+        """
+        Stream content as MPEG-TS via ProcessPoolManager (rate-limited, guarded).
+
+        Uses acquire_process/release_process for deterministic FFmpeg lifecycle.
+        """
+        if codec_info is None:
+            codec_info = await self.probe_stream(input_url)
+        actual_seek = seek_offset
+        if seek_offset > 0 and codec_info.duration and codec_info.duration > 0:
+            max_seek = max(0, codec_info.duration - 10)
+            if seek_offset >= codec_info.duration:
+                actual_seek = 0.0
+            elif seek_offset > max_seek:
+                actual_seek = max_seek
+        cmd = self.build_ffmpeg_command(
+            input_url, codec_info, source, seek_offset=actual_seek
+        )
+        logger.info(f"FFmpeg (pool): {' '.join(cmd[:10])}...")
+        process = None
+        try:
+            process = await process_pool_manager.acquire_process(
+                channel_id, cmd
+            )
+        except SpawnRejectedError as e:
+            if e.reason == "timeout":
+                logger.warning(
+                    f"ProcessPoolManager acquire timeout, bypassing pool for channel {channel_id} (POOL_BYPASS)"
+                )
+                async for chunk in self.stream(
+                    input_url, codec_info, source, buffer_size, actual_seek
+                ):
+                    yield chunk
+                return
+            logger.error(f"ProcessPoolManager acquire failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"ProcessPoolManager acquire failed: {e}")
+            raise
+        stderr_buf: list[bytes] = []
+        async def _drain_stderr_pool() -> None:
+            if process.stderr:
+                try:
+                    while True:
+                        data = await process.stderr.read(8192)
+                        if not data:
+                            break
+                        stderr_buf.append(data)
+                except (ConnectionResetError, BrokenPipeError):
+                    pass
+        drain_task = asyncio.create_task(_drain_stderr_pool())
+        try:
+            while True:
+                chunk = await process.stdout.read(buffer_size)
+                if not chunk:
+                    break
+                yield chunk
+        except asyncio.CancelledError:
+            logger.info("Stream cancelled (pool), releasing FFmpeg")
+            raise
+        finally:
+            drain_task.cancel()
+            try:
+                await drain_task
+            except asyncio.CancelledError:
+                pass
+            await process_pool_manager.release_process(channel_id)
+            stderr = b"".join(stderr_buf) if stderr_buf else b""
+            if process.returncode and process.returncode != 0 and stderr:
+                logger.warning(
+                    f"FFmpeg stderr: {stderr.decode('utf-8', errors='replace')[:500]}"
+                )
 
     def cleanup(self, channel_id: str) -> None:
         """Clean up FFmpeg process for a channel."""

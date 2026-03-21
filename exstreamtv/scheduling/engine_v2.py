@@ -2,7 +2,7 @@
 
 import logging
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -18,6 +18,10 @@ from ..database.models_v2 import (
 from .parser import ParsedSchedule, ScheduleParser
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow() -> datetime:
+    return datetime.now(tz=timezone.utc)
 
 
 class ScheduleEngineV2:
@@ -124,7 +128,7 @@ class ScheduleEngineV2:
             return timedelta(0)
 
         total_duration = timedelta(0)
-        current_time = start_time or datetime.utcnow()
+        current_time = start_time or _utcnow()
 
         for item in main_sequence:
             # Handle waitUntil - updates time but doesn't add duration
@@ -244,7 +248,7 @@ class ScheduleEngineV2:
             logger.warning(f"Main sequence {schedule.main_sequence_key} is empty")
             return []
 
-        start_time = start_time or datetime.utcnow()
+        start_time = start_time or _utcnow()
         self._timeline_start = start_time
         self._current_timeline_position = start_time
 
@@ -566,6 +570,6 @@ class ScheduleEngineV2:
             # Return shuffled sequence items
             resolved = []
             for seq_item in sequence:
-                resolved.extend(self._resolve_sequence_item(seq_item, schedule, datetime.utcnow()))
+                resolved.extend(self._resolve_sequence_item(seq_item, schedule, _utcnow()))
             return resolved
         return []

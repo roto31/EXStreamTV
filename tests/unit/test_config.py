@@ -10,6 +10,9 @@ import pytest
 
 from exstreamtv.config import (
     EXStreamTVConfig,
+    HDHomeRunConfig,
+    HDHOMERUN_DEFAULT_DEVICE_ID,
+    HDHOMERUN_VALID_DEVICE_ID_PATTERN,
     ServerConfig,
     DatabaseConfig,
     LoggingConfig,
@@ -135,6 +138,32 @@ class TestEXStreamTVConfig:
         
         assert config.server.port == 9000
         assert "test.db" in config.database.url
+
+
+@pytest.mark.unit
+class TestHDHomeRunConfig:
+    """Tests for HDHomeRun config, especially DeviceID (Plex/HDHomeRun require 8 hex chars)."""
+
+    def test_default_device_id_is_valid_8_hex(self) -> None:
+        """Default device_id must be exactly 8 hexadecimal characters."""
+        config = HDHomeRunConfig()
+        assert HDHOMERUN_VALID_DEVICE_ID_PATTERN.match(config.device_id)
+        assert config.device_id == HDHOMERUN_DEFAULT_DEVICE_ID
+
+    def test_invalid_device_id_normalized_to_default(self) -> None:
+        """Invalid device_id (e.g. EXSTREAMTV) is normalized to valid 8-hex default."""
+        config = HDHomeRunConfig(device_id="EXSTREAMTV")
+        assert config.device_id == HDHOMERUN_DEFAULT_DEVICE_ID
+
+    def test_valid_device_id_preserved(self) -> None:
+        """Valid 8-char hex device_id is preserved."""
+        config = HDHomeRunConfig(device_id="FFFFFFFF")
+        assert config.device_id == "FFFFFFFF"
+
+    def test_lowercase_hex_accepted(self) -> None:
+        """Lowercase hex is valid."""
+        config = HDHomeRunConfig(device_id="e5e17001")
+        assert config.device_id == "e5e17001"
 
 
 @pytest.mark.unit

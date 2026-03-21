@@ -31,6 +31,8 @@ class ErrorType(str, Enum):
     PERMISSION_ERROR = "permission_error"  # Privacy/geoblocking/access denied
     EXPIRATION_ERROR = "expiration_error"  # URL expired (enhanced HTTP_403)
     RATE_LIMIT_ERROR = "rate_limit_error"  # Rate limiting (enhanced QUOTA_ERROR)
+    YTDLP_ERROR = "ytdlp_error"  # yt-dlp subprocess exited non-zero
+    PIPE_EOF_ERROR = "pipe_eof_error"  # FFmpeg received 0 bytes from yt-dlp pipe
     UNKNOWN = "unknown"  # Unclassified errors
 
 
@@ -272,6 +274,93 @@ class ErrorClassifier:
             context=context,
         )
 
+    @staticmethod
+    def classify_subprocess_result(
+        ytdlp_returncode: int | None,
+        ffmpeg_returncode: int | None,
+        chunks_yielded: int,
+        stderr_text: str = "",
+        context: dict[str, Any] | None = None,
+    ) -> StreamError | None:
+        """
+        Classify failures visible only after stream() completes:
+          - yt-dlp exited non-zero
+          - FFmpeg produced 0 bytes (silent pipe EOF)
+        Returns None if stream ended cleanly.
+        """
+        context = context or {}
+        stderr_lower = stderr_text.lower()
+
+        if ytdlp_returncode is not None and ytdlp_returncode != 0:
+            if "format" in stderr_lower and any(
+                t in stderr_lower for t in ["not available", "available", "unable", "failed"]
+            ):
+                return StreamError(
+                    ErrorType.FORMAT_ERROR,
+                    ErrorSeverity.MEDIUM,
+                    f"yt-dlp exit {ytdlp_returncode}: no suitable format",
+                    context=context,
+                )
+            if any(t in stderr_lower for t in ["private", "unavailable", "not available"]):
+                return StreamError(
+                    ErrorType.PERMISSION_ERROR,
+                    ErrorSeverity.HIGH,
+                    f"yt-dlp exit {ytdlp_returncode}: content unavailable/private",
+                    context=context,
+                )
+            if any(t in stderr_lower for t in ["429", "rate limit", "too many"]):
+                return StreamError(
+                    ErrorType.RATE_LIMIT_ERROR,
+                    ErrorSeverity.HIGH,
+                    f"yt-dlp exit {ytdlp_returncode}: rate limited",
+                    context=context,
+                )
+            if any(t in stderr_lower for t in ["403", "forbidden"]):
+                return StreamError(
+                    ErrorType.HTTP_403,
+                    ErrorSeverity.MEDIUM,
+                    f"yt-dlp exit {ytdlp_returncode}: HTTP 403",
+                    context=context,
+                )
+            if any(t in stderr_lower for t in ["404", "not found"]):
+                if "archive.org" in context.get("url", "").lower():
+                    return StreamError(
+                        ErrorType.FORMAT_ERROR,
+                        ErrorSeverity.MEDIUM,
+                        f"yt-dlp exit {ytdlp_returncode}: Archive.org 404 — "
+                        "URL may use /download/ path; switch to /details/ + --playlist-items",
+                        context=context,
+                    )
+                return StreamError(
+                    ErrorType.HTTP_OTHER,
+                    ErrorSeverity.MEDIUM,
+                    f"yt-dlp exit {ytdlp_returncode}: 404",
+                    context=context,
+                )
+            return StreamError(
+                ErrorType.YTDLP_ERROR,
+                ErrorSeverity.MEDIUM,
+                f"yt-dlp exited {ytdlp_returncode}. stderr: {stderr_text[:200]}",
+                context=context,
+            )
+
+        if chunks_yielded == 0 and ffmpeg_returncode not in (None,):
+            if "end of file" in stderr_lower or "eof" in stderr_lower:
+                return StreamError(
+                    ErrorType.PIPE_EOF_ERROR,
+                    ErrorSeverity.MEDIUM,
+                    "FFmpeg received EOF from pipe with 0 output.",
+                    context=context,
+                )
+            return StreamError(
+                ErrorType.PIPE_EOF_ERROR,
+                ErrorSeverity.MEDIUM,
+                f"Stream produced 0 chunks (FFmpeg exit {ffmpeg_returncode}). "
+                f"stderr: {stderr_text[:200]}",
+                context=context,
+            )
+        return None
+
 
 class ErrorRecoveryStrategy:
     """Defines recovery strategies for different error types."""
@@ -352,6 +441,18 @@ class ErrorRecoveryStrategy:
             "try_alternative_format",
             "fallback_to_alternative_source",
         ],
+        ErrorType.YTDLP_ERROR: [
+            "retry_with_backoff",
+            "verify_ytdlp_script",
+            "retry_with_fresh_url",
+            "fallback_to_alternative_source",
+        ],
+        ErrorType.PIPE_EOF_ERROR: [
+            "retry_with_backoff",
+            "retry_from_beginning",
+            "verify_ytdlp_script",
+            "fallback_to_alternative_source",
+        ],
     }
 
     @classmethod
@@ -360,6 +461,19 @@ class ErrorRecoveryStrategy:
         return cls.RECOVERY_STRATEGIES.get(
             error_type, ["retry_with_backoff", "fallback_to_alternative_source"]
         )
+
+
+_BACKOFF_MULTIPLIERS: dict[ErrorType, float] = {
+    ErrorType.RATE_LIMIT_ERROR: 60.0,
+    ErrorType.HTTP_464: 60.0,
+    ErrorType.PERMISSION_ERROR: 10.0,
+    ErrorType.EXPIRATION_ERROR: 5.0,
+    ErrorType.YTDLP_ERROR: 5.0,
+    ErrorType.PIPE_EOF_ERROR: 5.0,
+    ErrorType.NETWORK_ERROR: 1.0,
+    ErrorType.HTTP_500: 2.0,
+    ErrorType.CDN_ERROR: 2.0,
+}
 
 
 class ErrorHandler:
@@ -414,6 +528,39 @@ class ErrorHandler:
 
         return stream_error
 
+    def handle_subprocess_result(
+        self,
+        ytdlp_returncode: int | None,
+        ffmpeg_returncode: int | None,
+        chunks_yielded: int,
+        stderr_text: str = "",
+        context: dict[str, Any] | None = None,
+        retry_count: int = 0,
+    ) -> StreamError | None:
+        """
+        Classify and record subprocess failures. Called by mpegts_streamer.stream()
+        in the finally block. Returns None if stream ended cleanly.
+        """
+        stream_error = ErrorClassifier.classify_subprocess_result(
+            ytdlp_returncode=ytdlp_returncode,
+            ffmpeg_returncode=ffmpeg_returncode,
+            chunks_yielded=chunks_yielded,
+            stderr_text=stderr_text,
+            context=context,
+        )
+        if stream_error is None:
+            return None
+        stream_error.retry_count = retry_count
+        stream_error.max_retries = self.max_retries
+        self.error_history.append(stream_error)
+        if len(self.error_history) > 100:
+            self.error_history = self.error_history[-100:]
+        logger.warning(
+            f"Subprocess error: {stream_error.error_type.value} "
+            f"(severity: {stream_error.severity.value}) — {stream_error.message[:120]}"
+        )
+        return stream_error
+
     def should_retry(self, stream_error: StreamError) -> bool:
         """Determine if an error should be retried."""
         if stream_error.retry_count >= stream_error.max_retries:
@@ -421,6 +568,10 @@ class ErrorHandler:
 
         # Don't retry critical errors
         if stream_error.severity == ErrorSeverity.CRITICAL:
+            return False
+
+        # Private/geoblocked content never retries
+        if stream_error.error_type == ErrorType.PERMISSION_ERROR:
             return False
 
         # Always retry low severity errors
@@ -434,9 +585,17 @@ class ErrorHandler:
         """Get recovery strategies for an error."""
         return ErrorRecoveryStrategy.get_strategies(stream_error.error_type)
 
-    def get_backoff_delay(self, retry_count: int) -> float:
-        """Calculate exponential backoff delay."""
-        return self.backoff_base * (2**retry_count)
+    def get_backoff_delay(
+        self, retry_count: int, error_type: ErrorType | None = None
+    ) -> float:
+        """
+        Exponential backoff with per-type multipliers.
+        RATE_LIMIT_ERROR → 60s base. YTDLP_ERROR → 5s base. NETWORK_ERROR → 1s base.
+        """
+        multiplier = (
+            _BACKOFF_MULTIPLIERS.get(error_type, 1.0) if error_type else 1.0
+        )
+        return self.backoff_base * multiplier * (2**retry_count)
 
     def get_recent_errors(
         self,

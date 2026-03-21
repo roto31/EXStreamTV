@@ -448,8 +448,9 @@ async def discover(request: Request, db: AsyncSession = Depends(get_db)):
         "DeviceAuth": "streamtv",
         "BaseURL": f"{base_url}/hdhomerun",
         "LineupURL": f"{base_url}/hdhomerun/lineup.json",
-        # EPG/Guide URL for Plex DVR to fetch programme data
-        "GuideURL": f"{base_url}/hdhomerun/epg",
+        # Note: GuideURL is NOT part of the official HDHomeRun spec.
+        # Plex does not read GuideURL from discover.json.
+        # Configure XMLTV URL in Plex DVR settings: http://<server>:<port>/iptv/xmltv.xml
         "TunerCount": config.hdhomerun.tuner_count,
     }
 
@@ -645,19 +646,33 @@ async def lineup(request: Request, db: AsyncSession = Depends(get_db)):
                 for pattern in patterns_to_remove:
                     remaining = re.sub(pattern, "", remaining)
 
-                # Only use cleaned name if there's content left, otherwise keep original
-                if remaining:
+                # Only apply stripping if result is meaningful (>=3 chars)
+                if remaining and len(remaining) >= 3:
                     guide_name = remaining
+                    logger.debug(
+                        f"Channel {guide_number}: Name stripped from '{channel.name}' to '{guide_name}'"
+                    )
 
         # Create stream URL - HDHomeRun expects MPEG-TS, but we'll use HLS
         # Plex/Emby/Jellyfin can handle HLS
         stream_url = f"{base_url}/hdhomerun/auto/v{channel.number}"
 
+        is_hd = (
+            getattr(channel, 'is_hd', None)
+            or getattr(channel, 'hd', None)
+            or (
+                getattr(channel, 'resolution', None) in ('1920x1080', '1280x720', '1080p', '720p')
+            )
+            or (
+                'HD' in channel.name.upper()
+                and 'SD' not in channel.name.upper()
+            )
+        )
         channel_entry = {
             "GuideNumber": str(guide_number),
             "GuideName": guide_name,
             "URL": stream_url,
-            "HD": 1 if "HD" in channel.name.upper() else 0,
+            "HD": 1 if is_hd else 0,
         }
 
         lineup_data.append(channel_entry)
@@ -732,12 +747,22 @@ async def stream_channel(
     # Query channel with error handling
     channel = None
     try:
+        try:
+            channel_num_int = int(channel_number)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid channel number: {channel_number!r}"
+            )
+
         stmt = select(Channel).where(
-            Channel.number == channel_number,
+            Channel.number == channel_num_int,
             Channel.enabled == True
         )
         result = await db.execute(stmt)
         channel = result.scalar_one_or_none()
+    except HTTPException:
+        raise
     except Exception as e:
         error_context = {
             "endpoint": "stream_channel",

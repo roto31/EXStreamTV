@@ -377,75 +377,6 @@ async def logs_root() -> dict[str, Any]:
     }
 
 
-@router.get("/{entry_id}", response_class=HTMLResponse)
-async def log_entry_detail(entry_id: str, request: Request) -> HTMLResponse:
-    """Log entry detail page with context and self-heal option.
-
-    Args:
-        entry_id: Base64-encoded log entry ID
-        request: FastAPI request object
-
-    Returns:
-        HTMLResponse: Log entry detail page
-
-    Raises:
-        HTTPException: If log entry ID is invalid
-    """
-    import base64
-
-    try:
-        # Decode entry_id (it's base64 encoded log line)
-        decoded = base64.b64decode(entry_id).decode("utf-8")
-
-        # Parse the log entry
-        parsed = parse_log_line(decoded)
-
-        # Get surrounding context (lines before and after)
-        log_file = get_log_file_path()
-        context_lines = []
-        target_line_index = None
-
-        if log_file.exists():
-            try:
-                with open(log_file, encoding="utf-8", errors="ignore") as f:
-                    all_lines = f.readlines()
-
-                    # Find the line index
-                    for i, line in enumerate(all_lines):
-                        if line.strip() == decoded.strip():
-                            target_line_index = i
-                            # Get 20 lines before and after for context
-                            start = max(0, i - 20)
-                            end = min(len(all_lines), i + 21)
-                            context_lines = [
-                                {
-                                    "line_number": j + 1,
-                                    "content": all_lines[j].strip(),
-                                    "is_target": j == i,
-                                    "parsed": parse_log_line(all_lines[j].strip()),
-                                }
-                                for j in range(start, end)
-                            ]
-                            break
-            except Exception as e:
-                logger.exception(f"Error reading context: {e}")
-
-        return templates.TemplateResponse(
-            "log_detail.html",
-            {
-                "request": request,
-                "title": f"Log Entry Detail - {parsed.get('level', 'INFO')}",
-                "entry": parsed,
-                "raw_line": decoded,
-                "context_lines": context_lines,
-                "target_line_index": target_line_index,
-            },
-        )
-    except Exception as e:
-        logger.exception(f"Error decoding log entry: {e}")
-        raise HTTPException(status_code=400, detail="Invalid log entry ID")
-
-
 @router.get("/entries")
 async def get_log_entries(
     lines: int = 500, filter_level: str | None = None
@@ -528,6 +459,75 @@ async def get_log_entries(
     except Exception as e:
         logger.exception(f"Error reading log file: {e}")
         raise HTTPException(status_code=500, detail=f"Error reading log file: {e!s}")
+
+
+@router.get("/{entry_id}", response_class=HTMLResponse)
+async def log_entry_detail(entry_id: str, request: Request) -> HTMLResponse:
+    """Log entry detail page with context and self-heal option.
+
+    Args:
+        entry_id: Base64-encoded log entry ID
+        request: FastAPI request object
+
+    Returns:
+        HTMLResponse: Log entry detail page
+
+    Raises:
+        HTTPException: If log entry ID is invalid
+    """
+    import base64
+
+    try:
+        # Decode entry_id (it's base64 encoded log line)
+        decoded = base64.b64decode(entry_id).decode("utf-8")
+
+        # Parse the log entry
+        parsed = parse_log_line(decoded)
+
+        # Get surrounding context (lines before and after)
+        log_file = get_log_file_path()
+        context_lines = []
+        target_line_index = None
+
+        if log_file.exists():
+            try:
+                with open(log_file, encoding="utf-8", errors="ignore") as f:
+                    all_lines = f.readlines()
+
+                    # Find the line index
+                    for i, line in enumerate(all_lines):
+                        if line.strip() == decoded.strip():
+                            target_line_index = i
+                            # Get 20 lines before and after for context
+                            start = max(0, i - 20)
+                            end = min(len(all_lines), i + 21)
+                            context_lines = [
+                                {
+                                    "line_number": j + 1,
+                                    "content": all_lines[j].strip(),
+                                    "is_target": j == i,
+                                    "parsed": parse_log_line(all_lines[j].strip()),
+                                }
+                                for j in range(start, end)
+                            ]
+                            break
+            except Exception as e:
+                logger.exception(f"Error reading context: {e}")
+
+        return templates.TemplateResponse(
+            "log_detail.html",
+            {
+                "request": request,
+                "title": f"Log Entry Detail - {parsed.get('level', 'INFO')}",
+                "entry": parsed,
+                "raw_line": decoded,
+                "context_lines": context_lines,
+                "target_line_index": target_line_index,
+            },
+        )
+    except Exception as e:
+        logger.exception(f"Error decoding log entry: {e}")
+        raise HTTPException(status_code=400, detail="Invalid log entry ID")
 
 
 @router.get("/stream")

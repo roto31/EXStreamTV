@@ -183,9 +183,12 @@ class FFmpegProcessPool:
         if wait:
             await self._semaphore.acquire()
         else:
-            if not self._semaphore.locked():
+            try:
                 self._semaphore.acquire_nowait()
-            else:
+            except asyncio.QueueFull:
+                logger.debug(
+                    "FFmpeg process pool at capacity, rejecting non-blocking spawn"
+                )
                 return None
         
         try:

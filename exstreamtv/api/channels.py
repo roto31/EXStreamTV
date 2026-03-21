@@ -1,5 +1,6 @@
 """Channel API endpoints - Async version with full CRUD support"""
 
+import asyncio
 import logging
 import shutil
 from datetime import datetime
@@ -19,6 +20,9 @@ from ..database.models import (
     Channel,
     ChannelPlaybackPosition,
     FFmpegProfile,
+    MediaItem,
+    Playout,
+    PlayoutItem,
     PlayoutMode,
     ProgramSchedule,
     StreamingMode,
@@ -868,4 +872,100 @@ async def get_channel_programming(
         "hours": hours,
         "program_count": len(programs),
         "programs": programs,
+    }
+
+
+@router.get("/{channel_number}/schedule")
+async def get_channel_schedule(
+    channel_number: str,
+    hours: int = 24,
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Get schedule for a channel by number (supports decimal e.g. "1984.1").
+
+    Returns programmes from TimelineBuilder for EPG consistency.
+    """
+    from ..api.timeline_builder import TimelineBuilder, PlaybackAnchor
+    from ..api.title_resolver import TitleResolver
+    from ..scheduling import ScheduleParser
+
+    stmt = select(Channel).where(Channel.number == channel_number, Channel.enabled == True)
+    result = await db.execute(stmt)
+    channel = result.scalar_one_or_none()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+
+    playback_pos = None
+    stmt = select(ChannelPlaybackPosition).where(ChannelPlaybackPosition.channel_id == channel.id)
+    result = await db.execute(stmt)
+    playback_pos = result.scalar_one_or_none()
+
+    playout_items: list[dict[str, Any]] = []
+    schedule_file = ScheduleParser.find_schedule_file(channel_number)
+    if schedule_file:
+        from ..api.iptv import _run_schedule_engine_sync
+        try:
+            playout_items = await asyncio.to_thread(
+                _run_schedule_engine_sync, channel.id, schedule_file
+            )
+        except Exception as e:
+            logger.warning(f"Schedule file load failed: {e}")
+
+    if not playout_items:
+        stmt = select(Playout).where(
+            Playout.channel_id == channel.id,
+            Playout.is_active == True,
+        )
+        result = await db.execute(stmt)
+        playout = result.scalar_one_or_none()
+        if playout:
+            items_stmt = select(PlayoutItem, MediaItem).outerjoin(
+                MediaItem, PlayoutItem.media_item_id == MediaItem.id
+            ).where(PlayoutItem.playout_id == playout.id).order_by(PlayoutItem.start_time)
+            items_result = await db.execute(items_stmt)
+            for pi, mi in items_result.all():
+                if mi:
+                    playout_items.append({
+                        "media_item": mi,
+                        "custom_title": pi.title or pi.custom_title,
+                    })
+
+    if not playout_items:
+        return {
+            "channel_id": channel.id,
+            "channel_number": channel_number,
+            "channel_name": channel.name,
+            "programmes": [],
+            "message": "No schedule items for this channel",
+        }
+
+    now = datetime.utcnow()
+    anchor = PlaybackAnchor(
+        playout_start_time=playback_pos.playout_start_time or now if playback_pos else now,
+        last_item_index=playback_pos.last_item_index if playback_pos else 0,
+        current_item_start_time=getattr(playback_pos, "current_item_start_time", None) if playback_pos else None,
+        elapsed_seconds_in_item=getattr(playback_pos, "elapsed_seconds_in_item", 0) or 0 if playback_pos else 0,
+    )
+    builder = TimelineBuilder()
+    programmes_raw = builder.build(playout_items, anchor, now=now, max_programmes=hours * 4)
+
+    resolver = TitleResolver()
+    programmes = []
+    for p in programmes_raw:
+        try:
+            title = resolver.resolve_title(p.playout_item, p.media_item, channel)
+        except Exception:
+            title = p.title or "Unknown"
+        programmes.append({
+            "start": p.start_time.isoformat(),
+            "stop": p.stop_time.isoformat(),
+            "title": title,
+        })
+
+    return {
+        "channel_id": channel.id,
+        "channel_number": channel_number,
+        "channel_name": channel.name,
+        "programmes": programmes,
     }

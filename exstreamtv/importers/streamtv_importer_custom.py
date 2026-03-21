@@ -485,15 +485,58 @@ class StreamTVCustomImporter:
             logger.warning(f"Invalid JSON in YouTube metadata: {e}")
     
     def _extract_plex_metadata(self, media_item: Any, meta_json: str) -> None:
-        """Extract Plex metadata from JSON."""
+        """Extract Plex metadata from JSON. Populates EPG-relevant fields (title, description, year, etc.)."""
         try:
             meta = json.loads(meta_json)
-            
+
             media_item.plex_rating_key = meta.get("rating_key") or media_item.source_id
             media_item.plex_guid = meta.get("guid")
             media_item.plex_library_section_id = meta.get("library_section_id")
             media_item.plex_library_section_title = meta.get("library_section_title")
-            
+
+            # Populate EPG-relevant fields from Plex metadata when present
+            if meta.get("title"):
+                media_item.title = meta.get("title")
+            if meta.get("summary"):
+                media_item.description = meta.get("summary")
+            if meta.get("year") is not None:
+                try:
+                    media_item.year = int(meta.get("year"))
+                except (TypeError, ValueError):
+                    pass
+            if meta.get("thumb"):
+                thumb = meta.get("thumb")
+                media_item.thumbnail = thumb if isinstance(thumb, str) and thumb.startswith("http") else None
+            if meta.get("parentIndex") is not None:
+                try:
+                    media_item.season_number = int(meta.get("parentIndex"))
+                except (TypeError, ValueError):
+                    pass
+            if meta.get("index") is not None:
+                try:
+                    media_item.episode_number = int(meta.get("index"))
+                except (TypeError, ValueError):
+                    pass
+            if meta.get("grandparentTitle"):
+                media_item.show_title = meta.get("grandparentTitle")
+            if meta.get("originallyAvailableAt"):
+                try:
+                    from datetime import date
+                    raw = meta.get("originallyAvailableAt")
+                    if isinstance(raw, str):
+                        media_item.release_date = date.fromisoformat(raw[:10])
+                    elif hasattr(raw, "year"):
+                        media_item.release_date = raw
+                except (ValueError, TypeError):
+                    pass
+            if meta.get("duration") is not None:
+                try:
+                    # Plex duration in milliseconds
+                    ms = int(meta.get("duration"))
+                    media_item.duration = ms // 1000 if ms > 0 else None
+                except (TypeError, ValueError):
+                    pass
+
         except json.JSONDecodeError as e:
             logger.warning(f"Invalid JSON in Plex metadata: {e}")
     

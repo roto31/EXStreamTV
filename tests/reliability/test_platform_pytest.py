@@ -233,27 +233,64 @@ class TestHDHomeRun:
     
     @pytest.mark.asyncio
     async def test_discover_json(self):
-        """API-HD-001: HDHomeRun discovery."""
+        """API-HD-001: HDHomeRun discovery. DeviceID must be 8 hex chars (Plex/HDHomeRun spec)."""
         import httpx
-        async with httpx.AsyncClient() as client:
+        import re
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             r = await client.get("http://localhost:8411/discover.json")
             assert r.status_code == 200
+            data = r.json()
+            device_id = data.get("DeviceID", "")
+            assert re.match(r"^[0-9A-Fa-f]{8}$", device_id), (
+                f"DeviceID '{device_id}' invalid - must be 8 hexadecimal chars for Plex DVR compatibility"
+            )
     
     @pytest.mark.asyncio
     async def test_lineup_json(self):
-        """API-HD-002: HDHomeRun lineup."""
+        """API-HD-002: HDHomeRun lineup. Valid JSON, unique GuideNumbers, URLs present."""
         import httpx
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             r = await client.get("http://localhost:8411/lineup.json")
             assert r.status_code == 200
+            lineup = r.json()
+            assert isinstance(lineup, list)
+            guide_numbers = []
+            for entry in lineup:
+                assert "GuideNumber" in entry
+                assert "GuideName" in entry
+                assert "URL" in entry
+                assert entry["URL"], "Channel URL must be non-empty"
+                guide_numbers.append(entry["GuideNumber"])
+            assert len(guide_numbers) == len(set(guide_numbers)), "GuideNumbers must be unique"
     
     @pytest.mark.asyncio
     async def test_lineup_status(self):
         """API-HD-003: HDHomeRun lineup status."""
         import httpx
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             r = await client.get("http://localhost:8411/lineup_status.json")
             assert r.status_code == 200
+
+    @pytest.mark.asyncio
+    @pytest.mark.network
+    async def test_hdhomerun_stream_endpoint_returns_200_video_mp2t(self):
+        """API-HD-004: HDHomeRun stream returns 200 and video/mp2t Content-Type."""
+        import httpx
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            # Request first channel from lineup, 5 second timeout
+            r = await client.get(
+                "http://localhost:8411/hdhomerun/auto/v100",
+                timeout=6.0,
+            )
+            assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+            ct = r.headers.get("content-type", "")
+            assert "video/mp2t" in ct or "mp2t" in ct, (
+                f"Expected video/mp2t Content-Type, got {ct}"
+            )
+            # At least keepalive chunk (1128 bytes) must be received
+            assert len(r.content) >= 1128, (
+                f"Expected >=1128 bytes MPEG-TS data, got {len(r.content)}"
+            )
 
 
 # ============ Database Tests ============

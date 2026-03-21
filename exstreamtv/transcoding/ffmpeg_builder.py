@@ -4,6 +4,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from exstreamtv.ffmpeg.constants import FFLAGS_STREAMING, BSF_H264_ANNEXB
+
 from ..config import config
 from ..database.models import (
     AudioFormat,
@@ -87,9 +89,7 @@ def build_ffmpeg_command(
     cmd.extend(
         [
             "-fflags",
-            "+genpts+discardcorrupt+fastseek",
-            "-flags",
-            "+low_delay",
+            FFLAGS_STREAMING,
             "-strict",
             "experimental",
             "-probesize",
@@ -146,6 +146,7 @@ def build_ffmpeg_command(
     # Video codec
     if profile.video_format == VideoFormat.COPY:
         cmd.extend(["-c:v", "copy"])
+        cmd.extend(["-bsf:v", BSF_H264_ANNEXB])
     else:
         encoder = _get_video_encoder(profile)
         cmd.extend(["-c:v", encoder])
@@ -208,8 +209,9 @@ def build_ffmpeg_command(
         cmd.extend(["-r", "30"])  # Default to 30fps
 
     # Output format: MPEG-TS
+    muxrate_kbps = int(profile.video_bitrate) + int(profile.audio_bitrate)
     cmd.extend(
-        ["-f", "mpegts", "-muxrate", f"{profile.video_bitrate + profile.audio_bitrate}k", "-"]
+        ["-f", "mpegts", "-muxrate", f"{muxrate_kbps}k", "-"]
     )
 
     return cmd

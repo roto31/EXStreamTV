@@ -89,6 +89,51 @@ class StreamManager:
     def get_active_streams(self):
         """Get list of active streams."""
         return list(self._active_streams.keys())
+    
+    def detect_source(self, url: str):
+        """Detect StreamSource from URL for authenticated streaming."""
+        from .mpegts_streamer import StreamSource
+        if not url:
+            return StreamSource.UNKNOWN
+        url_lower = url.lower()
+        if "youtube.com" in url_lower or "youtu.be" in url_lower or "googlevideo.com" in url_lower:
+            return StreamSource.YOUTUBE
+        if "archive.org" in url_lower:
+            return StreamSource.ARCHIVE_ORG
+        if "plex://" in url_lower or "/library/metadata/" in url_lower:
+            return StreamSource.PLEX
+        if "jellyfin" in url_lower or "emby" in url_lower:
+            return StreamSource.JELLYFIN
+        return StreamSource.UNKNOWN
+    
+    async def get_stream_url(self, url: str) -> str | None:
+        """
+        Resolve raw URL (YouTube, Archive.org, etc.) to streamable URL.
+        Uses ResolverRegistry for YouTube/Archive (cookie support).
+        Returns None if resolution fails.
+        """
+        if not url:
+            return None
+        source = self.detect_source(url)
+        media_item = {"url": url, "source": source.value}
+        try:
+            if source.value in ("youtube", "archive_org"):
+                from .resolver_registry import get_resolver_registry
+                from .resolvers.base import ResolverError, SourceType
+                registry = get_resolver_registry()
+                src_type = SourceType.YOUTUBE if source.value == "youtube" else SourceType.ARCHIVE_ORG
+                resolver = registry.get(src_type)
+                resolved = await resolver.resolve(media_item, force_refresh=False)
+                return resolved.url if resolved else None
+            from .url_resolver import get_url_resolver
+            from .resolvers.base import ResolverError
+            resolver = get_url_resolver()
+            resolved = await resolver.resolve(media_item)
+            return resolved.url if resolved else None
+        except ResolverError:
+            return None
+        except Exception:
+            return None
 
 __all__ = [
     # Channel management
