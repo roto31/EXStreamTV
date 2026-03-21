@@ -2,4 +2,4 @@
 
 See [Distribution](Distribution) and [Platform Guide](PLATFORM_GUIDE.md#8-cicd--deployment) for deployment options: direct install, Docker, macOS app.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

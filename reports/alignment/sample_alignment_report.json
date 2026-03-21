@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-02-21T12:00:00",
+  "summary": {
+    "passed": true,
+    "error_count": 0,
+    "errors": [],
+    "clock_validated": 5,
+    "clock_total": 5,
+    "xmltv_validated": 5,
+    "xmltv_total": 5
+  },
+  "clock_validation": [],
+  "xmltv_validation": {},
+  "hdhomerun_validation": {
+    "device_id": "E5E17001",
+    "discover_ok": true,
+    "lineup_ok": true
+  }
+}

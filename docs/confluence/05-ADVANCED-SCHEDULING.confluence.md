@@ -485,4 +485,4 @@ h2. Related Documentation
 * [Streaming Stability|EXStreamTV:Streaming Stability] - Streaming features
 * [API Reference|EXStreamTV:API Reference] - Complete API documentation
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

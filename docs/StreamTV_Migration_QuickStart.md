@@ -124,4 +124,4 @@ cp "/Users/roto1231/Documents/XCode Projects/EXStreamTV/exstreamtv.db.backup" \
 4. **Check Playlists**: Confirm all 214 playlists are visible
 5. **Optimize Database**: Run `VACUUM` and `ANALYZE` in SQLite
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

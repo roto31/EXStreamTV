@@ -448,8 +448,9 @@ async def discover(request: Request, db: AsyncSession = Depends(get_db)):
         "DeviceAuth": "streamtv",
         "BaseURL": f"{base_url}/hdhomerun",
         "LineupURL": f"{base_url}/hdhomerun/lineup.json",
-        # EPG/Guide URL for Plex DVR to fetch programme data
-        "GuideURL": f"{base_url}/hdhomerun/epg",
+        # Note: GuideURL is NOT part of the official HDHomeRun spec.
+        # Plex does not read GuideURL from discover.json.
+        # Configure XMLTV URL in Plex DVR settings: http://<server>:<port>/iptv/xmltv.xml
         "TunerCount": config.hdhomerun.tuner_count,
     }
 
@@ -645,9 +646,12 @@ async def lineup(request: Request, db: AsyncSession = Depends(get_db)):
                 for pattern in patterns_to_remove:
                     remaining = re.sub(pattern, "", remaining)
 
-                # Only use cleaned name if there's content left, otherwise keep original
-                if remaining:
+                # Only apply stripping if result is meaningful (>=3 chars)
+                if remaining and len(remaining) >= 3:
                     guide_name = remaining
+                    logger.debug(
+                        f"Channel {guide_number}: Name stripped from '{channel.name}' to '{guide_name}'"
+                    )
 
         # Create stream URL - HDHomeRun expects MPEG-TS, but we'll use HLS
         # Plex/Emby/Jellyfin can handle HLS
@@ -662,15 +666,6 @@ async def lineup(request: Request, db: AsyncSession = Depends(get_db)):
 
         lineup_data.append(channel_entry)
 
-    # #region agent log
-    try:
-        import json
-        lineup_guide_numbers = [entry["GuideNumber"] for entry in lineup_data[:10]]
-        with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-            f.write(json.dumps({"location":"hdhomerun/api.py:lineup","message":"HDHomeRun lineup generated","data":{"channel_count":len(lineup_data),"guide_numbers":lineup_guide_numbers,"first_entry":lineup_data[0] if lineup_data else None},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H2"}) + "\n")
-    except: pass
-    # #endregion
-    
     return lineup_data
 
 @hdhomerun_router.get("/lineup_status.json")
@@ -691,15 +686,6 @@ async def get_epg_data(request: Request = None, db: AsyncSession = Depends(get_d
     This is the endpoint that Plex DVR automatically fetches for guide data
     when using HDHomeRun tuners. This matches ErsatzTV's approach.
     """
-    # #region agent log
-    try:
-        import json
-        client_ip = request.client.host if request and request.client else "unknown"
-        with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as f:
-            f.write(json.dumps({"location":"hdhomerun/api.py:epg","message":"HDHomeRun EPG endpoint called","data":{"client_ip":client_ip,"user_agent":request.headers.get("user-agent","unknown") if request else "unknown"},"timestamp":datetime.utcnow().isoformat(),"sessionId":"debug-session","hypothesisId":"H4"}) + "\n")
-    except: pass
-    # #endregion
-    
     # Import the XMLTV generation from iptv module
     from ..api.iptv import get_epg
     

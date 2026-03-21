@@ -2,7 +2,13 @@
 
 All notable changes to the Documentation component will be documented in this file.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20
+
+## [2.6.0] - 2026-03-20 (documentation sync)
+### Changed
+- `architecture/DIAGRAMS.md` — added diagram 15 (stream resolution safety contract); revised date
+- `README.md`, `VERSION` — documentation metadata refresh
+- `guides/PLEX_SETUP.md` — guide updates (committed with codebase sync)
 
 ## [2.6.0] - 2026-01-31
 ### Added - Tunarr/dizqueTV Integration Documentation

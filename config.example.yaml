@@ -5,6 +5,9 @@
 server:
   host: "0.0.0.0"
   port: 8411
+  # base_url: "http://192.168.1.x:8411"  # Optional: LAN IP for Plex DVR lineup URLs
+  # public_url: "http://192.168.1.x:8411"  # Optional: override when behind reverse proxy and headers not forwarded
+  # trust_proxy: true  # Required when behind Nginx/Caddy/Traefik - enables X-Forwarded-* handling
   debug: false
   log_level: "INFO"
 
@@ -58,9 +61,11 @@ streaming:
     playlist_size: 5
 
 # HDHomeRun Emulation
+# DeviceID must be exactly 8 hexadecimal characters (HDHomeRun/Plex spec)
+# If guide shows 4x duplicate items, try tuner_count: 1 (Plex may fetch EPG per tuner)
 hdhomerun:
   enabled: true
-  device_id: "EXSTREAMTV"
+  device_id: "E5E17001"
   device_auth: "exstreamtv"
   tuner_count: 4
 

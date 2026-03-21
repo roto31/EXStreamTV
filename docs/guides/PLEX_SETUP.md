@@ -5,7 +5,7 @@ This guide explains how to use EXStreamTV as a tuner and program guide source fo
 ## Overview
 
 - **Single XMLTV URL**: One canonical EPG URL for both Plex DVR and IPTV apps.
-- **Stable channel IDs**: Channels use IDs like `exstream-1`, `exstream-2` in both the M3U and XMLTV. This keeps Plex DVR channel mapping correct when you reload the guide.
+- **Stable channel IDs**: Channels use IDs like `exstream.1`, `exstream.2` in both the M3U and XMLTV (dot format required for Plex XMLTV compliance). This keeps Plex DVR channel mapping correct when you reload the guide.
 - **EPG reflects playout**: Programme start/stop times in the guide are derived from the same timeline as the stream (ErsatzTV-style).
 
 ## Prerequisites
@@ -22,7 +22,7 @@ Use the **base URL** that Plex can reach (e.g. `http://192.168.1.100:8411` or yo
 | **M3U playlist** | `{base_url}/iptv/channels.m3u` |
 | **XMLTV (EPG)** | `{base_url}/iptv/xmltv.xml` |
 
-If you use access token authentication, append `?access_token=YOUR_TOKEN` to both URLs.
+Authentication is optional: `/iptv/xmltv.xml` and `/iptv/channels.m3u` allow anonymous access for Plex DVR compatibility. If you have access token authentication enabled, you can optionally append `?access_token=YOUR_TOKEN` to the URLs.
 
 Example:
 - M3U: `http://192.168.1.100:8411/iptv/channels.m3u`
@@ -62,6 +62,8 @@ When you change channels, schedules, or playouts in EXStreamTV:
 - **Plex can’t reach EXStreamTV**  
   Use an IP or hostname that Plex can resolve (e.g. LAN IP). Don’t use `localhost` if Plex is on another machine.
 
+- **"Error communicating with provider"** — Use a LAN IP (e.g. `http://192.168.1.100:8411/iptv/xmltv.xml`), not localhost. Verify the URL in a browser. No access token is required.
+
 - **Channels or guide missing**  
   Confirm `{base_url}/iptv/channels.m3u` and `{base_url}/iptv/xmltv.xml` return valid data in a browser or with `curl`. Check that at least one channel is enabled and has a schedule.
 
@@ -69,7 +71,7 @@ When you change channels, schedules, or playouts in EXStreamTV:
   EXStreamTV builds the EPG from the same playout timeline as the stream. If you still see mismatches, check channel playout and schedule configuration.
 
 - **Authentication**  
-  If access token is required, use the same token in both M3U and XMLTV URLs when configuring Plex.
+  IPTV endpoints allow anonymous access for Plex. If you use token auth, optionally append `?access_token=YOUR_TOKEN` to the URLs.
 
 ## References
 
@@ -77,4 +79,4 @@ When you change channels, schedules, or playouts in EXStreamTV:
 - Plex DVR guide reload (EXStreamTV API): `POST /api/settings/plex/reload-guide`
 - Plan: EPG and Plex Integration (best practices from ErsatzTV, Tunarr, dizqueTV)
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

@@ -6,6 +6,7 @@ Raises TitleResolutionError if no valid title; no silent fallbacks that hide mis
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -50,10 +51,10 @@ class TitleResolver:
         if custom and str(custom).strip():
             return str(custom).strip()
 
-        # 2. Media item title
+        # 2. Media item title (skip importer placeholders like "Item 332244")
         if media_item and hasattr(media_item, "title") and media_item.title:
             t = str(media_item.title).strip()
-            if t:
+            if t and not re.match(r"^Item \d+$", t):
                 return t
 
         # 3. Filename stem from media item path/url

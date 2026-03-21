@@ -1,15 +1,15 @@
 # EXStreamTV - Production Dependencies
 # Combined requirements from StreamTV + ErsatzTV features
 
-# Web Framework
-fastapi>=0.100.0
-uvicorn[standard]>=0.23.0
-starlette>=0.27.0
+# Web Framework (upper bounds to avoid breaking changes from new majors)
+fastapi>=0.100.0,<0.115.0
+uvicorn[standard]>=0.23.0,<0.32.0
+starlette>=0.27.0,<0.40.0
 python-multipart>=0.0.6
 
 # Database
-sqlalchemy>=2.0.0
-alembic>=1.12.0
+sqlalchemy>=2.0.0,<3.0.0
+alembic>=1.12.0,<2.0.0
 aiosqlite>=0.19.0
 
 # Async HTTP
@@ -35,7 +35,7 @@ yt-dlp>=2023.10.0
 
 # Validation
 jsonschema>=4.19.0
-pydantic>=2.0.0
+pydantic>=2.0.0,<3.0.0
 
 # Logging & Monitoring
 structlog>=23.0.0
@@ -52,3 +52,10 @@ keyring>=24.0.0
 # pytest>=7.4.0
 # pytest-asyncio>=0.21.0
 # pytest-cov>=4.1.0
+
+# Optional - Plex library (Python-PlexAPI for server/section listing and metadata)
+# Install with: pip install exstreamtv[plex] or pip install plexapi
+# plexapi>=4.15.0
+
+# SMT verification (EPG interval invariants)
+z3-solver>=4.12.0

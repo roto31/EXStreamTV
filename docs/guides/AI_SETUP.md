@@ -622,4 +622,4 @@ curl -X POST http://localhost:8411/api/database/backup
 - [Onboarding Guide](ONBOARDING.md) - Complete setup wizard
 - [macOS App Guide](MACOS_APP_GUIDE.md) - Use the menu bar app
 - [Tunarr/dizqueTV Integration](../architecture/TUNARR_DIZQUETV_INTEGRATION.md) - v2.6.0 technical details
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

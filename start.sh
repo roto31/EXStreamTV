@@ -16,6 +16,13 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Prefer project venv so installed deps (e.g. psutil) are used
+if [ -f ".venv/bin/python3" ]; then
+    PYTHON=".venv/bin/python3"
+else
+    PYTHON="python3"
+fi
+
 PORT=8411
 
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -49,5 +56,5 @@ echo -e "${GREEN}▶  Starting EXStreamTV on port $PORT...${NC}"
 echo ""
 
 # Start the server
-python3 -m exstreamtv
+exec "$PYTHON" -m exstreamtv
 

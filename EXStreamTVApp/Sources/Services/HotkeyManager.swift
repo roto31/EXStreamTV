@@ -180,7 +180,7 @@ class HotkeyManager: ObservableObject {
     }
     
     deinit {
-        unregisterAllHotkeys()
+        // Note: unregisterAllHotkeys() is MainActor-isolated; AppDelegate calls it in applicationWillTerminate
         if let handler = eventHandler {
             RemoveEventHandler(handler)
         }

@@ -5,6 +5,7 @@
 //  Manages "Launch at Login" functionality using SMAppService (macOS 13+).
 //
 
+import AppKit
 import Foundation
 import ServiceManagement
 

@@ -2,7 +2,7 @@
 
 All diagrams use Mermaid. Referenced from Platform Guide, EPG Alignment, Observability, Invariants.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20
 
 ---
 
@@ -292,4 +292,25 @@ flowchart TD
     Check --> Result
     Result -->|UNSAT| FAILED
     Result -->|SAT| VERIFIED
+```
+
+---
+
+## 15. Stream resolution safety contract
+
+Validates resolved sources before FFmpeg (`resolution_service`, `StreamingContractEnforcer`, `StreamSource`).
+
+```mermaid
+flowchart TD
+    Req[Stream request]
+    RS[resolution_service.resolve]
+    CE[StreamingContractEnforcer]
+    SS[StreamSource DTO]
+    FF[FFmpeg pipeline]
+    Slate[Reject / slate fallback]
+    Req --> RS
+    RS --> CE
+    CE -->|valid| SS
+    CE -->|invalid| Slate
+    SS --> FF
 ```

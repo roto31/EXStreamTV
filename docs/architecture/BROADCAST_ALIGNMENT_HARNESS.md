@@ -128,4 +128,4 @@ pytest tests/load/test_hdhomerun_stress.py -v -m "integration and not slow"
 pytest tests/integration/test_broadcast_alignment.py::test_dual_authority_detection -v
 ```
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

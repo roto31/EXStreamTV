@@ -15,79 +15,27 @@ struct ChannelSwitcher: View {
     @State private var typedNumber = ""
     @State private var clearNumberTask: Task<Void, Never>?
     
+    private var listSelection: Binding<Int?> {
+        Binding(
+            get: {
+                channelManager.channels.indices.contains(currentChannelIndex)
+                    ? channelManager.channels[currentChannelIndex].id
+                    : nil
+            },
+            set: { newId in
+                if let id = newId,
+                   let index = channelManager.channels.firstIndex(where: { $0.id == id }) {
+                    selectChannel(at: index)
+                }
+            }
+        )
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Channels")
-                    .font(.headline)
-                
-                Spacer()
-                
-                if !typedNumber.isEmpty {
-                    Text("Go to: \(typedNumber)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(.ultraThinMaterial))
-                }
-                
-                Button {
-                    isPresented = false
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding()
-            .background(.ultraThinMaterial)
-            
-            // Channel list
-            ScrollViewReader { proxy in
-                List(selection: Binding(
-                    get: { channelManager.channels.indices.contains(currentChannelIndex) ? channelManager.channels[currentChannelIndex].id : nil },
-                    set: { newId in
-                        if let id = newId, let index = channelManager.channels.firstIndex(where: { $0.id == id }) {
-                            selectChannel(at: index)
-                        }
-                    }
-                )) {
-                    ForEach(Array(channelManager.channels.enumerated()), id: \.element.id) { index, channel in
-                        ChannelRow(
-                            channel: channel,
-                            number: index + 1,
-                            isSelected: index == currentChannelIndex,
-                            isPlaying: channelManager.playingChannelId == channel.id
-                        )
-                        .tag(channel.id)
-                        .id(channel.id)
-                        .onTapGesture {
-                            selectChannel(at: index)
-                        }
-                    }
-                }
-                .listStyle(.plain)
-                .onChange(of: currentChannelIndex) { _, newIndex in
-                    if channelManager.channels.indices.contains(newIndex) {
-                        withAnimation {
-                            proxy.scrollTo(channelManager.channels[newIndex].id, anchor: .center)
-                        }
-                    }
-                }
-            }
-            
-            // Footer with keyboard shortcuts
-            HStack(spacing: 16) {
-                KeyboardShortcutHint(key: "↑↓", description: "Navigate")
-                KeyboardShortcutHint(key: "↵", description: "Select")
-                KeyboardShortcutHint(key: "0-9", description: "Jump to channel")
-                KeyboardShortcutHint(key: "ESC", description: "Close")
-            }
-            .font(.caption2)
-            .padding(8)
-            .background(.ultraThinMaterial)
+            channelSwitcherHeader
+            channelListContent
+            channelSwitcherFooter
         }
         .frame(width: 320, height: 400)
         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -95,6 +43,71 @@ struct ChannelSwitcher: View {
         .onKeyPress { press in
             handleKeyPress(press)
         }
+    }
+
+    private var channelSwitcherHeader: some View {
+        HStack {
+            Text("Channels")
+                .font(.headline)
+            Spacer()
+            if !typedNumber.isEmpty {
+                Text("Go to: \(typedNumber)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(.ultraThinMaterial))
+            }
+            Button {
+                isPresented = false
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+    }
+
+    private var channelListContent: some View {
+        ScrollViewReader { proxy in
+            List(selection: listSelection) {
+                ForEach(Array(channelManager.channels.enumerated()), id: \.element.id) { index, channel in
+                    ChannelSwitcherRow(
+                        channel: channel,
+                        number: index + 1,
+                        isSelected: index == currentChannelIndex,
+                        isPlaying: channelManager.playingChannelId == channel.id
+                    )
+                    .tag(channel.id)
+                    .id(channel.id)
+                    .onTapGesture {
+                        selectChannel(at: index)
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .onChange(of: currentChannelIndex) { _, newIndex in
+                if channelManager.channels.indices.contains(newIndex) {
+                    withAnimation {
+                        proxy.scrollTo(channelManager.channels[newIndex].id, anchor: .center)
+                    }
+                }
+            }
+        }
+    }
+
+    private var channelSwitcherFooter: some View {
+        HStack(spacing: 16) {
+            KeyboardShortcutHint(key: "↑↓", description: "Navigate")
+            KeyboardShortcutHint(key: "↵", description: "Select")
+            KeyboardShortcutHint(key: "0-9", description: "Jump to channel")
+            KeyboardShortcutHint(key: "ESC", description: "Close")
+        }
+        .font(.caption2)
+        .padding(8)
+        .background(.ultraThinMaterial)
     }
     
     private func selectChannel(at index: Int) {
@@ -173,23 +186,21 @@ struct ChannelSwitcher: View {
     }
 }
 
-// MARK: - Channel Row
+// MARK: - Channel Switcher Row
 
-struct ChannelRow: View {
+struct ChannelSwitcherRow: View {
     let channel: Channel
     let number: Int
     let isSelected: Bool
     let isPlaying: Bool
-    
+
     var body: some View {
         HStack(spacing: 12) {
-            // Channel number
             Text("\(number)")
                 .font(.system(.caption, design: .monospaced))
                 .foregroundColor(.secondary)
                 .frame(width: 30, alignment: .trailing)
-            
-            // Channel icon/thumbnail
+
             if let iconURL = channel.iconURL {
                 AsyncImage(url: iconURL) { image in
                     image
@@ -207,13 +218,11 @@ struct ChannelRow: View {
                     .foregroundColor(.secondary)
                     .frame(width: 32, height: 32)
             }
-            
-            // Channel info
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(channel.name)
                     .font(.body)
                     .lineLimit(1)
-                
                 if let program = channel.currentProgram {
                     Text(program)
                         .font(.caption)
@@ -221,10 +230,9 @@ struct ChannelRow: View {
                         .lineLimit(1)
                 }
             }
-            
+
             Spacer()
-            
-            // Playing indicator
+
             if isPlaying {
                 Image(systemName: "play.circle.fill")
                     .foregroundColor(.green)

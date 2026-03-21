@@ -175,4 +175,4 @@ No tuner connection errors appear in EXStreamTV logs because the server is not r
 
 **Fix:** Start EXStreamTV. Channels should resume streaming once the server is up and reachable by Plex.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

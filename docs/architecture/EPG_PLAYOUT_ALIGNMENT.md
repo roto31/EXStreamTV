@@ -69,7 +69,7 @@ EPG derives exclusively from `BroadcastScheduleAuthority.get_timeline(channel_id
 | **iptv.py `get_epg`** (main XMLTV) | `build_epg_from_clock` uses `auth.get_timeline(channel_id)` + `build_programmes_from_clock`. SMT gate before emit. | ✓ Clock authority, zero-drift. |
 | **Fallback** | Single 24h placeholder when clock path yields no programmes. | Trivially verified. |
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20
 
 ## Validation
 

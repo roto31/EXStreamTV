@@ -1,7 +1,7 @@
 # EXStreamTV Platform Guide
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-20
 
 This guide explains what EXStreamTV is, how it works, and how to operate it safely. It is written for technically literate readers who may not be familiar with streaming internals, AI agent architectures, or HDHomeRun protocols.
 

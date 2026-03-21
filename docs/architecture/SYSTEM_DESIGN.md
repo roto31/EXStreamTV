@@ -1,7 +1,7 @@
 # EXStreamTV System Design
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-20
 
 For a full architecture overview, streaming lifecycle, restart safety, and AI model, see the [Platform Guide](../PLATFORM_GUIDE.md). This document focuses on component layout and data models.
 
@@ -192,4 +192,4 @@ hdhomerun:
 - [TUNARR_DIZQUETV_INTEGRATION.md](./TUNARR_DIZQUETV_INTEGRATION.md) — v2.6 integration
 - [API Reference](../api/README.md) — REST and IPTV endpoints
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

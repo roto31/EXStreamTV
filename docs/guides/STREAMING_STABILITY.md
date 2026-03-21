@@ -488,4 +488,4 @@ sequenceDiagram
 - [AI Setup Guide](AI_SETUP.md) — AI configuration
 - [Hardware Transcoding](HW_TRANSCODING.md) — FFmpeg optimization
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

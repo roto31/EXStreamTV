@@ -86,4 +86,4 @@ Traefik forwards headers by default. Ensure `forwardedHeaders.trustedIPs` includ
    ```
    Expect 200 (stream) or 503 (ChannelManager not initialized – check server logs).
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

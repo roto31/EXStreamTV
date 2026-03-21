@@ -379,4 +379,4 @@ After completing onboarding:
 3. [Enable hardware transcoding](HW_TRANSCODING.md)
 4. [Set up schedules](../api/README.md)
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

@@ -54,4 +54,4 @@ Create each Wiki page on GitHub (Wiki tab → New Page), paste from the correspo
 - [ ] Wiki pages with Mermaid (Home, AI-Setup, Advanced-Scheduling, Streaming-Stability, System-Design, Tunarr-DizqueTV-Integration, Integration-Plan, Platform-Comparison): diagrams render.
 - [ ] Clone and run: `git clone https://github.com/roto31/EXStreamTV.git && cd EXStreamTV && ./start.sh` (after install) to confirm docs match reality.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

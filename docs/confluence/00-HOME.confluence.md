@@ -254,4 +254,4 @@ h2. Related Resources
 * [CONTRIBUTING|EXStreamTV:Contributing] - Contribution guidelines
 * [LICENSE|EXStreamTV:License] - MIT license
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

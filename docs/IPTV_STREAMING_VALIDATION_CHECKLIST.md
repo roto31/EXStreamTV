@@ -73,4 +73,4 @@ python3 scripts/iptv_diagnostic.py http://192.168.1.120:8411
 
 Runs all checks above automatically.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

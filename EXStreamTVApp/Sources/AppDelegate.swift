@@ -9,6 +9,7 @@ import AppKit
 import Combine
 import SwiftUI
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Properties
     

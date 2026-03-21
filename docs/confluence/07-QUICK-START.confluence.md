@@ -224,4 +224,4 @@ h2. Related Documentation
 * [Streaming Stability|EXStreamTV:Streaming Stability] - v2.6.0 streaming features
 * [API Reference|EXStreamTV:API Reference] - REST API documentation
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

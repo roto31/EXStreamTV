@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Streaming Settings - EXStreamTV{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Streaming Settings</div>
+            <p class="page-subtitle">Configure stream buffer sizes and optional rate throttling for channel playback.</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-outlined" type="button" id="refreshStreamingSettingsButton" aria-label="Reload streaming settings">
+                <span class="material-icons" aria-hidden="true">refresh</span>
+                Reload
+            </button>
+            <button class="btn btn-primary" type="button" id="saveStreamingSettingsButton" aria-label="Save streaming settings">
+                <span class="material-icons" aria-hidden="true">save</span>
+                Save Changes
+            </button>
+        </div>
+    </div>
+
+    <div class="card status-card" id="statusCard" style="display: none;">
+        <span id="statusMessage"></span>
+    </div>
+
+    <div class="settings-grid">
+        <div class="card settings-card">
+            <div class="card-title">Stream Buffer</div>
+            <div class="form-group">
+                <label for="bufferSize">Buffer size (bytes)</label>
+                <input type="number" id="bufferSize" min="65536" max="33554432" step="65536" value="2097152">
+                <small>Size of the in-memory buffer for stream reads. Default: 2 MB (2097152). Range: 64 KB–32 MB. Larger values can smooth playback on slow networks.</small>
+            </div>
+            <div class="form-group">
+                <label for="readSize">Read size (bytes)</label>
+                <input type="number" id="readSize" min="4096" max="1048576" step="4096" value="65536">
+                <small>Chunk size for each read from the source. Default: 64 KB (65536). Range: 4 KB–1 MB.</small>
+            </div>
+        </div>
+
+        <div class="card settings-card">
+            <div class="card-title">Stream Throttler</div>
+            <div class="form-group">
+                <label for="throttlerEnabled">
+                    <input type="checkbox" id="throttlerEnabled" style="width: auto; margin-right: 8px;" aria-label="Enable stream throttler">
+                    Enable stream throttler
+                </label>
+                <small>Rate-limit MPEG-TS delivery to the target bitrate to prevent client buffer overruns and improve stability.</small>
+            </div>
+            <div class="form-group">
+                <label for="targetBitrateMbps">Target bitrate (Mbps)</label>
+                <input type="number" id="targetBitrateMbps" min="1" max="50" step="0.5" value="4">
+                <small>Target bitrate for throttling. Default: 4 Mbps. Stored as bits per second internally.</small>
+            </div>
+            <div class="form-group">
+                <label for="throttlerMode">Mode</label>
+                <select id="throttlerMode" aria-label="Throttler mode">
+                    <option value="realtime">Realtime</option>
+                    <option value="burst">Burst</option>
+                    <option value="adaptive">Adaptive</option>
+                    <option value="disabled">Disabled</option>
+                </select>
+                <small>Realtime: match playback rate. Burst: allow bursts up to buffer size. Adaptive: adjust from client feedback. Disabled: no throttling.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card info-card" style="margin-top: 16px;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons" style="font-size: 20px;" aria-hidden="true">info</span>
+            Information
+        </div>
+        <div style="margin-top: 12px; color: var(--text-secondary); font-size: 15px; line-height: 1.5;">
+            <p><strong>Stream buffer</strong> settings affect how much data is buffered before sending to clients. <strong>Stream throttler</strong> limits the send rate to avoid overwhelming players (e.g. Plex) and can reduce transcoding load. Changes take effect for new streams; existing streams keep their current settings until reconnected.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.36px;
+    }
+
+    .page-subtitle {
+        color: var(--text-secondary);
+        margin-top: 4px;
+        font-size: 17px;
+    }
+
+    .page-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .status-card {
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 12px 16px;
+        font-size: 15px;
+    }
+
+    .status-card.success {
+        color: var(--success);
+        border-color: rgba(52, 199, 89, 0.4);
+        background: rgba(52, 199, 89, 0.15);
+    }
+
+    .status-card.error {
+        color: var(--error);
+        border-color: rgba(255, 59, 48, 0.4);
+        background: rgba(255, 59, 48, 0.15);
+    }
+
+    .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+    }
+
+    .settings-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .info-card {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 0.5px solid var(--divider);
+        padding: 16px;
+    }
+
+    .card-title {
+        font-size: 17px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .form-group label {
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .form-group input[type="number"],
+    .form-group input[type="text"],
+    .form-group select {
+        background: var(--surface-light);
+        border-radius: 10px;
+        border: 0.5px solid var(--divider);
+        color: var(--text-primary);
+        font-size: 17px;
+        padding: 10px 12px;
+        font-family: inherit;
+        min-height: 44px;
+    }
+
+    .form-group small {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ request.state.csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', () => {
+        const refreshButton = document.getElementById('refreshStreamingSettingsButton');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', () => loadSettings(true));
+        }
+
+        const saveButton = document.getElementById('saveStreamingSettingsButton');
+        if (saveButton) {
+            saveButton.addEventListener('click', saveSettings);
+        }
+
+        loadSettings();
+    });
+
+    async function loadSettings(showStatus = false) {
+        try {
+            const [streamingRes, throttlerRes] = await Promise.all([
+                fetch('/api/settings/streaming'),
+                fetch('/api/settings/stream-throttler')
+            ]);
+
+            if (!streamingRes.ok) throw new Error('Failed to load streaming settings');
+            if (!throttlerRes.ok) throw new Error('Failed to load throttler settings');
+
+            const streaming = await streamingRes.json();
+            const throttler = await throttlerRes.json();
+
+            document.getElementById('bufferSize').value = streaming.buffer_size ?? 2097152;
+            document.getElementById('readSize').value = streaming.read_size ?? 65536;
+
+            document.getElementById('throttlerEnabled').checked = throttler.enabled !== false;
+            document.getElementById('targetBitrateMbps').value = ((throttler.target_bitrate_bps ?? 4000000) / 1e6);
+            document.getElementById('throttlerMode').value = throttler.mode || 'realtime';
+
+            if (showStatus) {
+                showStatusMessage('Settings refreshed.', 'success');
+            }
+        } catch (error) {
+            console.error(error);
+            showStatusMessage(error.message, 'error');
+        }
+    }
+
+    async function saveSettings() {
+        try {
+            const bufferSize = Number(document.getElementById('bufferSize').value);
+            const readSize = Number(document.getElementById('readSize').value);
+            const throttlerEnabled = document.getElementById('throttlerEnabled').checked;
+            const targetBitrateMbps = Number(document.getElementById('targetBitrateMbps').value);
+            const throttlerMode = document.getElementById('throttlerMode').value;
+
+            if (bufferSize < 65536 || bufferSize > 33554432) {
+                throw new Error('Buffer size must be between 65536 and 33554432');
+            }
+            if (readSize < 4096 || readSize > 1048576) {
+                throw new Error('Read size must be between 4096 and 1048576');
+            }
+            if (targetBitrateMbps < 1 || targetBitrateMbps > 50) {
+                throw new Error('Target bitrate must be between 1 and 50 Mbps');
+            }
+
+            const streamingPayload = { buffer_size: bufferSize, read_size: readSize };
+            const throttlerPayload = {
+                enabled: throttlerEnabled,
+                target_bitrate_bps: Math.round(targetBitrateMbps * 1e6),
+                mode: throttlerMode
+            };
+
+            const [streamingRes, throttlerRes] = await Promise.all([
+                fetch('/api/settings/streaming', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(streamingPayload)
+                }),
+                fetch('/api/settings/stream-throttler', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(throttlerPayload)
+                })
+            ]);
+
+            if (!streamingRes.ok) {
+                const err = await streamingRes.json();
+                throw new Error(err.detail || 'Failed to save streaming settings');
+            }
+            if (!throttlerRes.ok) {
+                const err = await throttlerRes.json();
+                throw new Error(err.detail || 'Failed to save throttler settings');
+            }
+
+            showStatusMessage('Streaming and throttler settings saved. New streams will use the updated values.', 'success');
+        } catch (error) {
+            console.error(error);
+            showStatusMessage(error.message, 'error');
+        }
+    }
+
+    function showStatusMessage(message, status) {
+        const card = document.getElementById('statusCard');
+        const text = document.getElementById('statusMessage');
+        card.classList.remove('success', 'error');
+        card.classList.add(status);
+        text.textContent = message;
+        card.style.display = 'block';
+        setTimeout(() => {
+            card.style.display = 'none';
+        }, 5000);
+    }
+</script>
+{% endblock %}

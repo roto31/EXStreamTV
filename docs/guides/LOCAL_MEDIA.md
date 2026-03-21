@@ -508,4 +508,4 @@ ls -la /path/to/media
 - [Hardware Transcoding](HW_TRANSCODING.md)
 - [API Reference](../api/README.md)
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

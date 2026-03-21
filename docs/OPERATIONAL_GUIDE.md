@@ -109,4 +109,4 @@ ai_agent:
 - [Observability](OBSERVABILITY.md) — Metrics reference
 - [Feature Flags](FEATURE_FLAGS.md) — Config toggles
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

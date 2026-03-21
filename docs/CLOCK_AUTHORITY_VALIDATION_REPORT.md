@@ -143,4 +143,4 @@ python scripts/validate_clock_authority.py
 EXSTREAMTV_VALIDATE_DURATIONS=1 python -m uvicorn exstreamtv.main:app --host 0.0.0.0 --port 8411
 ```
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

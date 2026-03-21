@@ -7,12 +7,18 @@ from xml.sax.saxutils import escape as xml_escape
 
 from sqlalchemy.orm import Session
 
+from ..constants import EXSTREAM_CHANNEL_ID_PREFIX
 from ..database.models_v2 import Channel
 from ..database.session import get_db
 from ..scheduling.engine_v2 import ScheduleEngineV2
 from ..scheduling.parser import ScheduleParser
 
 logger = logging.getLogger(__name__)
+
+
+def _channel_xmltv_id(channel: Channel) -> str:
+    """Stable channel ID for XMLTV and M3U (exstream.{id}). Plex requires dot in ID."""
+    return f"{EXSTREAM_CHANNEL_ID_PREFIX}.{channel.id}"
 
 
 class EPGGeneratorV2:
@@ -84,7 +90,7 @@ class EPGGeneratorV2:
             if not channel.enabled:
                 continue
 
-            channel_id = f"streamtv.{channel.number}"
+            channel_id = _channel_xmltv_id(channel)
             display_name = channel.name
 
             # Channel icon
@@ -104,7 +110,7 @@ class EPGGeneratorV2:
             if not channel.enabled:
                 continue
 
-            channel_id = f"streamtv.{channel.number}"
+            channel_id = _channel_xmltv_id(channel)
 
             # Get timeline for channel
             timeline = self._get_channel_timeline(channel, start_time, end_time, db)

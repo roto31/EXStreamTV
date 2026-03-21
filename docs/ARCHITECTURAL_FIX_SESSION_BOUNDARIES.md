@@ -58,4 +58,4 @@
 | `scheduling/xmltv_from_clock.py` | Circuit breaker on EPG failure |
 | `streaming/resolvers/youtube.py` | VPN/bot/private error classification |
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

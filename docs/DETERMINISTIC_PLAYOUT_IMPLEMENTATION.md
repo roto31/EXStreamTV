@@ -189,4 +189,4 @@ Channels 123, 143, 1929, 1980, 1984, 1984.1, 1985, 1988, 1991, 1992, 1994, 2000,
 
 **How to validate:** Run channels through HDHomeRun, observe logs for state transitions and advancement messages. Simulate crash (kill process) during playback, restart, confirm journal recovery.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

@@ -65,4 +65,4 @@
 | Async correctness --scope | Pass |
 | Invariants             | Verified (no restart bypass, no streaming changes) |
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

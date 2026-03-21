@@ -1,7 +1,7 @@
 # Observability
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-20
 
 This document lists all Prometheus metrics and alert thresholds. For architecture and monitoring philosophy, see [Platform Guide §6](../PLATFORM_GUIDE.md#6-observability--monitoring).
 

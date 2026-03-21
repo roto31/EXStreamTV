@@ -2,4 +2,4 @@
 
 See [Platform Guide](PLATFORM_GUIDE.md#10-production-readiness--safety-model) for containment over automation, bounded loops, automatic shutdown, and regression detection.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

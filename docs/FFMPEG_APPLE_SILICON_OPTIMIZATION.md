@@ -116,4 +116,4 @@ ffmpeg -loglevel error -nostats \
 - **Profile-based builder:** `exstreamtv/transcoding/ffmpeg_builder.py`
 - **Config:** `exstreamtv/config.py` (`FFmpegConfig`)
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

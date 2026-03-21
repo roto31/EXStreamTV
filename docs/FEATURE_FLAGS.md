@@ -93,4 +93,4 @@ This document lists config toggles that control features. All keys are under `co
 - [Platform Guide](../PLATFORM_GUIDE.md) — Architecture
 - [Observability](OBSERVABILITY.md) — Metrics
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

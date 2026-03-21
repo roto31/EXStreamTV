@@ -1,0 +1,160 @@
+{
+  "generated_at": "2026-03-01T01:11:33.657528",
+  "summary": {
+    "passed": false,
+    "errors": [
+      "XMLTV ch=100: ",
+      "XMLTV ch=101: ",
+      "XMLTV ch=102: ",
+      "XMLTV ch=103: ",
+      "XMLTV ch=104: ",
+      "XMLTV ch=105: ",
+      "XMLTV ch=106: ",
+      "XMLTV ch=107: ",
+      "XMLTV ch=108: ",
+      "XMLTV ch=109: ",
+      "XMLTV ch=110: ",
+      "XMLTV ch=111: ",
+      "XMLTV ch=112: ",
+      "XMLTV ch=113: ",
+      "XMLTV ch=114: ",
+      "XMLTV ch=115: ",
+      "XMLTV ch=116: ",
+      "XMLTV ch=117: ",
+      "XMLTV ch=118: ",
+      "XMLTV ch=119: ",
+      "XMLTV ch=120: ",
+      "XMLTV ch=121: ",
+      "XMLTV ch=122: ",
+      "XMLTV ch=123: ",
+      "XMLTV ch=143: ",
+      "XMLTV ch=1929: ",
+      "XMLTV ch=1980: ",
+      "XMLTV ch=1984: ",
+      "XMLTV ch=1984.1: ",
+      "XMLTV ch=1985: ",
+      "XMLTV ch=1988: ",
+      "XMLTV ch=1991: ",
+      "XMLTV ch=1992: ",
+      "XMLTV ch=1994: ",
+      "XMLTV ch=2000: ",
+      "XMLTV ch=80: ",
+      "Plex ch=100: ",
+      "Plex ch=101: ",
+      "Plex ch=102: ",
+      "Plex ch=103: ",
+      "Plex ch=104: ",
+      "Drift ch=100: HTTP 404: {\"detail\":\"Channel not found\"}",
+      "Drift ch=101: HTTP 404: {\"detail\":\"Channel not found\"}",
+      "Drift ch=102: HTTP 404: {\"detail\":\"Channel not found\"}",
+      "Drift ch=103: HTTP 404: {\"detail\":\"Channel not found\"}",
+      "Drift ch=104: HTTP 404: {\"detail\":\"Channel not found\"}"
+    ],
+    "clock_validated": 0,
+    "clock_total": 10,
+    "schedule_validated": 0
+  },
+  "clock_validation": [
+    {
+      "channel_id": 100,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    },
+    {
+      "channel_id": 101,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    },
+    {
+      "channel_id": 102,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    },
+    {
+      "channel_id": 103,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    },
+    {
+      "channel_id": 104,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    },
+    {
+      "channel_id": 105,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    },
+    {
+      "channel_id": 106,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    },
+    {
+      "channel_id": 107,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    },
+    {
+      "channel_id": 108,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    },
+    {
+      "channel_id": 109,
+      "ok": false,
+      "message": "HTTP 404: {\"detail\":\"Channel not found\"}"
+    }
+  ],
+  "xmltv_validation": {},
+  "hdhomerun_validation": {
+    "discover": {
+      "ok": true,
+      "message": null
+    },
+    "lineup": {
+      "ok": true,
+      "message": null
+    },
+    "device_id": "3E84069C",
+    "guide_numbers": [
+      "100",
+      "101",
+      "102",
+      "103",
+      "104",
+      "105",
+      "106",
+      "107",
+      "108",
+      "109",
+      "110",
+      "111",
+      "112",
+      "113",
+      "114",
+      "115",
+      "116",
+      "117",
+      "118",
+      "119",
+      "120",
+      "121",
+      "122",
+      "123",
+      "143",
+      "1929",
+      "1980",
+      "1984",
+      "1984.1",
+      "1985",
+      "1988",
+      "1991",
+      "1992",
+      "1994",
+      "2000",
+      "80"
+    ]
+  },
+  "drift_monitor": {}
+}

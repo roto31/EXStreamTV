@@ -454,4 +454,4 @@ h2. Related Documentation
 * [macOS App Guide|EXStreamTV:macOS App] - Use the menu bar app
 * [Tunarr/dizqueTV Integration|EXStreamTV:Tunarr Integration] - v2.6.0 technical details
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

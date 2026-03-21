@@ -503,4 +503,4 @@ stats = scheduler.get_stats(channel_id=1)
 - [Streaming Stability](STREAMING_STABILITY.md) - Streaming features
 - [API Reference](../api/README.md) - Complete API documentation
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

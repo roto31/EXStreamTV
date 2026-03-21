@@ -110,15 +110,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
         await app.state.channel_manager.start()
         logger.info("Channel manager started")
-        # #region agent log
-        try:
-            import json as _j
-            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as _f:
-                _f.write(_j.dumps({"hypothesisId":"H2","location":"main.py:lifespan:channel_manager","message":"channel_manager_set","data":{},"timestamp":__import__("datetime").datetime.utcnow().isoformat(),"sessionId":"debug-session"}) + "\n")
-        except Exception:
-            pass
-        # #endregion
-        
+
         # Register channel manager with health tasks for restart capability
         try:
             from exstreamtv.tasks.health_tasks import set_channel_manager
@@ -137,15 +129,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             
     except Exception as e:
         logger.warning(f"Channel manager initialization failed: {e}")
-        # #region agent log
-        try:
-            import json as _j
-            with open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a") as _f:
-                _f.write(_j.dumps({"hypothesisId":"H2","location":"main.py:lifespan:channel_manager_except","message":"channel_manager_init_failed","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":__import__("datetime").datetime.utcnow().isoformat(),"sessionId":"debug-session"}) + "\n")
-        except Exception:
-            pass
-        # #endregion
-    
+
     # Start SSDP discovery for HDHomeRun emulation
     if config.hdhomerun.enabled:
         try:
@@ -392,9 +376,31 @@ def create_app() -> FastAPI:
     
     # Mount IPTV router at root level (not under /api) for StreamTV compatibility
     # This makes URLs like /iptv/xmltv.xml instead of /api/iptv/xmltv.xml
+    # Try main iptv, then iptv_v2, then minimal inline fallback so routes always exist
+    iptv_mounted = False
     if iptv_router:
         app.include_router(iptv_router, tags=["IPTV"])
-        logger.info("IPTV router mounted at root level for StreamTV compatibility")
+        logger.info("IPTV router mounted at root level for StreamTV compatibility (/iptv/channels.m3u, /iptv/xmltv.xml)")
+        iptv_mounted = True
+    if not iptv_mounted:
+        try:
+            from exstreamtv.api import iptv_v2
+            app.include_router(iptv_v2.router, tags=["IPTV"])
+            logger.info("IPTV V2 router mounted as fallback (/iptv/channels.m3u, /iptv/xmltv.xml)")
+            iptv_mounted = True
+        except Exception as e:
+            logger.warning(f"IPTV V2 fallback failed: {e}")
+    if not iptv_mounted:
+        # Last resort: inline minimal handlers so endpoints never 404
+        @app.get("/iptv/channels.m3u", include_in_schema=False)
+        async def _iptv_channels_m3u():
+            from fastapi.responses import PlainTextResponse
+            return PlainTextResponse("#EXTM3U\n", media_type="application/x-mpegURL")
+        @app.get("/iptv/xmltv.xml", include_in_schema=False)
+        async def _iptv_xmltv():
+            from fastapi.responses import PlainTextResponse
+            return PlainTextResponse('<?xml version="1.0"?><tv></tv>', media_type="application/xml")
+        logger.warning("IPTV: minimal inline fallback registered (empty M3U/XMLTV - fix iptv import)")
     
     # Try to include performance and integrations routers
     try:

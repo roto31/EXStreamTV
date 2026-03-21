@@ -7,6 +7,7 @@ No elapsed-time drift; all derived from persisted anchor.
 """
 
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, List, Optional
@@ -100,7 +101,8 @@ class TimelineBuilder:
 
             title = item.get("custom_title") or ""
             if not title and media_item and hasattr(media_item, "title"):
-                title = media_item.title or ""
+                raw = str(media_item.title or "").strip()
+                title = "" if re.match(r"^Item \d+$", raw) else raw
 
             programmes.append(
                 TimelineProgramme(

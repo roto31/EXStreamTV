@@ -209,4 +209,4 @@ Channel 123 and possibly others show very fast advancement (`natural_eof_or_exce
 - Client-disconnect fix prevents program changes during Plex reconnects.
 - Continuous playback should be stable once content/URL issues are resolved.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

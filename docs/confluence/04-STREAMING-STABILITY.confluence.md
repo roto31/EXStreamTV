@@ -446,4 +446,4 @@ h2. Related Documentation
 * [AI Setup Guide|EXStreamTV:AI Setup] - AI configuration
 * [Hardware Transcoding|EXStreamTV:Hardware Transcoding] - FFmpeg optimization
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

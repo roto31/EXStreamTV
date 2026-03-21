@@ -58,4 +58,4 @@ flowchart TD
 
 This keeps the channel "alive" in the health task's eyes while the clock advances, so the next resolve can move to the next item.
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

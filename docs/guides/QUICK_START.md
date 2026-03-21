@@ -317,4 +317,4 @@ Now that you have a working channel:
 - Browse [GitHub Issues](https://github.com/roto31/EXStreamTV/issues)
 - Join our community on [Discord](https://discord.gg/exstreamtv)
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

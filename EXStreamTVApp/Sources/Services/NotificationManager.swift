@@ -5,6 +5,7 @@
 //  Manages macOS system notifications for EXStreamTV.
 //
 
+import AppKit
 import Foundation
 import UserNotifications
 

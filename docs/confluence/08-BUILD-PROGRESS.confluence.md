@@ -259,4 +259,4 @@ h2. Related Documentation
 * [API Reference|EXStreamTV:API Reference] - Complete API documentation
 * [Changelog|EXStreamTV:Changelog] - Version history
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

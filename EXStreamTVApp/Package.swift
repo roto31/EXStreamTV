@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "EXStreamTVApp",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v14)
     ],
     products: [
         .executable(
@@ -23,7 +23,8 @@ let package = Package(
             dependencies: [],
             path: "Sources",
             resources: [
-                .process("Resources")
+                .process("Resources/Assets.xcassets"),
+                .copy("Resources/EXStreamTV.entitlements")
             ]
         ),
     ]

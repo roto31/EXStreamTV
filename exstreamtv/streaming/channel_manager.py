@@ -20,6 +20,29 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
+
+def _duration_to_seconds(duration: Any) -> int:
+    """Normalise int, float, timedelta, or None → integer seconds."""
+    if duration is None:
+        return 0
+    if isinstance(duration, timedelta):
+        return int(duration.total_seconds())
+    try:
+        return int(duration)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _safe_import(module_path: str, name: str) -> Optional[Any]:
+    """Import a name from a module, returning None on ImportError."""
+    try:
+        import importlib
+        mod = importlib.import_module(module_path)
+        return getattr(mod, name, None)
+    except (ImportError, AttributeError) as e:
+        logger.debug(f"Optional dependency {module_path}.{name} not available: {e}")
+        return None
+
 # Optional imports for new components (graceful fallback if not available)
 try:
     from exstreamtv.streaming.session_manager import (
@@ -83,6 +106,7 @@ class ChannelStream:
     BUFFER_SIZE = 2 * 1024 * 1024  # 2MB buffer
     CHUNK_SIZE = 64 * 1024  # 64KB read chunks
     QUEUE_MAX_SIZE = 50  # Max items in broadcast queue
+    SLOW_CLIENT_THRESHOLD = 20  # Consecutive QueueFull events before disconnection
 
     def __init__(
         self,
@@ -110,7 +134,7 @@ class ChannelStream:
         # Stream state
         self._broadcast_queue: asyncio.Queue = asyncio.Queue(maxsize=self.QUEUE_MAX_SIZE)
         self._stream_task: asyncio.Task | None = None
-        self._client_queues: list[asyncio.Queue] = []
+        self._client_queues: list[tuple[asyncio.Queue, list[int]]] = []
         self._is_running = False
         self._lock = asyncio.Lock()
         self._client_count = 0
@@ -223,12 +247,8 @@ class ChannelStream:
                 item_count = len(items)
                 
                 for playout_item, media_item in items:
-                    if media_item and media_item.duration:
-                        total_duration += media_item.duration
-                    elif playout_item.duration:
-                        total_duration += int(playout_item.duration.total_seconds())
-                    else:
-                        total_duration += 1800  # Default 30 min
+                    d = _duration_to_seconds(media_item.duration if media_item else None) or _duration_to_seconds(playout_item.duration)
+                    total_duration += d if d else 1800  # Default 30 min
             
             # Load or create anchor time
             stmt = select(ChannelPlaybackPosition).where(
@@ -252,13 +272,7 @@ class ChannelStream:
                     current_time = 0
                     calculated_index = 0
                     for idx, (playout_item, media_item) in enumerate(items):
-                        if media_item and media_item.duration:
-                            item_duration = media_item.duration
-                        elif playout_item.duration:
-                            item_duration = int(playout_item.duration.total_seconds())
-                        else:
-                            item_duration = 1800
-                        
+                        item_duration = _duration_to_seconds(media_item.duration if media_item else None) or _duration_to_seconds(playout_item.duration) or 1800
                         if current_time + item_duration > cycle_position:
                             calculated_index = idx
                             # Calculate seek offset within this item
@@ -281,11 +295,7 @@ class ChannelStream:
                         self._seek_offset = 0
                     
                     self._current_item_index = calculated_index
-                    
-                    # #region agent log
-                    import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H2","location":"channel_manager.py:_load_or_initialize_position","message":"ErsatzTV-style position calculation","data":{"channel_id":self.channel_id,"channel_number":self.channel_number,"anchor_time":str(self._playout_start_time),"elapsed_seconds":elapsed,"cycle_position":cycle_position,"total_duration":total_duration,"calculated_index":calculated_index,"item_count":item_count,"seek_offset":self._seek_offset},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-                    # #endregion
-                    
+
                     logger.info(
                         f"Resuming channel {self.channel_number} at calculated index "
                         f"{self._current_item_index} (elapsed: {elapsed:.0f}s, seek: {self._seek_offset:.0f}s, anchor: {self._playout_start_time})"
@@ -318,11 +328,7 @@ class ChannelStream:
                     )
                     db.add(position)
                 db.commit()
-                
-                # #region agent log
-                import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H2","location":"channel_manager.py:_load_or_initialize_position","message":"New anchor created","data":{"channel_id":self.channel_id,"channel_number":self.channel_number,"anchor_time":str(self._playout_start_time)},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-                # #endregion
-                
+
                 logger.info(
                     f"Starting channel {self.channel_number} from beginning with anchor: "
                     f"{self._playout_start_time}"
@@ -373,10 +379,6 @@ class ChannelStream:
         from exstreamtv.database.models import ChannelPlaybackPosition
         from sqlalchemy import select
         
-        # #region agent log
-        import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H1","location":"channel_manager.py:_save_position:entry","message":"Saving position to DB","data":{"channel_id":self.channel_id,"channel_number":self.channel_number,"current_item_index":self._current_item_index},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-        # #endregion
-        
         try:
             db = self.db_session_factory()
             try:
@@ -422,11 +424,7 @@ class ChannelStream:
                     db.add(position)
                 
                 db.commit()
-                
-                # #region agent log
-                import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H1","location":"channel_manager.py:_save_position:success","message":"Position saved successfully","data":{"channel_id":self.channel_id,"saved_index":self._current_item_index},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-                # #endregion
-                
+
                 logger.debug(
                     f"Saved position for channel {self.channel_number}: "
                     f"index {self._current_item_index}"
@@ -469,11 +467,10 @@ class ChannelStream:
         if not self._is_running:
             await self.start()
         
-        # Create client queue FIRST so we receive chunks as soon as they're broadcast
         client_queue: asyncio.Queue = asyncio.Queue(maxsize=100)
-        
+        slow_count: list[int] = [0]
         async with self._lock:
-            self._client_queues.append(client_queue)
+            self._client_queues.append((client_queue, slow_count))
             self._client_count += 1
             
         logger.info(
@@ -537,10 +534,10 @@ class ChannelStream:
             
         finally:
             async with self._lock:
-                if client_queue in self._client_queues:
-                    self._client_queues.remove(client_queue)
+                self._client_queues = [
+                    (q, sc) for q, sc in self._client_queues if q is not client_queue
+                ]
                 self._client_count -= 1
-                
             logger.debug(
                 f"Client left channel {self.channel_number}, "
                 f"remaining clients: {self._client_count}"
@@ -549,29 +546,24 @@ class ChannelStream:
     async def _resolve_media_url(self, media_item: Any) -> str:
         """
         Resolve a media item to a streamable URL using MediaURLResolver.
-        
-        Args:
-            media_item: The media item to resolve
-            
-        Returns:
-            Streamable URL string
+        Prefer script field so mpegts_streamer can run yt-dlp directly (no expiring CDN URL).
         """
+        if hasattr(media_item, "script") and media_item.script:
+            script = str(media_item.script).strip()
+            if script:
+                logger.debug(f"Using script field for media {getattr(media_item, 'id', '?')}")
+                return script
         try:
             from exstreamtv.streaming.url_resolver import get_url_resolver
-            
             resolver = get_url_resolver()
             resolved = await resolver.resolve(media_item)
-            
             logger.debug(
                 f"Resolved URL for media {getattr(media_item, 'id', 'unknown')}: "
                 f"{resolved.source_type.value}"
             )
-            
             return resolved.url
-            
         except Exception as e:
             logger.warning(f"URL resolution failed, using fallback: {e}")
-            # Fallback to direct URL/path
             if hasattr(media_item, "url") and media_item.url:
                 return media_item.url
             if hasattr(media_item, "path") and media_item.path:
@@ -625,34 +617,35 @@ class ChannelStream:
             
             # Handle case where media_item is None (source_url only items)
             if media_item:
-                # Resolve stream URL using MediaURLResolver
                 stream_url = await self._resolve_media_url(media_item)
                 title = media_item.title
-                duration = media_item.duration
+                duration = _duration_to_seconds(media_item.duration)
                 source = media_item.source
                 media_id = media_item.id
-                
-                # Log the resolved URL for debugging
                 logger.info(
                     f"Channel {self.channel_number} resolved URL for '{title}': "
                     f"{stream_url[:100]}..." if len(stream_url) > 100 else stream_url
                 )
             else:
-                # Use source_url directly from playout item
                 stream_url = playout_item.source_url
                 title = playout_item.title
-                duration = int(playout_item.duration.total_seconds()) if playout_item.duration else 0
+                duration = _duration_to_seconds(playout_item.duration)
                 source = "url"
                 media_id = None
-            
-            # Get seek offset (only for first item after position calculation)
+
+            url_lower = stream_url.lower() if stream_url else ""
+            source_type = "unknown"
+            if "archive.org" in url_lower or "yt-dlp" in url_lower:
+                source_type = "archive_org"
+            elif "youtube.com" in url_lower or "youtu.be" in url_lower:
+                source_type = "youtube"
+            elif source in ("plex",):
+                source_type = "plex"
+
             seek_offset = self._seek_offset
-            self._seek_offset = 0.0  # Reset after using
-            
-            # CRITICAL FIX: Validate seek offset doesn't exceed media duration
-            # If seek offset >= duration, FFmpeg will produce no output (seeks past EOF)
+            self._seek_offset = 0.0
             if duration and seek_offset > 0:
-                max_seek = max(0, duration - 10)  # Leave at least 10 seconds of content
+                max_seek = max(0, duration - 10)
                 if seek_offset >= duration:
                     logger.warning(
                         f"Channel {self.channel_number}: Seek offset {seek_offset:.0f}s exceeds "
@@ -665,16 +658,17 @@ class ChannelStream:
                         f"to {max_seek:.0f}s for '{title}' (duration: {duration}s)"
                     )
                     seek_offset = max_seek
-            
+
             return {
                 "media_id": media_id,
                 "media_url": stream_url,
                 "title": title,
                 "duration": duration,
                 "source": source,
+                "source_type": source_type,
                 "position": self._current_item_index,
                 "expires_at": None,
-                "seek_offset": seek_offset,  # ErsatzTV-style: seek into item
+                "seek_offset": seek_offset,
             }
             
         except Exception as e:
@@ -686,22 +680,17 @@ class ChannelStream:
     async def _run_continuous_stream(self) -> None:
         """
         Run the continuous stream loop with auto-recovery.
-        
         Continuously plays items from the schedule, broadcasting to all clients.
-        Includes automatic restart on failures with exponential backoff.
         """
         from exstreamtv.streaming.mpegts_streamer import MPEGTSStreamer
-        from exstreamtv.streaming.process_watchdog import get_ffmpeg_watchdog
-        from exstreamtv.tasks.health_tasks import update_channel_metric
-        
+        get_ffmpeg_watchdog = _safe_import("exstreamtv.streaming.process_watchdog", "get_ffmpeg_watchdog")
+        update_channel_metric = _safe_import("exstreamtv.tasks.health_tasks", "update_channel_metric")
         logger.info(f"Continuous stream loop started for channel {self.channel_number}")
-        
         streamer = MPEGTSStreamer()
-        watchdog = get_ffmpeg_watchdog()
-        
+        watchdog = get_ffmpeg_watchdog() if get_ffmpeg_watchdog else None
         while self._is_running:
             try:
-                await self._stream_loop(streamer, watchdog)
+                await self._stream_loop(streamer, watchdog, update_channel_metric)
                 
             except asyncio.CancelledError:
                 logger.info(
@@ -729,10 +718,13 @@ class ChannelStream:
         # Signal end of stream to all clients
         await self._broadcast_end()
     
-    async def _stream_loop(self, streamer: Any, watchdog: Any) -> None:
+    async def _stream_loop(
+        self,
+        streamer: Any,
+        watchdog: Any,
+        update_channel_metric: Any = None,
+    ) -> None:
         """Inner streaming loop."""
-        from exstreamtv.tasks.health_tasks import update_channel_metric
-        
         while self._is_running:
             # Get next playout item from schedule
             playout_item = await self._get_next_playout_item()
@@ -748,14 +740,6 @@ class ChannelStream:
                     logger.debug(
                         f"No content for channel {self.channel_number}, waiting..."
                     )
-                    # #region agent log
-                    try:
-                        import json as _json
-                        import time as _time
-                        open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a").write(_json.dumps({"location":"channel_manager.py:_stream_loop","message":"no_content","data":{"channel_number":self.channel_number,"channel_id":self.channel_id},"timestamp":_time.time(),"sessionId":"debug-session"}) + "\n")
-                    except Exception:
-                        pass
-                    # #endregion
                     if self._use_error_screens:
                         try:
                             await self._broadcast_error_screen(
@@ -774,11 +758,7 @@ class ChannelStream:
             
             # Get seek offset from playout item (ErsatzTV-style)
             seek_offset = playout_item.get("seek_offset", 0.0)
-            
-            # #region agent log
-            import json as _json, time as _time; open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log","a").write(_json.dumps({"hypothesisId":"H4","location":"channel_manager.py:_stream_loop:playing","message":"Now playing item","data":{"channel_number":self.channel_number,"current_item_index":self._current_item_index,"title":playout_item.get("title"),"seek_offset":seek_offset},"timestamp":_time.time(),"sessionId":"debug-session"})+"\n")
-            # #endregion
-            
+
             # Update current item tracking (EPG uses this for guide alignment)
             self._current_item_start_time = datetime.utcnow()
 
@@ -797,6 +777,12 @@ class ChannelStream:
                     await asyncio.sleep(0.1)  # Small delay before next item
                     continue
                     
+                from exstreamtv.streaming.mpegts_streamer import StreamSource
+                source_type_str = playout_item.get("source_type", "unknown")
+                try:
+                    stream_source = StreamSource(source_type_str)
+                except ValueError:
+                    stream_source = StreamSource.UNKNOWN
                 if self._process_pool_manager:
                     stream_iter = streamer.stream_via_pool(
                         media_url,
@@ -805,23 +791,25 @@ class ChannelStream:
                         seek_offset=seek_offset,
                     )
                 else:
-                    stream_iter = streamer.stream(media_url, seek_offset=seek_offset)
+                    stream_iter = streamer.stream(
+                        media_url,
+                        source=stream_source,
+                        seek_offset=seek_offset,
+                    )
                 async for chunk in stream_iter:
-                        # Update health metrics
                         self._last_output_time = datetime.utcnow()
                         self._bytes_streamed += len(chunk)
-                        update_channel_metric(
-                            self.channel_id,
-                            "last_output_time",
-                            self._last_output_time
-                        )
-                        
-                        # Report to watchdog
-                        watchdog.report_output(
-                            str(self.channel_id),
-                            bytes_count=len(chunk)
-                        )
-                        
+                        if update_channel_metric:
+                            update_channel_metric(
+                                self.channel_id,
+                                "last_output_time",
+                                self._last_output_time,
+                            )
+                        if watchdog:
+                            watchdog.report_output(
+                                str(self.channel_id),
+                                bytes_count=len(chunk),
+                            )
                         await self._broadcast_chunk(chunk)
                         if not self._is_running:
                             break
@@ -973,8 +961,9 @@ class ChannelStream:
                                 media.files[0].path if media.files else None
                             ),
                             "title": f"[Filler] {media.title}",
-                            "duration": media.duration,
+                            "duration": _duration_to_seconds(media.duration),
                             "source": "filler",
+                            "source_type": "unknown",
                             "is_filler": True,
                         }
                 return None
@@ -1000,11 +989,11 @@ class ChannelStream:
                 "media_id": media.id,
                 "media_url": media_url,
                 "title": f"[Filler] {media.title}",
-                "duration": media.duration,
+                "duration": _duration_to_seconds(media.duration),
                 "source": "filler",
+                "source_type": "unknown",
                 "is_filler": True,
             }
-            
         except Exception as e:
             logger.warning(f"Error getting filler item: {e}")
             return None
@@ -1025,19 +1014,35 @@ class ChannelStream:
             await self._send_to_clients(chunk)
     
     async def _send_to_clients(self, chunk: bytes) -> None:
-        """Send chunk to all connected client queues."""
+        """Send chunk to all connected client queues. Disconnect slow clients after threshold."""
+        slow_to_remove: list[asyncio.Queue] = []
         async with self._lock:
             if self._client_queues:
                 logger.debug(
                     f"Channel {self.channel_number}: Broadcasting {len(chunk)} bytes to {len(self._client_queues)} clients"
                 )
-            for queue in self._client_queues:
+            for queue, slow_count in self._client_queues:
                 try:
                     queue.put_nowait(chunk)
+                    slow_count[0] = 0
                 except asyncio.QueueFull:
-                    # Client can't keep up - skip this chunk for them
-                    logger.debug(f"Channel {self.channel_number}: Client queue full, skipping chunk")
-                    pass
+                    slow_count[0] += 1
+                    if slow_count[0] >= self.SLOW_CLIENT_THRESHOLD:
+                        logger.warning(
+                            f"Channel {self.channel_number}: Disconnecting slow client "
+                            f"(queue full {slow_count[0]} times)"
+                        )
+                        slow_to_remove.append(queue)
+            if slow_to_remove:
+                for queue in slow_to_remove:
+                    try:
+                        queue.put_nowait(None)
+                    except asyncio.QueueFull:
+                        pass
+                self._client_queues = [
+                    (q, sc) for q, sc in self._client_queues if q not in slow_to_remove
+                ]
+                self._client_count -= len(slow_to_remove)
     
     async def _report_to_ai_systems(
         self,
@@ -1086,7 +1091,7 @@ class ChannelStream:
     async def _broadcast_end(self) -> None:
         """Signal end of stream to all clients."""
         async with self._lock:
-            for queue in self._client_queues:
+            for queue, _ in self._client_queues:
                 try:
                     queue.put_nowait(None)
                 except asyncio.QueueFull:
@@ -1253,14 +1258,6 @@ class ChannelManager:
         Returns:
             ChannelStream for the channel.
         """
-        # #region agent log
-        try:
-            import json as _json
-            import time as _time
-            open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a").write(_json.dumps({"hypothesisId":"H4","location":"channel_manager.py:get_channel_stream:entry","message":"get_channel_stream called","data":{"channel_id":channel_id,"channel_number":channel_number},"timestamp":_time.time(),"sessionId":"debug-session"}) + "\n")
-        except Exception:
-            pass
-        # #endregion
         try:
             async with self._lock:
                 if channel_id not in self._channels:
@@ -1274,33 +1271,8 @@ class ChannelManager:
                     self._channels[channel_id] = channel_stream
 
                 stream = self._channels[channel_id]
-            # Log when a tuned channel has no streamable content (diagnostic for "channel not streaming")
-            try:
-                has_content = self._channel_has_streamable_content(channel_id)
-                if not has_content:
-                    import json as _json
-                    import time as _time
-                    from exstreamtv.utils.paths import get_debug_log_path
-                    with open(get_debug_log_path(), "a") as _f:
-                        _f.write(_json.dumps({
-                            "location": "channel_manager.py:get_channel_stream",
-                            "message": "channel_no_content_at_tune",
-                            "data": {"channel_id": channel_id, "channel_number": channel_number},
-                            "timestamp": _time.time(),
-                            "sessionId": "debug-session",
-                        }) + "\n")
-            except Exception:
-                pass
             return stream
         except Exception as e:
-            # #region agent log
-            try:
-                import json as _json
-                import time as _time
-                open("/Users/roto1231/Documents/XCode Projects/EXStreamTV/.cursor/debug.log", "a").write(_json.dumps({"hypothesisId":"H4","location":"channel_manager.py:get_channel_stream:exception","message":"get_channel_stream failed","data":{"channel_id":channel_id,"error":str(e),"error_type":type(e).__name__},"timestamp":_time.time(),"sessionId":"debug-session"}) + "\n")
-            except Exception:
-                pass
-            # #endregion
             raise
 
     async def start_channel(

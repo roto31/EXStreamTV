@@ -1,9 +1,9 @@
 # EXStreamTV Documentation
 
-Architecture diagrams: [docs/architecture/DIAGRAMS.md](architecture/DIAGRAMS.md) — Mermaid-only, 14 standardized diagrams.
+Architecture diagrams: [docs/architecture/DIAGRAMS.md](architecture/DIAGRAMS.md) — Mermaid-only, 15 standardized diagrams.
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-02-21
+**Last Updated:** 2026-03-20
 
 Welcome to the EXStreamTV documentation. This guide will help you set up, configure, and use EXStreamTV for your IPTV streaming needs.
 
@@ -323,4 +323,4 @@ See `confluence/README.md` for detailed instructions.
 - [CONTRIBUTING](../CONTRIBUTING.md) - Contribution guidelines
 - [LICENSE](../LICENSE) - MIT license
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

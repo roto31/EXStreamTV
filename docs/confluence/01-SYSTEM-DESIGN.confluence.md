@@ -396,4 +396,4 @@ h2. Related Documentation
 * [TUNARR_DIZQUETV_INTEGRATION|EXStreamTV:Tunarr Integration] - v2.6.0 integration details
 * [API Documentation|EXStreamTV:API Reference] - REST API reference
 
-**Last Revised:** 2026-03-01
+**Last Revised:** 2026-03-20

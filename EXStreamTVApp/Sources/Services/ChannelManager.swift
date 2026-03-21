@@ -5,8 +5,9 @@
 //  Manages channel information and provides quick access to channel controls.
 //
 
-import Foundation
+import AppKit
 import Combine
+import Foundation
 
 @MainActor
 class ChannelManager: ObservableObject {
@@ -14,6 +15,7 @@ class ChannelManager: ObservableObject {
     
     @Published var channels: [Channel] = []
     @Published var activeChannels: [Channel] = []
+    @Published var playingChannelId: Int?
     @Published var isLoading = false
     @Published var lastError: String?
     
@@ -110,7 +112,13 @@ class ChannelManager: ObservableObject {
             NSWorkspace.shared.open(url)
         }
     }
-    
+
+    /// Updates the currently selected/playing channel and opens its stream.
+    func selectChannel(_ channel: Channel) {
+        playingChannelId = channel.id
+        openChannelStream(channel.id)
+    }
+
     // MARK: - Private Methods
     
     private func fetchChannels() async {

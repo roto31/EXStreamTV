@@ -128,6 +128,12 @@ dmypy.json
 *~
 .DS_Store
 
+# Swift Package Manager (macOS app)
+EXStreamTVApp/.build/
+
+# Local database backups (not for VCS)
+backups/
+
 # Project specific
 *.db
 *.db-shm
