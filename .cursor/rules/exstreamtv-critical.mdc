@@ -1,0 +1,19 @@
+---
+description: EXStreamTV critical safety — 8 non-negotiable rules, always active, drift-resistant companion to exstreamtv-safety.mdc
+globs: ["exstreamtv/**/*.py", "tests/**/*.py"]
+alwaysApply: true
+---
+
+# EXStreamTV Critical Rules — Never Violate
+
+Full rules:   .cursor/rules/exstreamtv-safety.mdc
+Full lessons: docs/LESSONS_LEARNED.md
+
+1. datetime     — always datetime.now(tz=timezone.utc), never utcnow(). Normalise DB values with _ensure_utc() before arithmetic.
+2. FFmpeg flags — always import from exstreamtv/ffmpeg/constants.py. Never hardcode. Never -flags +low_delay or +fastseek.
+3. H.264 COPY   — always add -bsf:v h264_mp4toannexb after -c:v copy into MPEG-TS. Non-optional.
+4. async + DB   — never call sync SQLAlchemy .execute() or .commit() directly inside async def. Always run_in_executor.
+5. async lock   — never await inside async with self._lock. Collect under lock, execute outside.
+6. XMLTV time   — always %Y%m%d%H%M%S +0000. No dashes, no colons, no UTC suffix.
+7. sched loop   — every while loop advancing a time cursor must have an else guard that advances the index and breaks on full wrap.
+8. MPEG-TS trim — always find 0x47 sync byte and align before yielding trimmed bytes.

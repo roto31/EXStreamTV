@@ -1,0 +1,321 @@
+---
+description: EXStreamTV safety rules — auto-attached to all Python files. Enforces patterns from 30 confirmed audit bugs. Applies equally to ErsatzTV-ported code and new code.
+globs: ["exstreamtv/**/*.py", "tests/**/*.py"]
+alwaysApply: true
+---
+
+# EXStreamTV Safety Rules
+
+Derived from a full codebase audit (2026-03-20). 30 confirmed bugs across 18 files.
+Full reference: docs/LESSONS_LEARNED.md
+Short companion: .cursor/rules/exstreamtv-critical.mdc
+
+---
+
+## RULE 01 — Datetime: Always Timezone-Aware (LL-002, LL-015, LL-020)
+
+NEVER use datetime.utcnow() or datetime.now() without tz=timezone.utc.
+
+WRONG:
+    now = datetime.utcnow()
+
+CORRECT:
+    from datetime import datetime, timezone
+    now = datetime.now(tz=timezone.utc)
+
+SQLite returns naive datetimes (no PARSE_DECLTYPES configured in this project).
+Always normalise before arithmetic:
+
+    def _ensure_utc(dt):
+        if dt is None: return None
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+    elapsed = (datetime.now(tz=timezone.utc) - _ensure_utc(db_value)).total_seconds()
+
+---
+
+## RULE 02 — FFmpeg Flags: Always From constants.py (LL-004, LL-005, LL-011, LL-017)
+
+NEVER hardcode FFmpeg flag strings. Always import from exstreamtv/ffmpeg/constants.py.
+
+WRONG:
+    cmd.extend(["-fflags", "+genpts+discardcorrupt+fastseek"])
+    cmd.extend(["-flags", "+low_delay"])
+    cmd.extend(["-af", "loudnorm=I=-24:TP=-2:LRA=7"])
+
+CORRECT:
+    from exstreamtv.ffmpeg.constants import FFLAGS_STREAMING, LOUDNORM_FILTER
+    cmd.extend(["-fflags", FFLAGS_STREAMING])
+    cmd.extend(["-af", LOUDNORM_FILTER])
+
+BANNED flags — never use these:
+- -flags +low_delay  (drops B-frames on pre-recorded content, causes A/V desync)
+- +fastseek in -fflags  (wrong context for pipe output, masks missing +igndts)
+- loudnorm=I=-24  (wrong loudness target, causes volume jumps between items)
+
+---
+
+## RULE 03 — H.264 COPY Path: Always Add Bitstream Filter (LL-006)
+
+Whenever writing -c:v copy for H.264 content destined for MPEG-TS, ALWAYS add
+h264_mp4toannexb. No exceptions.
+
+    from exstreamtv.ffmpeg.constants import BSF_H264_ANNEXB
+
+    if video_format == VideoFormat.COPY:
+        cmd.extend(["-c:v", "copy"])
+        cmd.extend(["-bsf:v", BSF_H264_ANNEXB])  # REQUIRED — not optional
+
+Without this, the first GOP is corrupted or black on all decoders.
+
+---
+
+## RULE 04 — Hardware Accel: hwdownload Before format= (LL-012, LL-029)
+
+When hardware decoding is active AND a CPU-side filter is needed, prepend hwdownload.
+
+WRONG (crashes with "Impossible to convert between the formats"):
+    filters = ["scale=1920:1080", "format=yuv420p"]
+
+CORRECT:
+    is_hw = caps.preferred_method not in (HardwareAccelType.NONE, None)
+    if is_hw:
+        filters.insert(0, "hwdownload")
+    filters.append("format=yuv420p")
+
+---
+
+## RULE 05 — Scheduler Loops: Always Guard Empty Output (LL-001)
+
+Every while loop advancing a time cursor MUST have an else branch that advances the
+index if no items are produced. Without this, an empty collection causes 100% CPU spin.
+
+WRONG:
+    while current_time < end:
+        items = get_items(...)
+        if items:
+            current_time = items[-1].finish
+        # NO ELSE — infinite loop
+
+CORRECT:
+    _start_idx = schedule_index
+    while current_time < end:
+        items = get_items(...)
+        if items:
+            current_time = items[-1].finish
+        else:
+            schedule_index = (schedule_index + 1) % len(self.schedule_items)
+            if schedule_index == _start_idx:
+                break   # full wrap with no output — abort
+            continue
+        schedule_index = (schedule_index + 1) % len(self.schedule_items)
+
+---
+
+## RULE 06 — Database: Never Block the Event Loop (LL-003, LL-013)
+
+NEVER call synchronous SQLAlchemy .execute() or .commit() inside async def.
+
+WRONG:
+    async def save_something(self):
+        db = self.db_session_factory()
+        result = db.execute(stmt)   # BLOCKS ENTIRE EVENT LOOP
+
+CORRECT:
+    async def save_something(self):
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self._save_something_sync)
+
+    def _save_something_sync(self):
+        db = self.db_session_factory()
+        try:
+            result = db.execute(stmt)
+            db.commit()
+        finally:
+            db.close()  # ALWAYS in finally
+
+Always pair every db = factory() with finally: db.close().
+
+---
+
+## RULE 07 — XMLTV Timestamps: Exactly One Format (LL-007)
+
+ALL programme start/stop attributes MUST use: %Y%m%d%H%M%S +0000
+
+WRONG:
+    dt.strftime("%Y-%m-%d %H:%M:%S UTC")   # invalid XMLTV
+    dt.strftime("%Y-%m-%dT%H:%M:%SZ")       # ISO 8601, not XMLTV
+
+CORRECT:
+    dt.strftime("%Y%m%d%H%M%S +0000")
+
+Plex silently rejects any programme element with a non-conforming timestamp.
+
+---
+
+## RULE 08 — EPG: Guard None Before strftime (LL-008)
+
+Any variable used in .strftime() MUST be checked for None first.
+
+WRONG:
+    start_str = start_time.strftime(...)    # AttributeError if None
+
+CORRECT:
+    if start_time is None:
+        logger.warning(f"start_time None for channel {ch}, using now")
+        start_time = datetime.now(tz=timezone.utc)
+    if end_time is None or end_time <= start_time:
+        end_time = start_time + timedelta(seconds=1800)
+    start_str = start_time.strftime("%Y%m%d%H%M%S +0000")
+
+---
+
+## RULE 09 — Loop Variables: Never Shadow Outer Counters (LL-009)
+
+Inner loops MUST use distinct variable names from outer counters.
+
+WRONG:
+    for idx in range(current_item_index):    # shadows outer idx
+        item = schedule_items[idx]
+
+CORRECT:
+    for _ci in range(current_item_index):
+        item = schedule_items[_ci]
+
+---
+
+## RULE 10 — Channel Number: Always Cast to int (LL-010)
+
+FastAPI path parameters are str. Channel.number is int. Always cast explicitly.
+
+WRONG:
+    stmt = select(Channel).where(Channel.number == channel_number)
+
+CORRECT:
+    try:
+        ch = int(channel_number)
+    except (ValueError, TypeError):
+        raise HTTPException(400, detail=f"Invalid channel number: {channel_number!r}")
+    stmt = select(Channel).where(Channel.number == ch)
+
+---
+
+## RULE 11 — Async Locks: Never Await Blocking I/O Inside (LL-013)
+
+async with self._lock must contain only fast non-blocking operations.
+
+WRONG:
+    async with self._lock:
+        for item in self._items:
+            await self._kill_process(item)  # 5s inside lock = deadlock
+
+CORRECT:
+    to_kill = []
+    async with self._lock:
+        for item in list(self._items):
+            if item.needs_kill:
+                to_kill.append(item)
+                del self._items[item.id]
+    for item in to_kill:      # outside the lock
+        await self._kill_process(item)
+
+---
+
+## RULE 12 — MPEG-TS Buffer: Align Trim to Sync Byte (LL-014)
+
+Any operation slicing an MPEG-TS buffer MUST align to the nearest 0x47 sync byte.
+
+WRONG:
+    trimmed = buffer[-max_size:]
+
+CORRECT:
+    trimmed = buffer[-max_size:]
+    pos = trimmed.find(0x47)
+    if pos > 0:
+        trimmed = trimmed[pos:]
+    elif pos == -1:
+        logger.error("No MPEG-TS sync byte — discarding buffer")
+        trimmed = b""
+
+---
+
+## RULE 13 — Muxrate: Always Explicit int() Cast (LL-016)
+
+WRONG:
+    f"{profile.video_bitrate + profile.audio_bitrate}k"   # silent str concat
+
+CORRECT:
+    f"{int(profile.video_bitrate) + int(profile.audio_bitrate)}k"
+
+---
+
+## RULE 14 — YAML: Always safe_load (LL-022)
+
+WRONG:
+    data = yaml.load(f, Loader=yaml.FullLoader)
+
+CORRECT:
+    data = yaml.safe_load(f)
+
+---
+
+## RULE 15 — Caches: Always Include TTL (LL-019)
+
+    import time as _t
+    _cache_loaded_at: float = 0.0
+    _CACHE_TTL: int = 300
+
+    def _load_cache(force: bool = False) -> None:
+        global _cache_loaded_at
+        if not force and (_t.monotonic() - _cache_loaded_at) < _CACHE_TTL:
+            return
+        # ... reload credentials ...
+        _cache_loaded_at = _t.monotonic()
+
+---
+
+## RULE 16 — parse_duration: Handle Bare Integers (LL-018)
+
+Add at the start of ScheduleParser.parse_duration():
+
+    if not duration_str:
+        return None
+    duration_str = str(duration_str).strip()
+    if duration_str.isdigit():
+        val = int(duration_str)
+        return val if val > 0 else None
+
+---
+
+## RULE 17 — Semaphore: Use try/except for acquire_nowait (LL-021)
+
+WRONG:
+    if not semaphore.locked():
+        semaphore.acquire_nowait()
+
+CORRECT:
+    try:
+        semaphore.acquire_nowait()
+    except asyncio.QueueFull:
+        return None
+
+---
+
+## RULE 18 — ErsatzTV Ports: Verify Every Flag (LL-004, LL-005, LL-016)
+
+When porting code from ErsatzTV (C#), verify every FFmpeg flag for Python/pipe context.
+Confirm before committing any ported code:
+
+    [ ] All datetime values use datetime.now(tz=timezone.utc)
+    [ ] No FFmpeg flags hardcoded — all from constants.py
+    [ ] No -flags +low_delay anywhere
+    [ ] No +fastseek in -fflags
+    [ ] H.264 COPY path includes -bsf:v h264_mp4toannexb
+    [ ] Hardware decode filter chain has hwdownload before format=
+    [ ] Scheduler while-loops have empty-output guard
+    [ ] XMLTV timestamps use %Y%m%d%H%M%S +0000
+    [ ] No sync DB calls inside async def
+    [ ] No long-running awaits inside async locks
+    [ ] MPEG-TS buffer trims aligned to 0x47
+    [ ] Muxrate uses explicit int() cast
+    [ ] yaml.safe_load() not yaml.load()
