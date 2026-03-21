@@ -2,10 +2,10 @@
 
 > **Wiki mirror:** Matches [`docs/LESSONS_LEARNED.md`](https://github.com/roto31/EXStreamTV/blob/main/docs/LESSONS_LEARNED.md) on `main`. Edit the repository file first, then refresh this page.
 
-**Document version:** 1.3  
-**Audit date:** 2026-03-20 (codebase); **LL-031–035** Confluence / publishing (2026-03-21 – 2026-03-22)  
-**Scope:** Full codebase audit — 30 confirmed issues across 18 files; plus 5 documentation/tooling lessons (LL-031–035)  
-**Status:** Active — rules and skills derived from this document are enforced via `.cursor/rules/exstreamtv-safety.mdc` (runtime) and `.cursor/rules/exstreamtv-confluence.mdc` (docs/Confluence paths)
+**Document version:** 1.4  
+**Audit date:** 2026-03-20 (codebase); **LL-031–036** Confluence / publishing / doc parity (2026-03-21 – 2026-03-22)  
+**Scope:** Full codebase audit — 30 confirmed issues across 18 files; plus 6 documentation/tooling lessons (LL-031–036)  
+**Status:** Active — rules and skills via `.cursor/rules/exstreamtv-safety.mdc` (runtime), `.cursor/rules/exstreamtv-confluence.mdc`, `.cursor/rules/exstreamtv-documentation-parity.mdc` (doc publish workflow)
 
 ---
 
@@ -483,17 +483,30 @@ Each entry follows the format:
 
 ---
 
+## LL-036 — Missing Mermaid / “Blank” Confluence Pages While GitHub Wiki Looked Complete
+
+| Field | Detail |
+|---|---|
+| **Severity** | 🟡 Medium |
+| **Area** | Documentation / GitHub Wiki + Confluence parity |
+| **Root Cause** | **Confluence** and **GitHub Wiki** are updated by **different steps**. Wiki Markdown is correct (including ` ```mermaid ` fences), but Confluence shows **broken or missing diagrams** when: (1) **SVG attachments never uploaded** (e.g. HTTP **415** from wrong `httpx` default `Content-Type` — LL-034) while the page body still referenced `ri:attachment`; (2) **Kroki** failed and storage fell back to a **Mermaid code** macro without a Confluence Mermaid app → looks like a code fence, not a diagram; (3) **viewer** blocked Atlassian **JavaScript** → macros and media do not render. **“Blank” pages** often come from **very short** wiki stubs (e.g. link-only pages), the intentional short **`EXStreamTV.md`** wiki landing, or a Confluence child left at bootstrap **`<p />`** until a full publish runs. |
+| **Symptom** | Stakeholders report **empty diagrams**, **missing images**, or **blank** Confluence pages while **github.com/.../wiki** looks fine. |
+| **Fix Applied** | **Abort Confluence publish** if any Mermaid SVG upload fails (avoid body pointing at missing files). **Stderr** when Kroki falls back to code macro. **`scripts/verify_wiki_confluence_docs.py`** with **`--kroki`** validates every sidebar wiki page exists and every Mermaid block renders via Kroki before claiming “done”. **RULE DOC-07 / DOC-08**: treat **GitHub Wiki + Confluence** as dual targets; run verify after publish. |
+| **Prevention Rule** | RULE DOC-07 — Documentation: GitHub Wiki + Confluence Parity · RULE DOC-08 — Post-Publish Documentation Verification |
+
+---
+
 ## Summary Statistics
 
 | Severity | Count |
 |---|---|
 | 🔴 Critical | 14 |
 | 🟡 High | 9 |
-| 🟡 Medium | 11 |
+| 🟡 Medium | 12 |
 | 🟡 Low | 1 |
 | 🔴 Security | 1 |
 | Retracted | 1 |
-| **Total confirmed** | **35** |
+| **Total confirmed** | **36** |
 
 | Category | Count |
 |---|---|
@@ -506,4 +519,4 @@ Each entry follows the format:
 | Resource management | 3 |
 | Dead code | 2 |
 | Security | 1 |
-| Documentation / Confluence / uv | 5 |
+| Documentation / Confluence / uv | 6 |

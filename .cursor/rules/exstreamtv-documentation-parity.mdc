@@ -1,0 +1,36 @@
+---
+description: >-
+  When the user asks to publish or update documentation, mirror to GitHub Wiki AND Confluence,
+  then verify (verify_wiki_confluence_docs.py --kroki) before declaring complete. Dual-target
+  parity for Mermaid diagrams and non-blank pages.
+globs: EXStreamTV.wiki/**,docs/**,scripts/publish_confluence*.py,scripts/verify_wiki_confluence_docs.py,scripts/confluence_markdown_storage.py
+alwaysApply: false
+---
+
+# EXStreamTV — Documentation parity (GitHub Wiki + Confluence)
+
+Full lesson: **LL-036** in `docs/LESSONS_LEARNED.md`  
+Companion: `.cursor/rules/exstreamtv-confluence.mdc` (REST, attachments, titles)
+
+## RULE DOC-07 — Documentation: GitHub Wiki + Confluence Parity
+
+Documentation that lives in **`EXStreamTV.wiki/`** is the **source** for the GitHub Wiki UI **and** for Confluence ESTV (via `publish_confluence_wiki_tree.py`). They are **not** the same URL or pipeline.
+
+When the user requests **publish** or **update documentation** (or equivalent):
+
+1. **GitHub Wiki** — Commit and **push** changes under `EXStreamTV.wiki/` to the GitHub Wiki remote (same content the wiki site shows). Do not treat “Confluence only” as 100% done if the wiki repo is stale.
+2. **Confluence** — Run **`uv run scripts/publish_confluence_wiki_tree.py`** with valid **`CONFLUENCE_*`** credentials (and **`CONFLUENCE_ROOT_PAGE_ID`** or rely on title reuse — LL-035). Ensure **`CONFLUENCE_SKIP_KROKI`** is **not** set unless intentional (no SVG diagrams).
+3. **Order** — Prefer: finalize Markdown in repo → push wiki → run Confluence publisher (so both reflect the same revision).
+
+Short wiki **hub** pages (links only) are valid; the Confluence mirror will match. The stub **`EXStreamTV.md`** (“Welcome…”) is intentional for the **EXStreamTV Wiki** child title (LL-033).
+
+## RULE DOC-08 — Post-Publish Documentation Verification (Mandatory)
+
+Before stating that documentation publish is **complete**:
+
+1. Run **`uv run scripts/verify_wiki_confluence_docs.py --kroki`** — must exit **0** (every **`SIDEBAR_STEMS`** file exists; every Mermaid block renders via Kroki).
+2. Optionally **`--warn-thin 200`** — surfaces pages that may **look** sparse on Confluence; expand content if inappropriate.
+3. Spot-check **Confluence** in a logged-in browser with scripts allowed (Atlassian **JS errors** can hide diagrams — LL-036).
+4. If the publish log showed **`Kroki Mermaid render failed`**, fix the diagram or install a Confluence **Mermaid** app for code-macro fallback.
+
+Do **not** declare “100% complete” after only one of GitHub Wiki push or Confluence publish unless the user explicitly scoped a single target.

@@ -6,7 +6,8 @@ description: >-
   scripts vs Atlassian MCP, uv run invocation, space keys, title rules, and attachment
   behavior. Use when editing Confluence publishing scripts, docs/confluence/, EXStreamTV.wiki/,
   or when the user asks to mirror the wiki to Confluence, update ESTV docs, or fix
-  Mermaid/rendering on Confluence.
+  Mermaid/rendering on Confluence. For "publish all documentation" / GitHub Wiki + Confluence together,
+  use skill ``exstreamtv-documentation-parity``.
 ---
 
 # EXStreamTV Confluence & Wiki Publishing
@@ -20,6 +21,7 @@ description: >-
 | LL-033 | Unique titles per space — **`EXStreamTV`** root vs **`EXStreamTV Wiki`** child |
 | LL-034 | **`httpx.Client`**: no default **`Content-Type: application/json`** if the same client uploads attachments — else Confluence **415** on all files (SVG + screenshots) |
 | LL-035 | Second publish without **`CONFLUENCE_ROOT_PAGE_ID`**: do not **`POST`** duplicate root title — **400**; script reuses root via title **lookup** (or set env id) |
+| LL-036 | GitHub Wiki can be fine while Confluence **misses diagrams** or looks **blank** — dual publish + **`verify_wiki_confluence_docs.py --kroki`** (RULE DOC-07/08) |
 
 ## When to Use Which Publisher
 
@@ -50,6 +52,7 @@ export CONFLUENCE_SPACE_KEY=ESTV
 - `scripts/publish_confluence_mirror.py` — single-page bundle.
 - `scripts/confluence_markdown_storage.py` — Markdown → storage (Mermaid + code + images).
 - `scripts/wiki_sidebar_order.py` — `SIDEBAR_STEMS`, `display_title`, `confluence_wiki_child_title`.
+- `scripts/verify_wiki_confluence_docs.py` — pre/post check; use **`--kroki`** for full Mermaid validation (LL-036).
 - `docs/confluence/README.md` — human runbook.
 
 ## Checklist Before Changing Publishers
@@ -64,3 +67,4 @@ export CONFLUENCE_SPACE_KEY=ESTV
 ## Verification
 
 - `uv run scripts/publish_confluence_wiki_tree.py --dry-run` — lists pages; writes `docs/confluence/_dry_run_wiki_tree_storage_snippet.xml` (confirm `mermaid` in macro if sample includes a mermaid page).
+- `uv run scripts/verify_wiki_confluence_docs.py --kroki` — required for **100%** Mermaid validation before claiming doc publish complete (see **exstreamtv-documentation-parity** skill, RULE DOC-08).

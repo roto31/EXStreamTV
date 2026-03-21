@@ -177,3 +177,6 @@ xcuserdata/
 
 # Local clone used to push GitHub Wiki (scripts/sync_docs_to_wiki.py)
 .wiki_push_clone/
+
+# Confluence publisher dry-run output
+docs/confluence/_dry_run_storage_snippet.xml

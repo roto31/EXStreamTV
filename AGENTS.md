@@ -33,4 +33,6 @@ Subdirectory-specific rules are in:
 - exstreamtv/streaming/AGENTS.md    (async lock, sync DB, MPEG-TS rules)
 - exstreamtv/transcoding/AGENTS.md  (ErsatzTV port checklist)
 
-Confluence / GitHub wiki mirror (REST vs MCP, uv, titles, attachment uploads, root reuse): `.cursor/rules/exstreamtv-confluence.mdc` · lessons **LL-031–LL-035** in `docs/LESSONS_LEARNED.md` · skill `.cursor/skills/exstreamtv-confluence-publish/SKILL.md`
+Confluence / GitHub wiki mirror (REST vs MCP, uv, titles, attachment uploads, root reuse): `.cursor/rules/exstreamtv-confluence.mdc` · lessons **LL-031–LL-036** in `docs/LESSONS_LEARNED.md` · skill `.cursor/skills/exstreamtv-confluence-publish/SKILL.md`
+
+When asked to **publish or update documentation** (both surfaces): `.cursor/rules/exstreamtv-documentation-parity.mdc` (RULE DOC-07, DOC-08) · skill `.cursor/skills/exstreamtv-documentation-parity/SKILL.md` — GitHub Wiki **push** + `uv run scripts/publish_confluence_wiki_tree.py` + `uv run scripts/verify_wiki_confluence_docs.py --kroki` before declaring complete.

@@ -4,16 +4,20 @@ All notable changes to the Documentation component will be documented in this fi
 
 **Last Revised:** 2026-03-22
 
-## [2.6.0] - 2026-03-22 (Confluence publishers, lessons LL-031–LL-035, wiki sync)
+## [2.6.0] - 2026-03-22 (doc parity LL-036, verify script, Confluence hardening)
 
-### Documentation / tooling
-- **`docs/LESSONS_LEARNED.md`** — **LL-031–LL-035** (Confluence/MCP, uv, titles, attachment **415**, root **400** + reuse). Version **1.3**; **35** lessons.
-- **`EXStreamTV.wiki/Lessons-Learned.md`** — synced from repo; wiki banner → canonical doc on `main`.
-- **`scripts/publish_confluence_wiki_tree.py`**, **`publish_confluence_mirror.py`** — httpx headers for multipart; **`.env`**; username alias; root title lookup.
-- **`docs/confluence/README.md`**, **`.env.example`**, Cursor **confluence** rule/skill, **`AGENTS.md`**.
+### Added
+- **`scripts/verify_wiki_confluence_docs.py`** — sidebar coverage; Mermaid counts; **`--kroki`** validates Kroki; **`--warn-thin`** optional.
+- **`.cursor/rules/exstreamtv-documentation-parity.mdc`** — **RULE DOC-07** / **DOC-08** (GitHub Wiki + Confluence + mandatory verify).
+- **`.cursor/skills/exstreamtv-documentation-parity/SKILL.md`**.
+
+### Changed
+- **`docs/LESSONS_LEARNED.md`** — **LL-031–LL-036**; version **1.4**; **36** lessons.
+- **`EXStreamTV.wiki/Lessons-Learned.md`**, **`CI-CD-And-Testing.md`**, **`Deployment.md`**, **`Documentation-Changelog.md`** — sync / hub text.
+- **`scripts/publish_confluence_wiki_tree.py`**, **`publish_confluence_mirror.py`**, **`confluence_markdown_storage.py`**, **`docs/confluence/README.md`**, **`AGENTS.md`**, Confluence publish skill — multipart **415** fix, upload abort, Kroki stderr, verify pointers.
 
 ### Confluence (ESTV)
-- Republish: `uv run scripts/publish_confluence_wiki_tree.py` to update mirrored pages and attachments.
+- `uv run scripts/publish_confluence_wiki_tree.py` then `uv run scripts/verify_wiki_confluence_docs.py --kroki`.
 
 ## [2.6.0] - 2026-03-21 (documentation, Mermaid, wiki sync)
 

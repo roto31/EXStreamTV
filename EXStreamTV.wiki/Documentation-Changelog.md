@@ -4,17 +4,21 @@ All notable changes to the Documentation component will be documented in this fi
 
 **Last Revised:** 2026-03-22
 
-## [2.6.0] - 2026-03-22 (Confluence publishers, lessons LL-031–LL-035, wiki sync)
+## [2.6.0] - 2026-03-22 (doc parity, LL-036, verify script)
 
-### Documentation / tooling
-- **`docs/LESSONS_LEARNED.md`** — **LL-031–LL-035**: Confluence REST vs Atlassian MCP (ADF), **`uv run scripts/…`** (PEP 723), duplicate page titles (**EXStreamTV** vs **EXStreamTV Wiki**), attachment **HTTP 415** (httpx default `Content-Type: application/json` vs multipart), duplicate root **HTTP 400** + title lookup reuse / **`CONFLUENCE_ROOT_PAGE_ID`**. Summary **35** confirmed lessons; doc version **1.3**.
-- **`EXStreamTV.wiki/Lessons-Learned.md`** — full sync from repo + wiki mirror banner linking to canonical `docs/LESSONS_LEARNED.md`.
-- **`scripts/publish_confluence_wiki_tree.py`** / **`publish_confluence_mirror.py`** — multipart-safe httpx headers; repo **`.env`** load; **`CONFLUENCE_USERNAME`** alias; root page discovery when id env unset.
-- **`docs/confluence/README.md`** — 415 troubleshooting, root id / auto-reuse; **`.env.example`** Confluence keys.
-- **Cursor:** `.cursor/rules/exstreamtv-confluence.mdc` (**RULE DOC-05**, **DOC-06**), `.cursor/skills/exstreamtv-confluence-publish/SKILL.md`, **`AGENTS.md`** pointers.
+### Added
+- **`scripts/verify_wiki_confluence_docs.py`** — checks every **`SIDEBAR_STEMS`** wiki page exists; counts Mermaid; **`--kroki`** validates Kroki renders; optional **`--warn-thin`** for sparse pages.
+- **`.cursor/rules/exstreamtv-documentation-parity.mdc`** — **RULE DOC-07** (GitHub Wiki + Confluence dual publish), **RULE DOC-08** (mandatory verify before “done”).
+- **`.cursor/skills/exstreamtv-documentation-parity/SKILL.md`** — agent workflow for 100% documentation completion on both surfaces.
 
-### Confluence Cloud (ESTV)
-- Refresh pages after pulling: `uv run scripts/publish_confluence_wiki_tree.py` (credentials in **`.env`** or env). Ensures Mermaid SVG attachments and stakeholder HTML land in the space.
+### Changed
+- **`docs/LESSONS_LEARNED.md`** — **LL-036** (missing Mermaid / blank Confluence vs wiki); stats **36** lessons.
+- **`EXStreamTV.wiki/CI-CD-And-Testing.md`**, **`Deployment.md`** — expanded hub text so pages are not mistaken for empty stubs.
+- **`AGENTS.md`**, **`docs/confluence/README.md`**, Confluence publish skill — pointers to parity rule and verify script.
+
+### Also this date (earlier 2026-03-22 publish hardening)
+- **`docs/LESSONS_LEARNED.md`** — **LL-031–LL-035** (Confluence REST vs MCP, uv, titles, **415** multipart fix, root **400** reuse).
+- **`scripts/publish_confluence_wiki_tree.py`** / **`publish_confluence_mirror.py`**, **`.env.example`**, Confluence rule/skill updates; ESTV republish for Mermaid SVG attachments.
 
 ## [2.6.0] - 2026-03-21 (documentation, Mermaid, wiki sync)
 

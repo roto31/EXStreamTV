@@ -102,6 +102,18 @@ Use `uv run scripts/publish_confluence_wiki_tree.py --dry-run` to list planned p
 
 **Confluence shows “JavaScript load error” or login wall:** the site cannot load Atlassian scripts (network, VPN, blocker). Fix the browser environment; otherwise pages may not render attachments or macros correctly ([Atlassian troubleshooting](https://support.atlassian.com/)).
 
+## Verify wiki + Mermaid (GitHub Wiki + Confluence parity)
+
+After changing `EXStreamTV.wiki/*.md`, treat **GitHub Wiki** and **Confluence** as separate publishes. Before claiming documentation is complete:
+
+```bash
+uv run scripts/verify_wiki_confluence_docs.py --kroki
+# optional: flag very short hub pages
+uv run scripts/verify_wiki_confluence_docs.py --kroki --warn-thin 200
+```
+
+- **`--kroki`** — POSTs every ` ```mermaid ` block to Kroki; exit **1** if any render fails (catches Confluence surprises early). See **LL-036**, **RULE DOC-08**, skill **exstreamtv-documentation-parity**.
+
 **Last Revised:** 2026-03-22
 
 ---

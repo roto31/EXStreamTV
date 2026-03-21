@@ -1,12 +1,12 @@
 ---
 description: Confluence wiki mirror, REST storage vs Atlassian MCP ADF, uv script invocation
-globs: scripts/publish_confluence*.py,scripts/confluence_*.py,scripts/wiki_sidebar_order.py,scripts/build_*confluence*.py,scripts/build_atlassian_adf_manifest.py,docs/confluence/**,EXStreamTV.wiki/**
+globs: scripts/publish_confluence*.py,scripts/confluence_*.py,scripts/wiki_sidebar_order.py,scripts/verify_wiki_confluence_docs.py,scripts/build_*confluence*.py,scripts/build_atlassian_adf_manifest.py,docs/confluence/**,EXStreamTV.wiki/**
 alwaysApply: false
 ---
 
 # EXStreamTV — Confluence & Wiki Publishing
 
-Full lessons: **LL-031–LL-035** in `docs/LESSONS_LEARNED.md`
+Full lessons: **LL-031–LL-036** in `docs/LESSONS_LEARNED.md` · dual-target workflow: `.cursor/rules/exstreamtv-documentation-parity.mdc`
 
 ## RULE DOC-01 — Confluence: Storage REST vs ADF MCP
 
