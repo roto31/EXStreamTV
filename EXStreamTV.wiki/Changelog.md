@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Alembic 006** — `schedule_history` table; **`POST /api/schedule-history/capture`** and **`POST /api/schedule-history/{id}/revert`** (`exstreamtv/api/schedule_history.py`, `schedule_snapshot_service`).
 - **`exstreamtv/utils/async_subprocess.py`** — thread-pooled / asyncio subprocess helpers for API and streaming-adjacent paths.
 - **`exstreamtv/patterns/`** and **`exstreamtv/models/`** — shared application patterns; ADR **`docs/architecture/ADR-channel-manager-database-sessions.md`**.
-- **`frontend/`** — Vite + React + TypeScript scaffold (dev proxy to API).
+- **`frontend/`** — Vite + React + TypeScript + **Tailwind** + **React Router**; **personas** (`sessionStorage` + context); pages: dashboard, channels, schedules, schedule-history, settings; dev proxy → **8411**. Spec: **`docs/EXStreamTV-UI-Architecture.md`**.
 - **`.cursor/rules/patterns-implemented.mdc`** — Cursor rule summarizing implemented patterns.
 
 ### Documentation & Confluence tooling

@@ -1,9 +1,9 @@
 # EXStreamTV — Lessons Learned
 
-**Document version:** 1.4  
-**Audit date:** 2026-03-20 (codebase); **LL-031–036** Confluence / publishing / doc parity (2026-03-21 – 2026-03-22)  
-**Scope:** Full codebase audit — 30 confirmed issues across 18 files; plus 6 documentation/tooling lessons (LL-031–036)  
-**Status:** Active — rules and skills via `.cursor/rules/exstreamtv-safety.mdc` (runtime), `.cursor/rules/exstreamtv-confluence.mdc`, `.cursor/rules/exstreamtv-documentation-parity.mdc` (doc publish workflow)
+**Document version:** 1.5  
+**Audit date:** 2026-03-20 (codebase); **LL-031–037** Confluence / publishing / doc parity / GitHub Wiki UI (2026-03-21 – 2026-04-03)  
+**Scope:** Full codebase audit — 30 confirmed issues across 18 files; plus 7 documentation/tooling lessons (LL-031–037)  
+**Status:** Active — rules and skills via `.cursor/rules/exstreamtv-safety.mdc` (runtime), `.cursor/rules/exstreamtv-confluence.mdc`, `.cursor/rules/exstreamtv-documentation-parity.mdc`, `.cursor/rules/exstreamtv-github-wiki.mdc` (doc publish + wiki discoverability)
 
 ---
 
@@ -494,17 +494,30 @@ Each entry follows the format:
 
 ---
 
+## LL-037 — GitHub Wiki “Missing” From Repo Sidebar While Content Still Exists
+
+| Field | Detail |
+|---|---|
+| **Severity** | 🟡 Medium |
+| **Area** | Documentation / GitHub product UI |
+| **Root Cause** | **GitHub’s repository navigation** does not always show a primary **Wiki** tab: it may sit under a **“…” overflow** menu, vary with **UI experiments** (e.g. global nav / hyperspace), or disappear when **Wikis are disabled** in **Settings → General → Features**. Separately, contributors may confuse the in-repo folder **`EXStreamTV.wiki/`** with the **hosted** wiki; the hosted site only updates after a **push** to **`https://github.com/<owner>/<repo>.wiki.git`**. |
+| **Symptom** | “Wiki is gone from GitHub” / no sidebar link; stakeholders assume documentation was deleted. |
+| **Fix Applied** | Verified live wiki URL returns real pages when enabled. Added **README** wiki badge + **Documentation** section with direct `…/wiki` link; expanded **`docs/WIKI_UPLOAD.md`** troubleshooting; **RULE DOC-09** + skill **`.cursor/skills/exstreamtv-github-wiki/SKILL.md`**. |
+| **Prevention Rule** | RULE DOC-09 — GitHub Wiki: Discoverability and Hosted vs In-Repo Copy |
+
+---
+
 ## Summary Statistics
 
 | Severity | Count |
 |---|---|
 | 🔴 Critical | 14 |
 | 🟡 High | 9 |
-| 🟡 Medium | 12 |
+| 🟡 Medium | 13 |
 | 🟡 Low | 1 |
 | 🔴 Security | 1 |
 | Retracted | 1 |
-| **Total confirmed** | **36** |
+| **Total confirmed** | **37** |
 
 | Category | Count |
 |---|---|
@@ -517,4 +530,4 @@ Each entry follows the format:
 | Resource management | 3 |
 | Dead code | 2 |
 | Security | 1 |
-| Documentation / Confluence / uv | 6 |
+| Documentation / Confluence / uv / GitHub Wiki | 7 |

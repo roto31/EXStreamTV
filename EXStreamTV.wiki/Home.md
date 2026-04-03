@@ -13,6 +13,7 @@ Welcome to the EXStreamTV documentation. This guide will help you set up, config
 
 | Document | Description |
 |----------|-------------|
+| [Project README (GitHub)](https://github.com/roto31/EXStreamTV#readme) | Root readme — wiki badge and docs section if the **Wiki** tab is hidden in the UI (LL-037) |
 | [Platform Guide](Platform-Guide) | Full architecture, streaming, HDHomeRun, AI, observability |
 | [Quick Start](Quick-Start) | Get started in 10 minutes |
 | [Installation](Installation) | Complete installation guide |
@@ -20,6 +21,7 @@ Welcome to the EXStreamTV documentation. This guide will help you set up, config
 | [System Design](System-Design) | Architecture overview |
 | [Pattern refactor sources](Pattern-Refactor-Sources) | Refactor inventory + Alembic stamp note |
 | [ADR: ChannelManager DB sessions](ADR-Channel-Manager-Database) | Sync vs async SQLAlchemy boundaries |
+| [UI architecture (Track B)](EXStreamTV-UI-Architecture) | React app in `frontend/` — routes, personas, Tailwind |
 
 ---
 
