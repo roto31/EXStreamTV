@@ -174,6 +174,21 @@ async def channel_health_task() -> dict[str, Any]:
     return stats
 
 
+def _get_long_run_containment_mode() -> bool:
+    """True when long-running streams should trigger AI/agent containment (opt-in)."""
+    return False
+
+
+async def request_channel_restart(channel_id: int) -> bool:
+    """
+    Public entry for channel restart (agents, tools, tests).
+
+    All restart requests should go through this function rather than calling
+    ChannelManager.stop_channel/start_channel directly from agent code.
+    """
+    return await _trigger_channel_restart(channel_id)
+
+
 async def _trigger_channel_restart(channel_id: int) -> bool:
     """
     Trigger a restart for an unhealthy channel.

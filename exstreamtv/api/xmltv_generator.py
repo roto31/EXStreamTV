@@ -149,6 +149,9 @@ class XMLTVGenerator:
             ch_id = _channel_xmltv_id(ch)
             name = _xml(ch.name if hasattr(ch, "name") else str(ch))
             lines.append(f'  <channel id="{ch_id}">')
+            guide = getattr(ch, "number", None)
+            if guide is not None and str(guide).strip() != "":
+                lines.append(f'    <display-name>{_xml(str(guide).strip())}</display-name>')
             lines.append(f'    <display-name>{name}</display-name>')
             logo = getattr(ch, "logo_path", None) or getattr(ch, "logo_url", None)
             if logo:
@@ -160,6 +163,8 @@ class XMLTVGenerator:
         for ch in channels:
             ch_id = ch.id if hasattr(ch, "id") else ch
             progs = programmes_by_channel.get(ch_id, [])
+            seen_starts: set[tuple[str, str]] = set()
+            ch_xmltv_id = _channel_xmltv_id(ch)
             for p in progs:
                 title_raw = (p.title or "").strip()
                 if not title_raw or _PLACEHOLDER_RE.match(title_raw):
@@ -170,8 +175,11 @@ class XMLTVGenerator:
                         getattr(mi, "id", "?") if mi else "?",
                     )
                     continue
-                ch_xmltv_id = _channel_xmltv_id(ch)
                 start_str = _format_xmltv_datetime(p.start_time)
+                dedup_key = (ch_xmltv_id, start_str)
+                if dedup_key in seen_starts:
+                    continue
+                seen_starts.add(dedup_key)
                 stop_str = _format_xmltv_datetime(p.stop_time)
                 title = _xml(title_raw)
                 lines.append(f'  <programme start="{start_str}" stop="{stop_str}" channel="{ch_xmltv_id}">')
@@ -194,6 +202,31 @@ class XMLTVGenerator:
             progs = programmes_by_channel.get(ch_id, [])
 
             for i, p in enumerate(progs):
+                utc_lo = datetime(1970, 1, 1, tzinfo=timezone.utc)
+                utc_hi = datetime(2100, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+                naive_lo = datetime(1970, 1, 1)
+                naive_hi = datetime(2100, 12, 31, 23, 59, 59)
+
+                def _out_of_range(dt: datetime, label: str) -> bool:
+                    if dt.tzinfo is not None:
+                        u = dt.astimezone(timezone.utc)
+                        if u < utc_lo or u > utc_hi:
+                            errors.append(
+                                f"Channel {ch_id} programme {i}: {label} time out of range "
+                                f"(must be within 1970-01-01 .. 2100-12-31 UTC)"
+                            )
+                            return True
+                    else:
+                        if dt < naive_lo or dt > naive_hi:
+                            errors.append(
+                                f"Channel {ch_id} programme {i}: {label} time out of range "
+                                f"(must be within 1970-01-01 .. 2100-12-31)"
+                            )
+                            return True
+                    return False
+
+                if _out_of_range(p.start_time, "start") or _out_of_range(p.stop_time, "stop"):
+                    continue
                 if p.start_time >= p.stop_time:
                     errors.append(
                         f"Channel {ch_id} programme {i}: start >= stop "
@@ -201,9 +234,8 @@ class XMLTVGenerator:
                     )
                 t = (p.title or "").strip()
                 if not t or _PLACEHOLDER_RE.match(t):
-                    errors.append(
-                        f"Channel {ch_id} programme {i}: invalid title {t!r}"
-                    )
+                    label = "empty title" if not t else f"invalid title {t!r}"
+                    errors.append(f"Channel {ch_id} programme {i}: {label}")
                 if i + 1 < len(progs):
                     next_p = progs[i + 1]
                     if p.stop_time != next_p.start_time:

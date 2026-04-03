@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from exstreamtv.patterns.commands.config_types import TranscodeConfig
 from exstreamtv.patterns.state import ChannelContext, StreamError
+
 if TYPE_CHECKING:
     from exstreamtv.streaming.channel_manager import ChannelManager
 

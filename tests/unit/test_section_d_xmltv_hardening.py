@@ -20,6 +20,17 @@ if TYPE_CHECKING:
     from _pytest.fixtures import FixtureRequest
 
 
+def _minimal_request() -> MagicMock:
+    req = MagicMock()
+    req.app.state = MagicMock()
+    req.app.state.xmltv_cache = None
+    req.url.scheme = "http"
+    req.url.hostname = "127.0.0.1"
+    req.url.port = 8411
+    req.headers = {}
+    return req
+
+
 # ==================== Datetime Validation ====================
 
 
@@ -182,7 +193,7 @@ async def test_get_epg_empty_channels_returns_503() -> None:
         from exstreamtv.api.iptv import get_epg
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_epg(db=mock_session)
+            await get_epg(_minimal_request(), db=mock_session)
 
         assert exc_info.value.status_code == 503
         assert "Empty" in str(exc_info.value.detail)
@@ -214,7 +225,7 @@ async def test_get_epg_lineup_validation_failure_returns_503() -> None:
         from exstreamtv.api.iptv import get_epg
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_epg(db=mock_session)
+            await get_epg(_minimal_request(), db=mock_session)
 
         assert exc_info.value.status_code == 503
         assert "lineup" in str(exc_info.value.detail).lower()
@@ -245,7 +256,7 @@ async def test_get_epg_xmltv_validation_error_returns_503() -> None:
             from exstreamtv.api.iptv import get_epg
 
             with pytest.raises(HTTPException) as exc_info:
-                await get_epg(db=mock_session)
+                await get_epg(_minimal_request(), db=mock_session)
 
             assert exc_info.value.status_code == 503
             assert exc_info.value.headers.get("Retry-After") == "60"

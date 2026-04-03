@@ -114,7 +114,12 @@ class MediaURLResolver:
             source = media_item.source_type
         elif isinstance(media_item, dict):
             source = media_item.get("source") or media_item.get("source_type")
-        
+
+        if isinstance(media_item, dict) and media_item.get("plex_rating_key"):
+            return SourceType.PLEX
+        if hasattr(media_item, "plex_rating_key") and getattr(media_item, "plex_rating_key", None):
+            return SourceType.PLEX
+
         if source:
             source_lower = str(source).lower()
             if "youtube" in source_lower:
@@ -187,13 +192,17 @@ class MediaURLResolver:
         
         if url:
             url_lower = str(url).lower()
-            if "youtube.com" in url_lower or "youtu.be" in url_lower:
+            if (
+                "youtube.com" in url_lower
+                or "youtu.be" in url_lower
+                or "googlevideo.com" in url_lower
+            ):
                 return SourceType.YOUTUBE
             elif "archive.org" in url_lower:
                 return SourceType.ARCHIVE_ORG
             elif url_lower.startswith("/") or url_lower.startswith("file://"):
                 return SourceType.LOCAL
-            elif ":32400" in url_lower or "plex" in url_lower:
+            elif "/library/metadata/" in url_lower:
                 return SourceType.PLEX
             elif ":8096" in url_lower or "jellyfin" in url_lower:
                 return SourceType.JELLYFIN

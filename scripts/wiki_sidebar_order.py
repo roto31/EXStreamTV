@@ -21,6 +21,7 @@ SIDEBAR_STEMS: tuple[str, ...] = (
     "Architecture-Diagrams",
     "Pattern-Refactor-Sources",
     "ADR-Channel-Manager-Database",
+    "EXStreamTV-UI-Architecture",
     "Architecture",
     "Streaming-Internals",
     "HDHomeRun-Emulation",

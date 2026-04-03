@@ -33,7 +33,7 @@ class TestChannelModel:
         db.refresh(channel)
         
         assert channel.id is not None
-        assert channel.number == 1
+        assert str(channel.number) == "1"
         assert channel.name == "Test Channel"
         assert channel.enabled is True
     
@@ -178,7 +178,7 @@ class TestLibraryModels:
             name="Movies",
             path="/media/movies",
             library_type="movie",
-            file_extensions=[".mp4", ".mkv"],
+            file_extensions=".mp4,.mkv",
         )
         
         db.add(library)
@@ -195,7 +195,9 @@ class TestLibraryModels:
             name="Plex Movies",
             server_url="http://localhost:32400",
             token="test_token",
-            library_key="1",
+            plex_library_key="1",
+            plex_library_name="Movies",
+            library_type="movie",
         )
         
         db.add(library)
@@ -260,10 +262,11 @@ class TestPlayoutModel:
         # Add playout items
         start_time = datetime.now()
         for i in range(5):
+            st = start_time + timedelta(hours=i)
             item = PlayoutItem(
                 playout_id=playout.id,
-                start_time=start_time + timedelta(hours=i),
-                duration=3600,
+                start_time=st,
+                finish_time=st + timedelta(hours=1),
                 title=f"Program {i}",
             )
             db.add(item)

@@ -42,6 +42,25 @@ class RiskLevel(str, Enum):
     CRITICAL = "critical"
 
 
+class MetadataIssueType(str, Enum):
+    """Deterministic metadata quality issue labels (EPG / enrichment)."""
+
+    METADATA_LOOKUP_FAILURE = "metadata_lookup_failure"
+    EPISODE_NUM_MISSING = "episode_num_missing"
+    PLACEHOLDER_TITLE_EXCESS = "placeholder_title_excess"
+
+
+@dataclass
+class MetadataAnalysis:
+    """One detected metadata issue for a channel or global catalogue."""
+
+    channel_id: Optional[int]
+    issue_type: str
+    confidence: float
+    affected_items_count: int
+    metadata_failure_ratio: float
+
+
 @dataclass
 class Pattern:
     """A detected pattern."""
@@ -585,6 +604,57 @@ class PatternDetector:
         """Register callback for predictions."""
         self._on_prediction.append(callback)
     
+    def analyze_metadata_issues(
+        self,
+        metrics: dict[str, Any],
+        channel_id: Optional[int],
+        programme_total: Optional[int],
+    ) -> list[MetadataAnalysis]:
+        """Heuristic scan of enrichment counters (Section B.3 regression tests)."""
+        results: list[MetadataAnalysis] = []
+        prog = programme_total if programme_total and programme_total > 0 else 1
+
+        lk_fail = int(metrics.get("metadata_lookup_failure_total", 0))
+        lk_succ = int(metrics.get("metadata_lookup_success_total", 0))
+        if lk_fail > 0:
+            denom = lk_fail + lk_succ if lk_fail + lk_succ > 0 else 1
+            ratio = lk_fail / denom
+            results.append(
+                MetadataAnalysis(
+                    channel_id=channel_id,
+                    issue_type=MetadataIssueType.METADATA_LOOKUP_FAILURE.value,
+                    confidence=min(0.99, ratio + 0.3),
+                    affected_items_count=lk_fail,
+                    metadata_failure_ratio=ratio,
+                )
+            )
+
+        episode_missing = int(metrics.get("episode_metadata_missing_total", 0))
+        if episode_missing > 0:
+            results.append(
+                MetadataAnalysis(
+                    channel_id=channel_id,
+                    issue_type=MetadataIssueType.EPISODE_NUM_MISSING.value,
+                    confidence=0.7,
+                    affected_items_count=episode_missing,
+                    metadata_failure_ratio=episode_missing / prog,
+                )
+            )
+
+        placeholders = int(metrics.get("placeholder_title_generated_total", 0))
+        if placeholders > 10:
+            results.append(
+                MetadataAnalysis(
+                    channel_id=channel_id,
+                    issue_type=MetadataIssueType.PLACEHOLDER_TITLE_EXCESS.value,
+                    confidence=0.75,
+                    affected_items_count=placeholders,
+                    metadata_failure_ratio=placeholders / prog,
+                )
+            )
+
+        return results
+
     def get_stats(self) -> dict[str, Any]:
         """Get detector statistics."""
         return {

@@ -5,11 +5,12 @@ Handles loading, validation, and access to application configuration.
 """
 
 import os
+import re
 from pathlib import Path
 from typing import Any, Optional
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # Global configuration instance
 _config: Optional["EXStreamTVConfig"] = None
@@ -100,13 +101,28 @@ class StreamingConfig(BaseModel):
     read_size: int = 65536  # 64KB
 
 
+# Plex / HDHomeRun expect DeviceID as exactly 8 hexadecimal characters.
+HDHOMERUN_VALID_DEVICE_ID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}$")
+HDHOMERUN_DEFAULT_DEVICE_ID = "a1b2c3d4"
+
+
 class HDHomeRunConfig(BaseModel):
     """HDHomeRun emulation configuration."""
     enabled: bool = True
-    device_id: str = "EXSTREAMTV"
+    device_id: str = Field(default=HDHOMERUN_DEFAULT_DEVICE_ID)
     device_auth: str = "exstreamtv"
     tuner_count: int = 4
     friendly_name: str = "EXStreamTV"
+
+    @field_validator("device_id", mode="before")
+    @classmethod
+    def _normalize_device_id(cls, value: Any) -> str:
+        if value is None or value == "":
+            return HDHOMERUN_DEFAULT_DEVICE_ID
+        candidate = str(value).strip()
+        if HDHOMERUN_VALID_DEVICE_ID_PATTERN.match(candidate):
+            return candidate
+        return HDHOMERUN_DEFAULT_DEVICE_ID
 
 
 class ChannelsConfig(BaseModel):
@@ -321,6 +337,8 @@ class EPGConfig(BaseModel):
     """EPG configuration."""
     refresh_interval: int = 3600
     days_ahead: int = 7
+    episode_num_required: bool = False
+    plex_xmltv_mismatch_ratio_threshold: float = 0.15
 
 
 class SchedulingConfig(BaseModel):

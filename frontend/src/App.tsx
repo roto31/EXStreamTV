@@ -1,17 +1,31 @@
-/**
- * Track B — React shell (EXStreamTV-UI-Architecture.md).
- * Phase 0: ErsatzTV client files in the spec paths were not present in this repo;
- * extend with Tailwind, personas, and v1 API clients per the architecture doc.
- */
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { PersonaProvider } from "./context/PersonaContext";
+import AppShell from "./layout/AppShell";
+import ChannelDetailPage from "./pages/ChannelDetailPage";
+import ChannelsPage from "./pages/ChannelsPage";
+import Dashboard from "./pages/Dashboard";
+import ScheduleHistoryPage from "./pages/ScheduleHistoryPage";
+import ScheduleDetailPage from "./pages/ScheduleDetailPage";
+import SchedulesPage from "./pages/SchedulesPage";
+import SettingsPage from "./pages/SettingsPage";
+
 export default function App() {
   return (
-    <main style={{ fontFamily: "system-ui", padding: "2rem", maxWidth: 640 }}>
-      <h1>EXStreamTV</h1>
-      <p>
-        Frontend scaffold. Run the FastAPI app on port 8000 and{" "}
-        <code>npm run dev</code> here; API is proxied under <code>/api</code> and{" "}
-        <code>/iptv</code>.
-      </p>
-    </main>
+    <BrowserRouter>
+      <PersonaProvider>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route index element={<Dashboard />} />
+            <Route path="channels" element={<ChannelsPage />} />
+            <Route path="channels/:id" element={<ChannelDetailPage />} />
+            <Route path="schedules" element={<SchedulesPage />} />
+            <Route path="schedules/:id" element={<ScheduleDetailPage />} />
+            <Route path="schedule-history" element={<ScheduleHistoryPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </PersonaProvider>
+    </BrowserRouter>
   );
 }

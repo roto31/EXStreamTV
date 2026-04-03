@@ -171,7 +171,7 @@ async def _build_epg_via_timeline_builder(
     try:
         _total_prog = sum(len(v) for v in programmes_by_channel.values())
         gen = XMLTVGenerator()
-        return gen.generate(channels, programmes_by_channel, base_url=base_url, validate=False)
+        return gen.generate(channels, programmes_by_channel, base_url=base_url, validate=True)
     except Exception as e:
         logger.warning(f"TimelineBuilder EPG generation failed: {e}")
         return None
@@ -486,6 +486,22 @@ async def get_epg(
                     )
                     channel.playout_mode = PlayoutMode.CONTINUOUS
 
+        from ..monitoring.metadata_metrics import validate_xmltv_lineup
+
+        if not channels:
+            raise HTTPException(
+                status_code=503,
+                detail="Empty channel mapping; cannot build XMLTV",
+                headers={"Retry-After": "60"},
+            )
+
+        if not validate_xmltv_lineup(channels):
+            raise HTTPException(
+                status_code=503,
+                detail="XMLTV lineup validation failed (duplicate GuideNumber or empty display name).",
+                headers={"Retry-After": "60"},
+            )
+
         logger.info(f"Generating XMLTV EPG for {len(channels)} channels")
 
         # Always derive base_url from the incoming request so icon URLs work for Plex
@@ -539,9 +555,18 @@ async def get_epg(
         end_time = now + timedelta(days=build_days)
 
         # Try TimelineBuilder pipeline (remediation: monotonic EPG, no drift)
-        timeline_xml = await _build_epg_via_timeline_builder(
-            channels, db, now, end_time, base_url
-        )
+        from .xmltv_generator import XMLTVValidationError
+
+        try:
+            timeline_xml = await _build_epg_via_timeline_builder(
+                channels, db, now, end_time, base_url
+            )
+        except XMLTVValidationError as e:
+            raise HTTPException(
+                status_code=503,
+                detail=str(e) or "XMLTV validation failed",
+                headers={"Retry-After": "60"},
+            ) from e
         if timeline_xml:
             if lazy_xmltv is not None:
                 await lazy_xmltv.prime(timeline_xml)

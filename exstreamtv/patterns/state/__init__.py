@@ -1,14 +1,14 @@
 from exstreamtv.patterns.state.channel_context import ChannelContext
 from exstreamtv.patterns.state.stream_states import (
-    StreamError,
-    StreamState,
-    IdleState,
-    StartingState,
-    LiveState,
     BufferingState,
     FailedState,
+    IdleState,
+    LiveState,
     RestartingState,
+    StartingState,
     StoppingState,
+    StreamError,
+    StreamState,
 )
 
 __all__ = [

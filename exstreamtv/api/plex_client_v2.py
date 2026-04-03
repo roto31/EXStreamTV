@@ -9,8 +9,15 @@ import httpx
 
 from ..config import config
 from ..constants import DEFAULT_TIMEOUT_SECONDS
+from ..services.plex_library_service import (
+    get_plex_server,
+    is_plexapi_available,
+    list_sections as plex_service_list_sections,
+)
 
 logger = logging.getLogger(__name__)
+
+_PLEX_LIBRARY_SERVICE_AVAILABLE = is_plexapi_available()
 
 
 class PlexClientV2:
@@ -61,7 +68,15 @@ class PlexClientV2:
         }
 
     async def get_libraries(self) -> list[dict[str, Any]]:
-        """Get all libraries from Plex server"""
+        """Get all libraries from Plex server (PlexAPI when available, else HTTP)."""
+        if _PLEX_LIBRARY_SERVICE_AVAILABLE:
+            server = get_plex_server(self.base_url, self.token or "")
+            if server is not None:
+                return plex_service_list_sections(server)
+        return await self._get_libraries_http()
+
+    async def _get_libraries_http(self) -> list[dict[str, Any]]:
+        """Get libraries via direct HTTP /library/sections."""
         try:
             url = f"{self.base_url}/library/sections"
             headers = self._get_headers()
@@ -69,23 +84,20 @@ class PlexClientV2:
             response = await self._http_client.get(url, headers=headers)
             response.raise_for_status()
 
-            # Plex returns XML by default
             if response.headers.get("content-type", "").startswith("application/json"):
                 data = response.json()
                 return data.get("MediaContainer", {}).get("Directory", [])
-            else:
-                # Parse XML
-                root = ET.fromstring(response.text)
-                libraries = []
-                for directory in root.findall("Directory"):
-                    libraries.append(
-                        {
-                            "key": directory.get("key"),
-                            "type": directory.get("type"),
-                            "title": directory.get("title"),
-                        }
-                    )
-                return libraries
+            root = ET.fromstring(response.text)
+            libraries = []
+            for directory in root.findall("Directory"):
+                libraries.append(
+                    {
+                        "key": directory.get("key"),
+                        "type": directory.get("type"),
+                        "title": directory.get("title"),
+                    }
+                )
+            return libraries
 
         except Exception as e:
             logger.exception(f"Error getting Plex libraries: {e}")

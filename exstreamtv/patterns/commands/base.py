@@ -32,6 +32,7 @@ class StreamCommand(ABC):
 
     async def undo(self) -> None:
         """Optional reversal; default no-op."""
+        return None
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(channel={self.channel_id}, id={self.command_id[:8]})"

@@ -54,4 +54,16 @@ Create each Wiki page on GitHub (Wiki tab → New Page), paste from the correspo
 - [ ] Wiki pages with Mermaid (Home, AI-Setup, Advanced-Scheduling, Streaming-Stability, System-Design, Tunarr-DizqueTV-Integration, Integration-Plan, Platform-Comparison): diagrams render.
 - [ ] Clone and run: `git clone https://github.com/roto31/EXStreamTV.git && cd EXStreamTV && ./start.sh` (after install) to confirm docs match reality.
 
-**Last Revised:** 2026-03-20
+## Wiki tab missing from the GitHub repo sidebar
+
+The live wiki may still exist. GitHub often puts **Wiki** in the **“…” overflow** on the repo tab bar, or hides it when the viewport is narrow. The tab also **disappears entirely** if **Settings → General → Features → Wikis** is turned off.
+
+| Symptom | What to do |
+| --- | --- |
+| No **Wiki** next to Issues / Pull requests | Open the direct URL: `https://github.com/<owner>/<repo>/wiki` (e.g. [EXStreamTV wiki](https://github.com/roto31/EXStreamTV/wiki)). Check **Settings → Wikis** is enabled. Add a **Wiki** link in the repo **About** description and in **README** (this repo does). |
+| Wiki URL 404 / empty | Enable Wikis in settings, create **Home**, then push from `EXStreamTV.wiki/` per this doc. |
+| Only `EXStreamTV.wiki/` folder in clone | That folder is **not** the hosted wiki until you push to `https://github.com/<owner>/<repo>.wiki.git`. |
+
+Lesson: **LL-037** in `docs/LESSONS_LEARNED.md`. Rule: **RULE DOC-09** in `.cursor/rules/exstreamtv-github-wiki.mdc`.
+
+**Last Revised:** 2026-04-03

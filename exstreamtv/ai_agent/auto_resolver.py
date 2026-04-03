@@ -479,11 +479,11 @@ class AutoResolver:
     
     async def _apply_restart(self, issue: DetectedIssue) -> None:
         """Restart affected component."""
-        if issue.channel_id and self._channel_manager:
+        if issue.channel_id:
             logger.info(f"Restarting channel {issue.channel_id}")
-            await self._channel_manager.stop_channel(issue.channel_id)
-            await asyncio.sleep(0.5)
-            # Channel will restart on next request
+            from exstreamtv.tasks.health_tasks import request_channel_restart
+
+            await request_channel_restart(issue.channel_id)
     
     async def _apply_refresh(self, issue: DetectedIssue) -> None:
         """Refresh credentials or URLs."""

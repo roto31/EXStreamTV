@@ -1,8 +1,12 @@
 """
 Stream Manager v2 Compatibility Module
 
-This module provides backward compatibility for v2 modules that import
-from stream_manager_v2. It provides basic stream management functionality.
+**F1 (intentional stub):** V2 import paths (`metadata/engine_v2`, `importers/channel_importer_v2`)
+use this module as a **lightweight stream registry only**. It is **not** a substitute for
+`ChannelManager` / `StreamService` parity—do not assume feature equivalence.
+
+For production start/stop/restart behaviour, use `ChannelManager`, `StreamService`, and
+`exstreamtv.tasks.health_tasks.request_channel_restart` instead of extending this stub.
 """
 
 from typing import Any, Dict, Optional

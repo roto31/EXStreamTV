@@ -56,6 +56,10 @@ Canonical sources: `AGENTS.md`, `docs/architecture/PATTERN_REFACTOR_SOURCES.md`,
 - `LazyXmltvCache`: on `app.state` · `peek_fresh` / `prime` / `invalidate` · wired from `iptv` EPG generation.
 - `with_retry` / `check_stream_health`: `exstreamtv/services/health_service.py`.
 
+## StreamManagerV2 (`exstreamtv/streaming/stream_manager_v2.py`)
+
+- **Registry-only stub (F1):** Kept for V2 extractor/importer import paths; not a full `ChannelManager` replacement. Prefer `StreamService` / command queue for operational control.
+
 ## Lifespan
 
 - Pattern singletons (`command_queue`, `stream_service`, `event_bus`, `url_resolver_chain`, `mediator`) are created in `lifespan`, not at import time.

@@ -11,8 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Alembic 006** — `schedule_history` table; **`POST /api/schedule-history/capture`** and **`POST /api/schedule-history/{id}/revert`** (`exstreamtv/api/schedule_history.py`, `schedule_snapshot_service`).
 - **`exstreamtv/utils/async_subprocess.py`** — thread-pooled / asyncio subprocess helpers for API and streaming-adjacent paths.
 - **`exstreamtv/patterns/`** and **`exstreamtv/models/`** — shared application patterns; ADR **`docs/architecture/ADR-channel-manager-database-sessions.md`**.
-- **`frontend/`** — Vite + React + TypeScript scaffold (dev proxy to API).
+- **`frontend/`** — Vite + React + TypeScript + **Tailwind** + **React Router**; **personas** (`sessionStorage` + context); pages: dashboard, channels, schedules, schedule-history, settings; dev proxy → **8411**. Spec: **`docs/EXStreamTV-UI-Architecture.md`**.
 - **`.cursor/rules/patterns-implemented.mdc`** — Cursor rule summarizing implemented patterns.
+
+### Added / changed — Stub completion rollout (Track B depth, quality gate)
+
+- **Track B** — Channel detail with playouts, now-playing, and upcoming items; `/schedules/:id` and `getSchedule`; **viewer** persona hides schedule-history capture/revert; `frontend/src/api/playouts.ts` and related API clients. Canonical spec: **`docs/EXStreamTV-UI-Architecture.md`**.
+- **Auth** — **`POST /api/auth/youtube/cookies`** uploads Netscape `cookies.txt`, updates `config.yaml`, calls **`reload_config`** (`exstreamtv/api/auth.py`).
+- **EPG / XMLTV** — Programme datetimes validated within 1970–2100; lineup validation and **503** + **Retry-After** when channel mapping is empty or invalid; timeline EPG generation uses **`validate=True`**; XMLTV channel block emits GuideNumber-first display names; duplicate programme starts de-duplicated; empty-title validation message includes **empty title**.
+- **Config** — **`HDHOMERUN_VALID_DEVICE_ID_PATTERN`** / **`HDHOMERUN_DEFAULT_DEVICE_ID`**; **`EPGConfig.episode_num_required`**, **`plex_xmltv_mismatch_ratio_threshold`**.
+- **Observability & bounded-agent tests** — **`exstreamtv/monitoring/metadata_metrics.py`** (includes **`validate_xmltv_lineup`**), **`anomaly_cluster.py`**, **`performance_baselines.py`**; AI helpers **`bounded_agent_loop`**, **`grounded_envelope`**, **`metadata_self_resolution`**, **`metadata_tools_impl`**, **`tool_registry`**; **`PatternDetector.analyze_metadata_issues`** / **`MetadataAnalysis`**; **`request_channel_restart`** and **`_get_long_run_containment_mode`** in **`health_tasks`**.
+- **Streaming / imports** — **`MediaURLResolver`**: **`googlevideo.com`** YouTube match; Plex only via **`/library/metadata/`** or explicit markers (not loose **`plex`** substring); **`PlexClientV2.get_libraries`** prefers Python-PlexAPI when available; **`auto_resolver`** restarts via **`request_channel_restart`**; **`verify_restart_path.py`** allows **`patterns/state/channel_context.py`** for lifecycle **`start_channel`**; **`exstreamtv.services`** lazy **`__getattr__`** so **`M3UTestingService`** does not import missing ORM symbols at package import.
+- **StreamManagerV2 (F1)** — Documented as **registry-only** compatibility stub in module docstring and **`.cursor/rules/patterns-implemented.mdc`** (not **`ChannelManager`** parity).
+- **CI** — **`.github/workflows/ci.yml`**: scoped **Ruff**, **`pytest tests/unit`**, **`frontend`** **`npm run build`**.
+- **Docs** — **`docs/architecture/EXStreamTV-Cursor-Pattern-Prompt-SNAPSHOT.md`** (paste target for external Tasks 1–20 checklist); **`PATTERN_REFACTOR_SOURCES.md`** § Tasks 1–20; **`BUILD_PROGRESS.md`** Phase 14 aligned with Track B depth.
 
 ### Documentation & Confluence tooling
 - **Lessons learned** through **LL-036** in `docs/LESSONS_LEARNED.md` (includes missing Mermaid / “blank” Confluence vs wiki, Kroki fallback, verify-before-done). **36** confirmed lessons; doc version **1.4**. Wiki **`Lessons-Learned`** mirrors repo + banner.

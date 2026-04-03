@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+
 from exstreamtv.patterns.commands.base import StreamCommand
 from exstreamtv.patterns.commands.command_queue import StreamCommandQueue
 from exstreamtv.patterns.commands.config_types import TranscodeConfig

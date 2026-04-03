@@ -32,7 +32,7 @@ This document tracks the development progress of EXStreamTV, organized by phase 
 - Alembic **006** — `schedule_history` table; **`/api/schedule-history`** capture + revert
 - **`exstreamtv/utils/async_subprocess.py`** — async-safe subprocess helpers for API/streaming-adjacent paths
 - **`exstreamtv/patterns/`** — shared application patterns; ADR **ADR-channel-manager-database-sessions.md** for DB session boundaries
-- **`frontend/`** — Vite + React + TypeScript scaffold (Track B; dev proxy to API)
+- **`frontend/`** (Track B) — Vite + React + TypeScript + **Tailwind** + **React Router**; **personas**; dashboard, channels (**detail** with playouts / now-playing / timeline), schedules (**detail**), schedule-history; **viewer** read-only for memento; dev proxy → **8411** — see **`docs/EXStreamTV-UI-Architecture.md`**
 
 ---
 

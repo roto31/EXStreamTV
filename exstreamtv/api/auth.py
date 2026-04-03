@@ -2,14 +2,15 @@
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from fastapi import APIRouter, HTTPException, Request
+import yaml
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from ..config import get_config
+from ..config import get_config, reload_config
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,43 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 # Initialize Jinja2 templates
 templates_path = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(templates_path))
+
+
+def _config_yaml_path() -> Path:
+    for candidate in (
+        Path("config.yaml"),
+        Path(__file__).resolve().parents[2] / "config.yaml",
+    ):
+        if candidate.exists():
+            return candidate
+    return Path(__file__).resolve().parents[2] / "config.yaml"
+
+
+def _get_youtube_cookies_path() -> Path:
+    raw = (get_config().sources.youtube.cookies_file or "").strip()
+    if raw:
+        return Path(raw).expanduser()
+    return Path(__file__).resolve().parents[2] / "data" / "youtube_cookies.txt"
+
+
+def _read_write_config_yaml(mutator: Callable[[dict[str, Any]], None]) -> None:
+    cfg_path = _config_yaml_path()
+    if cfg_path.exists():
+        with open(cfg_path, encoding="utf-8") as f:
+            data: dict[str, Any] = yaml.safe_load(f) or {}
+    else:
+        data = {}
+    mutator(data)
+    cfg_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        import fcntl
+
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+    except ImportError:
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
 
 
 class ArchiveOrgCredentials(BaseModel):
@@ -88,6 +126,27 @@ async def youtube_status() -> dict[str, Any]:
         "cookies_file": config.sources.youtube.cookies_file,
         "enabled": config.sources.youtube.enabled,
     }
+
+
+@router.post("/youtube/cookies")
+async def youtube_cookies_upload(file: UploadFile = File(...)) -> dict[str, str]:
+    """Upload Netscape-format cookies.txt for YouTube (yt-dlp)."""
+    filename = (file.filename or "").lower()
+    if not filename.endswith(".txt"):
+        raise HTTPException(status_code=400, detail="Cookies file must be a .txt file (Netscape format).")
+    dest = _get_youtube_cookies_path()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    body = await file.read()
+    dest.write_bytes(body)
+
+    def mutator(data: dict[str, Any]) -> None:
+        sources = data.setdefault("sources", {})
+        yt = sources.setdefault("youtube", {})
+        yt["cookies_file"] = str(dest)
+
+    _read_write_config_yaml(mutator)
+    reload_config()
+    return {"status": "success", "path": str(dest)}
 
 
 @router.get("/archive-org", response_class=HTMLResponse)

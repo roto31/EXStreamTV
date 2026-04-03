@@ -1,0 +1,5 @@
+"""Performance SLO baselines for regression tests (Section H)."""
+
+EPG_GENERATION_P95_SEC_BASELINE = 5.0
+AGENT_LOOP_3_STEPS_SEC_BASELINE = 30.0
+REGRESSION_MULTIPLIER = 1.05

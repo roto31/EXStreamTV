@@ -49,6 +49,8 @@ class LibraryItem:
 
     # Metadata
     year: Optional[int] = None
+    description: Optional[str] = None
+    rating: Optional[float] = None
     studio: Optional[str] = None
     genres: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
@@ -218,7 +220,10 @@ class LibraryManager:
     def add_library(self, library: BaseLibrary) -> None:
         """Add a library to the manager."""
         self._libraries[library.library_id] = library
-        logger.info(f"Added library: {library.name} ({library.library_type.value})")
+        name = getattr(library, "name", "?")
+        lt = getattr(library, "library_type", None)
+        lt_val = getattr(lt, "value", lt) if lt is not None else "unknown"
+        logger.info(f"Added library: {name} ({lt_val})")
 
     def remove_library(self, library_id: int) -> None:
         """Remove a library from the manager."""

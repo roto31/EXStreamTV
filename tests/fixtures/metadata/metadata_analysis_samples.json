@@ -1,0 +1,23 @@
+[
+  {
+    "channel_id": 1,
+    "issue_type": "metadata_lookup_failure",
+    "confidence": 0.65,
+    "affected_items_count": 12,
+    "metadata_failure_ratio": 0.12
+  },
+  {
+    "channel_id": 2,
+    "issue_type": "episode_num_missing",
+    "confidence": 0.7,
+    "affected_items_count": 4,
+    "metadata_failure_ratio": 0.05
+  },
+  {
+    "channel_id": null,
+    "issue_type": "placeholder_title_excess",
+    "confidence": 0.8,
+    "affected_items_count": 20,
+    "metadata_failure_ratio": 0.2
+  }
+]

@@ -2,6 +2,7 @@
 Unit tests for library modules.
 """
 
+from datetime import timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -129,6 +130,7 @@ class TestLibraryManager:
         for i in range(2):
             library = MagicMock(spec=BaseLibrary)
             library.library_id = i
+            library.name = f"Library {i}"
             library.sync = AsyncMock(return_value=[
                 LibraryItem(
                     id=f"item_{i}",

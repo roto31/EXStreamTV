@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)]()
 [![Version](https://img.shields.io/badge/Version-2.6.0-blue.svg)](https://github.com/roto31/EXStreamTV)
+[![Wiki](https://img.shields.io/badge/docs-GitHub_Wiki-0366d6.svg)](https://github.com/roto31/EXStreamTV/wiki)
 
 EXStreamTV creates custom live TV channels from online sources (YouTube, Archive.org) and local media (Plex, Jellyfin, Emby, local folders). Plex DVR treats it as an HDHomeRun tuner — discover, add, and tune your channels like a physical device.
 
@@ -21,6 +22,11 @@ EXStreamTV creates custom live TV channels from online sources (YouTube, Archive
 Plex discovers EXStreamTV as an HDHomeRun device on your network. After adding the DVR, you see your custom channels in the lineup. Tuning a channel starts live streaming; multiple clients can share the same stream.
 
 See [Platform Guide](docs/PLATFORM_GUIDE.md#3-hdhomrun-emulation) for how discovery, lineup, and tuning work.
+
+## Documentation
+
+- **[GitHub Wiki](https://github.com/roto31/EXStreamTV/wiki)** — full guides (Mermaid, screenshots). Source tree: `EXStreamTV.wiki/` in this repo; refresh with `python scripts/sync_docs_to_wiki.py --wiki-dir EXStreamTV.wiki` and push the wiki remote (see `docs/WIKI_UPLOAD.md`, `scripts/push_wiki.sh`).
+- **[Platform Guide](docs/PLATFORM_GUIDE.md)** and **[docs/README.md](docs/README.md)** for repo-local navigation.
 
 ## Architecture Overview
 
@@ -134,10 +140,15 @@ EXStreamTV/
 │   ├── ffmpeg/           # Transcoding pipeline
 │   └── monitoring/       # Metrics, Prometheus
 ├── EXStreamTVApp/        # macOS menu bar app
+├── frontend/             # Track B — Vite, React, Tailwind (dev proxy → API :8411)
 ├── containers/           # Docker
-├── tests/                # pytest suite
+├── tests/                # pytest suite (`tests/unit` run in CI)
 └── docs/                 # Documentation
 ```
+
+## Development & CI
+
+On push/PR to **`main`**, [GitHub Actions](https://github.com/roto31/EXStreamTV/actions) runs scoped **Ruff**, **`pytest tests/unit`**, and **`npm run build`** in **`frontend/`**. Full **`tests/`** may include integration cases that expect a running stack; run locally as needed.
 
 ## Migration
 

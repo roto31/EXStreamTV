@@ -74,9 +74,9 @@ class TestLogLifecycleManager:
 
         log_dir = log_setup["log_dir"]
 
-        # Create some log files
-        (log_dir / "app.log").write_text("Application log content")
-        (log_dir / "error.log").write_text("Error log content")
+        # Create some log files (large enough that total_active_size_mb rounds above 0)
+        (log_dir / "app.log").write_bytes(b"x" * 300_000)
+        (log_dir / "error.log").write_bytes(b"y" * 300_000)
 
         manager = LogLifecycleManager(
             log_directories=[log_dir],

@@ -1,0 +1,20 @@
+---
+description: >-
+  When the GitHub Wiki tab seems missing, use direct wiki URL, check Settings → Wikis, and
+  distinguish EXStreamTV.wiki/ in the main repo from the hosted wiki (push to *.wiki.git).
+globs: EXStreamTV.wiki/**,docs/WIKI_UPLOAD.md,scripts/push_wiki.sh,scripts/sync_docs_to_wiki.py,README.md
+alwaysApply: false
+---
+
+# EXStreamTV — GitHub Wiki discoverability
+
+Full lesson: **LL-037** in `docs/LESSONS_LEARNED.md`  
+Publish workflow: `.cursor/rules/exstreamtv-documentation-parity.mdc` (RULE DOC-07, DOC-08)
+
+## RULE DOC-09 — GitHub Wiki: Discoverability and Hosted vs In-Repo Copy
+
+1. **Sidebar** — If **Wiki** is not visible on the repo tab bar, check the **“…”** overflow, narrow viewport, or **Settings → General → Features → Wikis** (disabled = no tab). The wiki may still be reachable at **`https://github.com/<owner>/<repo>/wiki`**.
+2. **Hosted vs folder** — The directory **`EXStreamTV.wiki/`** in the **main** repository is a **working copy** of wiki Markdown. The **GitHub Wiki site** only reflects content pushed to **`https://github.com/<owner>/<repo>.wiki.git`** (see `scripts/push_wiki.sh`, `docs/WIKI_UPLOAD.md`).
+3. **Discoverability** — Keep a **direct wiki link** in **README** (and optionally repo **About**) so documentation is findable without relying on GitHub’s tab layout.
+
+When the user reports the wiki “gone from GitHub,” verify the **HTTP wiki URL** and **Wikis enabled** before assuming content loss.

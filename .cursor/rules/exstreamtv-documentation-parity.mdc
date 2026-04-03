@@ -10,7 +10,7 @@ alwaysApply: false
 # EXStreamTV — Documentation parity (GitHub Wiki + Confluence)
 
 Full lesson: **LL-036** in `docs/LESSONS_LEARNED.md`  
-Companion: `.cursor/rules/exstreamtv-confluence.mdc` (REST, attachments, titles)
+Companion: `.cursor/rules/exstreamtv-confluence.mdc` (REST, attachments, titles) · **LL-037** / RULE DOC-09: `.cursor/rules/exstreamtv-github-wiki.mdc` (wiki tab / discoverability)
 
 ## RULE DOC-07 — Documentation: GitHub Wiki + Confluence Parity
 

@@ -19,6 +19,7 @@ ALLOWED_PATTERNS = [
     r"channel_manager\.py",
     r"health_tasks\.py",
     r"hdhomerun[/\\]api_v2\.py",  # start_channel for initial tune, not restart
+    r"patterns[/\\]state[/\\]channel_context\.py",  # spawn_ffmpeg lifecycle, not agent restart
     r"[/\\]tests[/\\]",
     r"[/\\]Build[/\\]",  # legacy build artifacts
 ]

@@ -46,14 +46,16 @@ def engine():
 
 @pytest.fixture(scope="function")
 def db_session(engine) -> Generator[Session, None, None]:
-    """Create a new database session for each test."""
+    """Create a new database session for each test; wipe rows so commits don't leak across tests."""
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     session = SessionLocal()
-    
     try:
         yield session
     finally:
         session.rollback()
+        for tbl in reversed(Base.metadata.sorted_tables):
+            session.execute(tbl.delete())
+        session.commit()
         session.close()
 
 
@@ -170,26 +172,50 @@ def mock_ffprobe() -> Generator[MagicMock, None, None]:
 
 
 @pytest.fixture
-def mock_plex_server() -> Generator[MagicMock, None, None]:
-    """Mock Plex server for testing."""
-    with patch("exstreamtv.media.libraries.plex.PlexServer") as mock:
-        server = MagicMock()
-        server.library.sections.return_value = [
-            MagicMock(
-                key="1",
-                title="Movies",
-                type="movie",
-                totalSize=100,
-            ),
-            MagicMock(
-                key="2", 
-                title="TV Shows",
-                type="show",
-                totalSize=50,
-            ),
-        ]
-        mock.return_value = server
-        yield mock
+def mock_plex_server() -> Generator[None, None, None]:
+    """Mock aiohttp for PlexLibrary HTTP calls (no plexapi)."""
+    from unittest.mock import AsyncMock
+
+    payloads = [
+        {"MediaContainer": {"Directory": [{"type": "movie", "title": "Movies"}]}},
+        {
+            "MediaContainer": {
+                "Metadata": [
+                    {
+                        "Media": [{"Part": [{"key": "/library/parts/1/file.mp4"}]}],
+                    }
+                ]
+            }
+        },
+    ]
+    call = [0]
+
+    async def _json() -> dict:
+        i = min(call[0], len(payloads) - 1)
+        call[0] += 1
+        return payloads[i]
+
+    mock_response = MagicMock()
+    mock_response.status = 200
+    mock_response.json = _json
+
+    get_cm = MagicMock()
+    get_cm.__aenter__ = AsyncMock(return_value=mock_response)
+    get_cm.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session = MagicMock()
+    mock_session.get = MagicMock(return_value=get_cm)
+    mock_session.close = AsyncMock()
+
+    class _FakeClientSession:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        def get(self, *args: object, **kwargs: object) -> MagicMock:
+            return get_cm
+
+    with patch("exstreamtv.media.libraries.plex.aiohttp.ClientSession", _FakeClientSession):
+        yield
 
 
 @pytest.fixture

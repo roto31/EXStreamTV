@@ -3,7 +3,7 @@
 Architecture diagrams: [docs/architecture/DIAGRAMS.md](architecture/DIAGRAMS.md) — Mermaid-only, **19** standardized diagrams (includes schedule history memento flow, §19).
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-04-01
+**Last Updated:** 2026-04-03
 
 Welcome to the EXStreamTV documentation. This guide will help you set up, configure, and use EXStreamTV for your IPTV streaming needs.
 
@@ -13,6 +13,7 @@ Welcome to the EXStreamTV documentation. This guide will help you set up, config
 
 | Document | Description |
 |----------|-------------|
+| [Project README (GitHub)](https://github.com/roto31/EXStreamTV#readme) | Root readme — wiki badge and docs section if the **Wiki** tab is hidden in the UI (LL-037) |
 | [Platform Guide](PLATFORM_GUIDE.md) | Full architecture, streaming, HDHomeRun, AI, observability |
 | [Quick Start](guides/QUICK_START.md) | Get started in 10 minutes |
 | [Installation](guides/INSTALLATION.md) | Complete installation guide |
@@ -20,6 +21,8 @@ Welcome to the EXStreamTV documentation. This guide will help you set up, config
 | [System Design](architecture/SYSTEM_DESIGN.md) | Architecture overview |
 | [Pattern refactor sources](architecture/PATTERN_REFACTOR_SOURCES.md) | Refactor inventory + Alembic stamp note |
 | [ADR: ChannelManager DB sessions](architecture/ADR-channel-manager-database-sessions.md) | Sync vs async SQLAlchemy boundaries |
+| [UI architecture (Track B)](EXStreamTV-UI-Architecture.md) | React app in `frontend/` — routes, personas, Tailwind |
+| [GitHub Actions CI](https://github.com/roto31/EXStreamTV/actions) | Scoped Ruff, `pytest tests/unit`, `frontend` production build |
 
 ---
 

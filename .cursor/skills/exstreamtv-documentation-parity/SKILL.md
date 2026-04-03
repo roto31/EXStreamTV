@@ -44,6 +44,7 @@ description: >-
 | `scripts/publish_confluence_wiki_tree.py` | README + wiki tree → Confluence storage + SVG attachments |
 | `scripts/wiki_sidebar_order.py` | `SIDEBAR_STEMS` — must match wiki files |
 
-## Related skill
+## Related skills
 
 - `.cursor/skills/exstreamtv-confluence-publish/SKILL.md` — REST vs MCP, env, LL-031–035 technical detail
+- `.cursor/skills/exstreamtv-github-wiki/SKILL.md` — wiki tab missing, direct URL, `EXStreamTV.wiki/` vs hosted push (LL-037)
