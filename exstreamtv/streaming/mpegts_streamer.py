@@ -10,11 +10,11 @@ Ported from StreamTV with all critical bug fixes preserved:
 """
 
 import asyncio
+import contextlib
 import logging
 import platform
 import shlex
 import shutil
-import subprocess
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -118,7 +118,7 @@ class MPEGTSStreamer:
         self._ffprobe_path = ffprobe_path or config.ffmpeg.ffprobe_path
         self._hardware_acceleration = hardware_acceleration
         self._channel_profile = channel_profile
-        self._processes: dict[str, subprocess.Popen] = {}
+        self._processes: dict[str, asyncio.subprocess.Process] = {}
         
         # Validate FFmpeg exists
         # Validate FFmpeg exists
@@ -696,16 +696,14 @@ class MPEGTSStreamer:
         Yields:
             MPEG-TS data chunks.
         """
-        # Detect yt-dlp script fields and launch as subprocess
         is_script = _is_script_field(input_url)
-        ytdlp_proc = None
+        ytdlp_proc: asyncio.subprocess.Process | None = None
+        pump_task: asyncio.Task[None] | None = None
         if is_script:
-            import shlex
-            ytdlp_proc = subprocess.Popen(
-                shlex.split(input_url.strip()),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                bufsize=0,
+            ytdlp_proc = await asyncio.create_subprocess_exec(
+                *shlex.split(input_url.strip()),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             actual_input = "pipe:0"
             codec_info = codec_info or CodecInfo()
@@ -746,13 +744,41 @@ class MPEGTSStreamer:
         logger.info(f"FFmpeg command: {' '.join(cmd)}")
         logger.debug(f"Starting FFmpeg: {' '.join(cmd[:10])}...")
 
-        # Start FFmpeg process (stdin from yt-dlp when script)
         process = await asyncio.create_subprocess_exec(
             *cmd,
-            stdin=ytdlp_proc.stdout if ytdlp_proc else None,
+            stdin=asyncio.subprocess.PIPE if is_script else None,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
+
+        if is_script and ytdlp_proc is not None and ytdlp_proc.stdout and process.stdin:
+
+            async def _pump_ytdlp_to_ffmpeg() -> None:
+                assert ytdlp_proc is not None and ytdlp_proc.stdout is not None
+                assert process.stdin is not None
+                try:
+                    while True:
+                        block = await ytdlp_proc.stdout.read(buffer_size)
+                        if not block:
+                            break
+                        process.stdin.write(block)
+                        await process.stdin.drain()
+                except asyncio.CancelledError:
+                    raise
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+                except Exception as e:
+                    logger.debug("yt-dlp → FFmpeg pump ended: %s", e)
+                finally:
+                    try:
+                        if not process.stdin.is_closing():
+                            process.stdin.close()
+                            await process.stdin.wait_closed()
+                    except Exception:
+                        pass
+
+            pump_task = asyncio.create_task(_pump_ytdlp_to_ffmpeg())
+
         stderr_buffer: list[bytes] = []
         async def _drain_stderr() -> None:
             if process.stderr:
@@ -785,6 +811,10 @@ class MPEGTSStreamer:
                 await drain_task
             except asyncio.CancelledError:
                 pass
+            if pump_task is not None:
+                pump_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await pump_task
             # Ensure process is cleaned up
             if process.returncode is None:
                 process.terminate()
@@ -793,13 +823,13 @@ class MPEGTSStreamer:
                 except asyncio.TimeoutError:
                     process.kill()
                     await process.wait()
-            # Clean up yt-dlp subprocess if one was launched
-            if ytdlp_proc and ytdlp_proc.poll() is None:
+            if ytdlp_proc is not None and ytdlp_proc.returncode is None:
+                ytdlp_proc.terminate()
                 try:
-                    ytdlp_proc.terminate()
-                    ytdlp_proc.wait(timeout=5)
-                except Exception:
+                    await asyncio.wait_for(ytdlp_proc.wait(), timeout=5)
+                except asyncio.TimeoutError:
                     ytdlp_proc.kill()
+                    await ytdlp_proc.wait()
             stderr_text = ""
             if process.returncode and process.returncode != 0:
                 raw_stderr = await process.stderr.read()
@@ -808,7 +838,7 @@ class MPEGTSStreamer:
                     logger.warning(f"FFmpeg stderr ({chunk_count} chunks): {stderr_text}")
 
             _error_handler.handle_subprocess_result(
-                ytdlp_returncode=ytdlp_proc.poll() if ytdlp_proc else None,
+                ytdlp_returncode=ytdlp_proc.returncode if ytdlp_proc else None,
                 ffmpeg_returncode=process.returncode,
                 chunks_yielded=chunk_count,
                 stderr_text=stderr_text,
@@ -907,13 +937,5 @@ class MPEGTSStreamer:
                 )
 
     def cleanup(self, channel_id: str) -> None:
-        """Clean up FFmpeg process for a channel."""
-        if channel_id in self._processes:
-            process = self._processes[channel_id]
-            try:
-                process.terminate()
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
-            del self._processes[channel_id]
+        """Legacy hook; stream lifecycle is owned by the process pool / stream loop."""
+        self._processes.pop(channel_id, None)

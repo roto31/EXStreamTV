@@ -1,7 +1,7 @@
 # EXStreamTV System Design
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-03-20
+**Last Updated:** 2026-04-01
 
 For a full architecture overview, streaming lifecycle, restart safety, and AI model, see the [Platform Guide](../PLATFORM_GUIDE.md). This document focuses on component layout and data models.
 
@@ -24,17 +24,22 @@ flowchart TB
         Sched[Schedules]
         Lib[Libraries]
     end
+    subgraph SPA [Optional SPA]
+        FE[frontend Vite React]
+    end
     subgraph API [API Layer]
         REST[REST API]
         IPTV[IPTV M3U/EPG]
         HDHR[HDHomeRun Emulator]
         SSDP[SSDP Discovery]
+        Hist[schedule-history routes]
     end
     subgraph Stream [Streaming]
         ChMgr[ChannelManager]
         Session[SessionManager]
         Pool[ProcessPoolManager]
         Throttle[StreamThrottler]
+        SubP[async subprocess helpers]
     end
     subgraph Media [Media]
         Playout[Playout Engine]
@@ -43,6 +48,7 @@ flowchart TB
     end
     subgraph Data [Data]
         DB[SQLite/PostgreSQL]
+        SH[(schedule_history)]
         Plex[Plex/Jellyfin/Emby]
         YT[YouTube]
         Archive[Archive.org]
@@ -53,10 +59,13 @@ flowchart TB
         I[IPTV]
     end
     UI --> API
+    FE -.->|dev proxy| REST
     API --> Stream
     Stream --> Media
     Media --> Data
     Stream --> Clients
+    Hist --> SH
+    SubP --> Pool
 ```
 
 ---
@@ -66,8 +75,17 @@ flowchart TB
 ### FastAPI Application (`exstreamtv/main.py`)
 
 - Lifespan: async startup/shutdown for database, channel manager, ProcessPoolManager
-- Routers: REST, IPTV, HDHomeRun, WebUI, SSDP
+- Routers: REST, IPTV, HDHomeRun, WebUI, SSDP; includes **`/api/schedule-history`** (memento capture / revert)
 - Static files and Jinja2 templates
+- Optional **`frontend/`** — Vite + React + TypeScript scaffold (proxies API in dev); see `EXStreamTV-UI-Architecture.md` if present in repo
+
+### Async subprocess façade (`exstreamtv/utils/async_subprocess.py`)
+
+- Thread-pooled and asyncio **`create_subprocess_*`** helpers for blocking CLI tools (FFprobe, Ollama, scripts) without blocking the event loop in **`async def`** handlers
+
+### Schedule history (`exstreamtv/database/models/schedule_history.py`, migration **006**)
+
+- Persists JSON snapshots for schedule-apply safety; **ADR:** [ADR-channel-manager-database-sessions.md](ADR-channel-manager-database-sessions.md) documents sync vs async DB boundaries in streaming paths
 
 ### Channel Manager (`exstreamtv/streaming/channel_manager.py`)
 

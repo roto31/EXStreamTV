@@ -7,8 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 14 (pattern refactor, schedule memento, async I/O)
+- **Alembic 006** — `schedule_history` table; **`POST /api/schedule-history/capture`** and **`POST /api/schedule-history/{id}/revert`** (`exstreamtv/api/schedule_history.py`, `schedule_snapshot_service`).
+- **`exstreamtv/utils/async_subprocess.py`** — thread-pooled / asyncio subprocess helpers for API and streaming-adjacent paths.
+- **`exstreamtv/patterns/`** and **`exstreamtv/models/`** — shared application patterns; ADR **`docs/architecture/ADR-channel-manager-database-sessions.md`**.
+- **`frontend/`** — Vite + React + TypeScript scaffold (dev proxy to API).
+- **`.cursor/rules/patterns-implemented.mdc`** — Cursor rule summarizing implemented patterns.
+
 ### Documentation & Confluence tooling
-- **`docs/LESSONS_LEARNED.md`** through **LL-035**; wiki **[Lessons-Learned](Lessons-Learned)** synced. Confluence publishers: multipart/httpx **415** fix; root page reuse / **`CONFLUENCE_ROOT_PAGE_ID`**. See repository root **`CHANGELOG.md`** and **[Documentation Changelog](Documentation-Changelog)**.
+- **Lessons learned** through **LL-036** in `docs/LESSONS_LEARNED.md` (includes missing Mermaid / “blank” Confluence vs wiki, Kroki fallback, verify-before-done). **36** confirmed lessons; doc version **1.4**. Wiki **`Lessons-Learned`** mirrors repo + banner.
+- **`scripts/verify_wiki_confluence_docs.py`** — every sidebar wiki page exists; Mermaid counts; **`--kroki`** validates Kroki; optional **`--warn-thin`**. **RULE DOC-07 / DOC-08** in **`.cursor/rules/exstreamtv-documentation-parity.mdc`**; skill **`.cursor/skills/exstreamtv-documentation-parity/SKILL.md`**.
+- **Publishers** (`publish_confluence_wiki_tree.py`, `publish_confluence_mirror.py`): multipart-safe httpx; abort if Mermaid SVG upload fails; Kroki failures logged to stderr.
+- **Changelogs** and **`docs/confluence/README.md`** updated. After doc changes: push **`EXStreamTV.wiki/`**, run **`uv run scripts/publish_confluence_wiki_tree.py`**, then **`uv run scripts/verify_wiki_confluence_docs.py --kroki`**.
 
 ---
 

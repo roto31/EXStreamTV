@@ -1,0 +1,67 @@
+---
+description: Design patterns implemented in EXStreamTV — correct usage of refactored patterns
+globs: exstreamtv/**/*.py
+---
+
+# Implemented design patterns
+
+Canonical sources: `AGENTS.md`, `docs/architecture/PATTERN_REFACTOR_SOURCES.md`, `EXStreamTV-Cursor-Pattern-Prompt.md`, `EXStreamTV-UI-Architecture.md` (Downloads or docs copies).
+
+## State (`exstreamtv/patterns/state/`)
+
+- Stream lifecycle is managed through `ChannelContext` and `StreamState` subclasses.
+- Transitions use `ctx.get_state().start` / `stop` / `on_health_check_*` / `on_ffmpeg_exited`.
+- Do not reintroduce parallel `is_running` / `is_failed` booleans on services for the same concern.
+
+## Command (`exstreamtv/patterns/commands/`)
+
+- Start/stop/restart for the FSM should go through `StreamCommandQueue` where integrated.
+- Prefer `request.app.state.command_queue.enqueue(cmd)` from routers/tasks over ad-hoc `stream_service` calls when the queue is wired.
+
+## Factory (`exstreamtv/patterns/factory/`)
+
+- Prefer `get_ffmpeg_builder(mode).build(StreamSource(url=...), config)` for new FFmpeg argv construction.
+- **All** shared flag strings must come from `exstreamtv/ffmpeg/constants.py` (e.g. `FFLAGS_STREAMING`, `BSF_H264_ANNEXB`, `LOUDNORM_FILTER`).
+
+## Repository (`exstreamtv/patterns/repository/`)
+
+- Prefer `ChannelRepository` / `ProgramRepository` (maps to `PlayoutItem`) for new data access; `PersonaRepository` is reserved until schema exists.
+
+## Chain (`exstreamtv/patterns/chain/`)
+
+- Raw string URLs: use `URLResolver.resolve_or_pass` via `build_default_url_resolver_chain(session)`.
+- Media-item resolution remains `MediaURLResolver` in `exstreamtv/streaming/url_resolver.py` until fully unified.
+
+## Mediator (`exstreamtv/patterns/mediator/`)
+
+- Cross-component notifications: `await app.state.mediator.notify(sender, event, payload)` when mediator is set.
+
+## Observer (`exstreamtv/patterns/observer/`)
+
+- Subscribe/emit through `StreamEventBus`; use `unsubscribe_all(channel_id)` on channel delete.
+
+## Proxy (`exstreamtv/patterns/proxy/`)
+
+- Use **`await StreamUrlProxy.get_url()`** for refreshed URLs — not an async property.
+
+## Strategy (`exstreamtv/patterns/strategy/`)
+
+- Schedule template ordering: `get_scheduling_strategy(style)`; optional `spec.scheduling_style` / `spec.genre_weights` on channel specs.
+
+## Memento / null / cache
+
+- `ScheduleHistory` ORM + migration `006` · capture/revert via `exstreamtv/services/schedule_snapshot_service.py` and `/api/schedule-history/*`.
+- `ScheduleMemento` / `ScheduleOriginator`: in-memory helpers in `patterns/memento/`.
+- `NullFillerLibrary` / `get_filler_library_for_channel`: `patterns/null_objects/null_filler.py`.
+- `LazyXmltvCache`: on `app.state` · `peek_fresh` / `prime` / `invalidate` · wired from `iptv` EPG generation.
+- `with_retry` / `check_stream_health`: `exstreamtv/services/health_service.py`.
+
+## Lifespan
+
+- Pattern singletons (`command_queue`, `stream_service`, `event_bus`, `url_resolver_chain`, `mediator`) are created in `lifespan`, not at import time.
+
+## Async subprocess (Task 18)
+
+- Prefer `asyncio.create_subprocess_exec` / `exstreamtv/utils/async_subprocess.py` in async routes.
+- Heavy or legacy CLI batches may use `subprocess_run_thread` (`asyncio.to_thread(subprocess.run, …)`) so the event loop is not blocked.
+- Sync-only modules (e.g. `ffmpeg/capabilities/detector.py`, macOS Keychain helpers) may keep `subprocess.run`; call from async via `asyncio.to_thread` if needed.

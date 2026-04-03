@@ -47,6 +47,13 @@ except ImportError as e:
     logging.getLogger(__name__).warning(f"Schedules router not available: {e}")
 
 try:
+    from .schedule_history import router as schedule_history_router
+    api_router.include_router(schedule_history_router, tags=["Schedule history"])
+except ImportError as e:
+    import logging
+    logging.getLogger(__name__).warning(f"Schedule history router not available: {e}")
+
+try:
     from .schedule_items import router as schedule_items_router
     api_router.include_router(schedule_items_router, tags=["Schedule Items"])
 except ImportError as e:

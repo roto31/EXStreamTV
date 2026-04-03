@@ -1,7 +1,5 @@
 # EXStreamTV — Lessons Learned
 
-> **Wiki mirror:** Matches [`docs/LESSONS_LEARNED.md`](https://github.com/roto31/EXStreamTV/blob/main/docs/LESSONS_LEARNED.md) on `main`. Edit the repository file first, then refresh this page.
-
 **Document version:** 1.4  
 **Audit date:** 2026-03-20 (codebase); **LL-031–036** Confluence / publishing / doc parity (2026-03-21 – 2026-03-22)  
 **Scope:** Full codebase audit — 30 confirmed issues across 18 files; plus 6 documentation/tooling lessons (LL-031–036)  

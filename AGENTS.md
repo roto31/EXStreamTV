@@ -36,3 +36,12 @@ Subdirectory-specific rules are in:
 Confluence / GitHub wiki mirror (REST vs MCP, uv, titles, attachment uploads, root reuse): `.cursor/rules/exstreamtv-confluence.mdc` · lessons **LL-031–LL-036** in `docs/LESSONS_LEARNED.md` · skill `.cursor/skills/exstreamtv-confluence-publish/SKILL.md`
 
 When asked to **publish or update documentation** (both surfaces): `.cursor/rules/exstreamtv-documentation-parity.mdc` (RULE DOC-07, DOC-08) · skill `.cursor/skills/exstreamtv-documentation-parity/SKILL.md` — GitHub Wiki **push** + `uv run scripts/publish_confluence_wiki_tree.py` + `uv run scripts/verify_wiki_confluence_docs.py --kroki` before declaring complete.
+
+---
+
+## Pattern refactor + UI architecture (2026)
+
+- **Task list & constraints:** Keep aligned with the Cursor pattern prompt (`EXStreamTV-Cursor-Pattern-Prompt.md` — local path often `~/Downloads/`; see [docs/architecture/PATTERN_REFACTOR_SOURCES.md](docs/architecture/PATTERN_REFACTOR_SOURCES.md)).
+- **UI / React spec:** `EXStreamTV-UI-Architecture.md` — product roadmap; backend pattern work in `exstreamtv/patterns/` must not violate rules above (especially FFmpeg flags from `exstreamtv/ffmpeg/constants.py`).
+- **Enforcement:** `.cursor/rules/patterns-implemented.mdc` · implementation tree under `exstreamtv/patterns/` · stream orchestration in `exstreamtv/services/stream_service.py`.
+- **Reminder:** New FFmpeg argv construction must use **`exstreamtv/ffmpeg/constants.py`** (e.g. `FFLAGS_STREAMING`, `LOUDNORM_FILTER`, `BSF_H264_ANNEXB`) — never duplicate flag strings in `patterns/factory/`.

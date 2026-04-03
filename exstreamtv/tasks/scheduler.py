@@ -47,11 +47,12 @@ class TaskScheduler:
     - Graceful shutdown
     """
     
-    def __init__(self):
+    def __init__(self, max_concurrent_jobs: int = 8):
         self._tasks: Dict[str, ScheduledTask] = {}
         self._running = False
         self._scheduler_task: Optional[asyncio.Task] = None
         self._lock = asyncio.Lock()
+        self._run_semaphore = asyncio.Semaphore(max(1, max_concurrent_jobs))
     
     def add_task(
         self,
@@ -175,27 +176,28 @@ class TaskScheduler:
                 await asyncio.sleep(5)
     
     async def _execute_task(self, task: ScheduledTask) -> None:
-        """Execute a scheduled task."""
-        task.is_running = True
-        task.last_run = datetime.now()
-        
-        try:
-            logger.debug(f"Running scheduled task: {task.name}")
-            
-            if asyncio.iscoroutinefunction(task.func):
-                await task.func(*task.args, **task.kwargs)
-            else:
-                task.func(*task.args, **task.kwargs)
-            
-            task.run_count += 1
-            logger.debug(f"Scheduled task completed: {task.name}")
-        
-        except Exception as e:
-            logger.error(f"Scheduled task failed: {task.name}: {e}")
-        
-        finally:
-            task.is_running = False
-            task.next_run = task.calculate_next_run()
+        """Execute a scheduled task (bounded concurrency / backpressure)."""
+        async with self._run_semaphore:
+            task.is_running = True
+            task.last_run = datetime.now()
+
+            try:
+                logger.debug(f"Running scheduled task: {task.name}")
+
+                if asyncio.iscoroutinefunction(task.func):
+                    await task.func(*task.args, **task.kwargs)
+                else:
+                    task.func(*task.args, **task.kwargs)
+
+                task.run_count += 1
+                logger.debug(f"Scheduled task completed: {task.name}")
+
+            except Exception as e:
+                logger.error(f"Scheduled task failed: {task.name}: {e}")
+
+            finally:
+                task.is_running = False
+                task.next_run = task.calculate_next_run()
 
 
 # Global scheduler instance

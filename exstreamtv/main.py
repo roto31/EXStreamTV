@@ -4,6 +4,7 @@ EXStreamTV Main Application
 FastAPI application entry point combining StreamTV and ErsatzTV features.
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -113,8 +114,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         # Register channel manager with health tasks for restart capability
         try:
-            from exstreamtv.tasks.health_tasks import set_channel_manager
-            set_channel_manager(app.state.channel_manager)
+            from exstreamtv.tasks import health_tasks
+
+            health_tasks.set_channel_manager(app.state.channel_manager)
         except Exception as e:
             logger.warning(f"Failed to register channel manager with health tasks: {e}")
         
@@ -126,7 +128,55 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 logger.info(f"Channel pre-warming complete: {success}/{len(prewarm_results)} channels ready")
         except Exception as e:
             logger.warning(f"Channel pre-warming failed (non-critical): {e}")
-            
+
+        # Stream FSM + serialized command queue (State + Command patterns)
+        try:
+            from exstreamtv.patterns.commands.command_queue import StreamCommandQueue
+            from exstreamtv.services.stream_service import StreamService
+
+            stream_service = StreamService(app.state.channel_manager)
+            app.state.stream_service = stream_service
+            app.state.channel_contexts = stream_service.contexts
+
+            cmd_queue = StreamCommandQueue(max_size=200)
+            app.state.command_queue = cmd_queue
+            app.state.command_queue_task = asyncio.create_task(
+                cmd_queue.process_forever(),
+                name="stream_command_queue",
+            )
+            health_tasks.set_stream_restart_queue(cmd_queue, stream_service)
+            logger.info("StreamService and StreamCommandQueue started")
+
+            from exstreamtv.patterns.chain.url_resolvers import (
+                build_default_url_resolver_chain,
+            )
+            from exstreamtv.patterns.mediator.stream_mediator import StreamMediator
+            from exstreamtv.patterns.observer.event_bus import StreamEventBus
+
+            streamlink_session = None
+            try:
+                import streamlink
+
+                streamlink_session = streamlink.Streamlink()
+            except Exception as sl_e:
+                logger.debug("Streamlink session not available: %s", sl_e)
+            app.state.event_bus = StreamEventBus()
+            app.state.streamlink_session = streamlink_session
+            app.state.url_resolver_chain = build_default_url_resolver_chain(
+                streamlink_session
+            )
+            mediator = StreamMediator(cmd_queue, stream_service)
+            mediator.register("event_bus", app.state.event_bus)
+            app.state.mediator = mediator
+            logger.info("StreamEventBus, URL resolver chain, and StreamMediator ready")
+
+            from exstreamtv.patterns.cache.xmltv_cache import LazyXmltvCache
+
+            app.state.xmltv_cache = LazyXmltvCache(ttl_seconds=120.0)
+            logger.info("LazyXmltvCache registered on app.state (TTL=120s)")
+        except Exception as e:
+            logger.warning(f"Stream command queue initialization failed (non-critical): {e}")
+
     except Exception as e:
         logger.warning(f"Channel manager initialization failed: {e}")
 
@@ -243,7 +293,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     # Shutdown
     logger.info("Shutting down EXStreamTV")
-    
+
+    # Stop stream command queue before channel manager
+    if hasattr(app.state, "command_queue_task") and app.state.command_queue_task:
+        try:
+            app.state.command_queue_task.cancel()
+            try:
+                await app.state.command_queue_task
+            except asyncio.CancelledError:
+                pass
+            logger.info("StreamCommandQueue task stopped")
+        except Exception as e:
+            logger.warning(f"Error stopping stream command queue: {e}")
+
     # Stop AI components
     if hasattr(app.state, 'log_collector'):
         try:

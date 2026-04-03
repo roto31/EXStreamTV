@@ -69,6 +69,7 @@ from exstreamtv.database.models.schedule import (
     ProgramSchedule,
     ProgramScheduleItem,
 )
+from exstreamtv.database.models.schedule_history import ScheduleHistory
 from exstreamtv.database.models.smart_collection import (
     RerunCollection,
     RerunHistoryItem,
@@ -123,6 +124,7 @@ __all__ = [
     "Block",
     "BlockGroup",
     "BlockItem",
+    "ScheduleHistory",
     # Filler
     "FillerPreset",
     "FillerPresetItem",

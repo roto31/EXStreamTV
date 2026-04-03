@@ -334,8 +334,8 @@ async def get_channel_playlist(
 
 @router.get("/iptv/xmltv.xml")
 async def get_epg(
+    request: Request,
     access_token: str | None = None,
-    request: Request = None,
     plain: bool = True,
     db: AsyncSession = Depends(get_db),
 ):
@@ -352,6 +352,20 @@ async def get_epg(
         if access_token is not None and config.security.api_key_required and config.security.access_token:
             if access_token != config.security.access_token:
                 raise HTTPException(status_code=401, detail="Invalid access token")
+
+        lazy_xmltv = getattr(request.app.state, "xmltv_cache", None)
+        if lazy_xmltv is not None:
+            lazy_hit = await lazy_xmltv.peek_fresh()
+            if lazy_hit is not None:
+                logger.debug(
+                    "Returning app.state XMLTV cache (%ss TTL)",
+                    int(lazy_xmltv.ttl_seconds),
+                )
+                return Response(
+                    content=lazy_hit,
+                    media_type="text/xml; charset=utf-8",
+                    headers={"Cache-Control": f"max-age={int(lazy_xmltv.ttl_seconds)}"},
+                )
 
         # Return cached XMLTV if fresh
         cache_age = _time.time() - _xmltv_cache_time
@@ -529,6 +543,10 @@ async def get_epg(
             channels, db, now, end_time, base_url
         )
         if timeline_xml:
+            if lazy_xmltv is not None:
+                await lazy_xmltv.prime(timeline_xml)
+            _xmltv_cache = timeline_xml
+            _xmltv_cache_time = _time.time()
             return Response(
                 content=timeline_xml,
                 media_type="application/xml",
@@ -1798,6 +1816,8 @@ async def get_epg(
         # Store result in cache
         _xmltv_cache = xml_content
         _xmltv_cache_time = _time.time()
+        if lazy_xmltv is not None:
+            await lazy_xmltv.prime(xml_content)
         logger.debug(f"XMLTV cache updated ({len(xml_content)} bytes)")
 
         # Optional: request Plex DVR to reload guide after EPG is generated (throttled 60s)
@@ -1841,7 +1861,7 @@ async def get_epg(
 
 
 @router.post("/iptv/xmltv/refresh")
-async def refresh_epg_cache():
+async def refresh_epg_cache(request: Request):
     """
     Force-expire the XMLTV cache so the next EPG request regenerates fresh data.
     Call this after making changes to channel schedules.
@@ -1849,6 +1869,9 @@ async def refresh_epg_cache():
     global _xmltv_cache, _xmltv_cache_time
     _xmltv_cache = None
     _xmltv_cache_time = 0.0
+    lazy = getattr(request.app.state, "xmltv_cache", None)
+    if lazy is not None:
+        lazy.invalidate()
     logger.info("XMLTV cache manually invalidated")
     return {"status": "ok", "message": "XMLTV cache cleared. Next EPG request will regenerate."}
 

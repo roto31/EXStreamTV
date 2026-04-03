@@ -1,9 +1,9 @@
 # EXStreamTV Documentation
 
-Architecture diagrams: [docs/architecture/DIAGRAMS.md](Architecture-Diagrams) — Mermaid-only, **18** standardized diagrams (includes six-layer AI/coding safety, §18).
+Architecture diagrams: [docs/architecture/DIAGRAMS.md](Architecture-Diagrams) — Mermaid-only, **19** standardized diagrams (includes schedule history memento flow, §19).
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-03-21
+**Last Updated:** 2026-04-01
 
 Welcome to the EXStreamTV documentation. This guide will help you set up, configure, and use EXStreamTV for your IPTV streaming needs.
 
@@ -18,6 +18,8 @@ Welcome to the EXStreamTV documentation. This guide will help you set up, config
 | [Installation](Installation) | Complete installation guide |
 | [API Reference](API-Reference) | REST API documentation |
 | [System Design](System-Design) | Architecture overview |
+| [Pattern refactor sources](Pattern-Refactor-Sources) | Refactor inventory + Alembic stamp note |
+| [ADR: ChannelManager DB sessions](ADR-Channel-Manager-Database) | Sync vs async SQLAlchemy boundaries |
 
 ---
 
@@ -52,8 +54,10 @@ docs/
 │
 ├── architecture/                # Architecture Documentation
 │   ├── SYSTEM_DESIGN.md        # System architecture
-│   ├── DIAGRAMS.md             # 18 Mermaid diagrams (canonical)
-│   └── TUNARR_DIZQUETV_INTEGRATION.md # v2.6.0 integration (NEW)
+│   ├── DIAGRAMS.md             # 19 Mermaid diagrams (canonical)
+│   ├── PATTERN_REFACTOR_SOURCES.md
+│   ├── ADR-channel-manager-database-sessions.md
+│   └── TUNARR_DIZQUETV_INTEGRATION.md # v2.6.0 integration
 │
 ├── development/                 # Development Documentation
 │   └── DISTRIBUTION.md         # Distribution guide
@@ -307,10 +311,6 @@ All documentation is available in Confluence-ready format in the `confluence/` f
 4. Copy/paste content from `.confluence.md` files
 
 See `confluence/README.md` for detailed instructions.
-
-### Automated mirror (ESTV space)
-
-The repository can push **README + this wiki** to **Confluence Cloud** (storage format, Kroki → Mermaid SVG attachments, screenshots). Runbook: **[`docs/confluence/README.md`](https://github.com/roto31/EXStreamTV/blob/main/docs/confluence/README.md)**. Pitfalls and fixes: **[Lessons Learned](Lessons-Learned)** (**LL-031–LL-035**).
 
 ---
 

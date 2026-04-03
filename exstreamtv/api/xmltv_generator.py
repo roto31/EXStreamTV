@@ -36,6 +36,8 @@ def validate_xmltv_structure(xml_content: str, channel_ids: set[str]) -> Tuple[b
     Returns (valid, errors).
     """
     errors: List[str] = []
+    if not xml_content or not xml_content.strip():
+        return False, ["Empty XMLTV body"]
     try:
         root = ET.fromstring(xml_content)
     except ET.ParseError as e:

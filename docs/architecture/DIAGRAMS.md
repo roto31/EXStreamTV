@@ -2,7 +2,7 @@
 
 All diagrams use Mermaid. Referenced from Platform Guide, EPG Alignment, Observability, Invariants, Lessons Learned.
 
-**Last Revised:** 2026-03-21
+**Last Revised:** 2026-04-01
 
 ---
 
@@ -422,3 +422,22 @@ flowchart TB
 
 **Merge note (2026-03-21):** Branch `2026-02-21-ufnw` was merged into `default` `main` so GitHub,
 local clones, and wiki sources all reflect the same remediation + hardening + tooling tree.
+
+---
+
+## 19. Schedule history (memento) API
+
+Capture and revert channel schedule snapshots stored in **`schedule_history`** (Alembic **006**).
+
+```mermaid
+flowchart TD
+    A[Client] -->|POST /api/schedule-history/capture| B[schedule_snapshot_service]
+    B --> C[(schedule_history)]
+    B --> D[JSON snapshot + metadata]
+    D --> C
+    A -->|POST /api/schedule-history/id/revert| E[revert_snapshot]
+    C --> E
+    E --> F[channels / schedules restored]
+```
+
+See [System Design — Schedule history](SYSTEM_DESIGN.md#schedule-history-exstreamtvdatabasemodelsschedule_historypy-migration-006).

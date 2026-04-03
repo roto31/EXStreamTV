@@ -27,6 +27,7 @@ from ..database.models import (
     ProgramSchedule,
     StreamingMode,
 )
+from ..patterns.repository.channel_repository import ChannelRepository
 from ..streaming.plex_api_client import request_plex_guide_reload
 
 logger = logging.getLogger(__name__)
@@ -85,14 +86,8 @@ async def get_all_channels(
     Returns:
         list[ChannelResponse]: List of all channels
     """
-    # Query channels with relationships
-    stmt = select(Channel).options(
-        selectinload(Channel.ffmpeg_profile),
-        selectinload(Channel.watermark)
-    ).order_by(Channel.number)
-    
-    result = await db.execute(stmt)
-    channels = result.scalars().all()
+    repo = ChannelRepository(db)
+    channels = await repo.list_all_with_profiles()
     
     if include_content_status:
         # Get channel IDs that have schedules

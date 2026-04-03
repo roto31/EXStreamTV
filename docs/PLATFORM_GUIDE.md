@@ -689,7 +689,7 @@ In metadata self-resolution, metrics before and after an attempt are compared. I
 
 ## 11. Documentation, Wiki, and Branch Alignment
 
-- **Canonical diagrams:** [Architecture Diagrams](architecture/DIAGRAMS.md) — 18 Mermaid diagrams (system overview, FFmpeg constants layer, async lock pattern, six-layer AI/coding safety, etc.).
+- **Canonical diagrams:** [Architecture Diagrams](architecture/DIAGRAMS.md) — 19 Mermaid diagrams (system overview, schedule history memento, FFmpeg constants layer, async lock pattern, six-layer AI/coding safety, etc.).
 - **Wiki:** Source markdown lives under `docs/wiki/` and main guides under `docs/`. Regenerate the GitHub Wiki tree with:
   `python scripts/sync_docs_to_wiki.py --wiki-dir EXStreamTV.wiki`
   then commit and push `EXStreamTV.wiki/` (or copy `wiki_out/` into your wiki clone).

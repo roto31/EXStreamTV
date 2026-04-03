@@ -3,8 +3,8 @@
 This document tracks the development progress of EXStreamTV, organized by phase and component.
 
 **Current Version:** 2.6.0  
-**Last Updated:** 2026-01-31  
-**Status:** Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅ | Phase 5 ✅ | Phase 6 ✅ | Phase 7 ✅ | Phase 8 ✅ | Phase 9 ✅ | Phase 10 ✅ | Phase 11 ✅ | Phase 12 ✅ | Phase 13 ✅
+**Last Updated:** 2026-04-01  
+**Status:** Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅ | Phase 5 ✅ | Phase 6 ✅ | Phase 7 ✅ | Phase 8 ✅ | Phase 9 ✅ | Phase 10 ✅ | Phase 11 ✅ | Phase 12 ✅ | Phase 13 ✅ | Phase 14 ✅
 
 ---
 
@@ -25,6 +25,14 @@ This document tracks the development progress of EXStreamTV, organized by phase 
 | 11 | Additional Integrations | ✅ Complete | 2.0.0 |
 | 12 | AI Channel Creator | ✅ Complete | 2.1.0-2.5.0 |
 | 13 | Tunarr/dizqueTV Integration | ✅ Complete | 2.6.0 |
+| 14 | Pattern refactor & schedule memento | ✅ Complete | 2.6.0+ |
+
+### Phase 14 highlights (2026-04)
+
+- Alembic **006** — `schedule_history` table; **`/api/schedule-history`** capture + revert
+- **`exstreamtv/utils/async_subprocess.py`** — async-safe subprocess helpers for API/streaming-adjacent paths
+- **`exstreamtv/patterns/`** — shared application patterns; ADR **ADR-channel-manager-database-sessions.md** for DB session boundaries
+- **`frontend/`** — Vite + React + TypeScript scaffold (Track B; dev proxy to API)
 
 ---
 

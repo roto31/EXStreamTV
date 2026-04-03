@@ -14,6 +14,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
+from exstreamtv.utils.async_subprocess import subprocess_run_thread
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Scripts"])
@@ -116,9 +118,8 @@ async def run_script(script_id: str, request: Request) -> dict[str, Any]:
 
     try:
         # Run the script
-        result = subprocess.run(
+        result = await subprocess_run_thread(
             ["python3", str(script_path)],
-            check=False,
             capture_output=True,
             text=True,
             timeout=60,
@@ -199,9 +200,8 @@ async def apply_fixes(script_id: str, request: Request) -> dict[str, Any]:
                     # Escape quotes in the command
                     escaped_cmd = fix_def["command"].replace('"', '\\"')
                     apple_script = f'do shell script "{escaped_cmd}" with administrator privileges'
-                    result = subprocess.run(
+                    result = await subprocess_run_thread(
                         ["osascript", "-e", apple_script],
-                        check=False,
                         capture_output=True,
                         text=True,
                         timeout=30,
@@ -226,9 +226,8 @@ async def apply_fixes(script_id: str, request: Request) -> dict[str, Any]:
                     # Use the current Python interpreter (which should be the venv if active)
                     cmd_parts = [venv_python, "-m", "pip", *cmd_parts[1:]]
 
-                result = subprocess.run(
+                result = await subprocess_run_thread(
                     cmd_parts,
-                    check=False,
                     capture_output=True,
                     text=True,
                     timeout=120,  # Increased timeout for pip installs
@@ -291,7 +290,6 @@ async def _run_check_ffmpeg() -> dict[str, Any]:
         dict[str, Any]: Script execution results with FFmpeg version and path
     """
     import shutil
-    import subprocess
 
     ffmpeg_path = shutil.which("ffmpeg")
 
@@ -306,8 +304,11 @@ async def _run_check_ffmpeg() -> dict[str, Any]:
         }
 
     try:
-        result = subprocess.run(
-            ["ffmpeg", "-version"], check=False, capture_output=True, text=True, timeout=5
+        result = await subprocess_run_thread(
+            ["ffmpeg", "-version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         version_line = result.stdout.split("\n")[0] if result.stdout else "Unknown version"
         return {

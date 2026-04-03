@@ -12,6 +12,7 @@ Welcome to the EXStreamTV API documentation. This guide explains how to use the 
   - [Collections](#collections)
   - [Media Items](#media-items)
 - [Scheduling APIs](#scheduling-apis)
+  - [Schedule history (memento)](#schedule-history-memento)
   - [Schedules](#schedules)
   - [Playouts](#playouts)
   - [Blocks](#blocks)
@@ -439,6 +440,38 @@ Returns complete information about a media item including file paths, duration, 
 ## Scheduling APIs
 
 These APIs control when and how content plays on your channels.
+
+### Schedule history (memento)
+
+Persist JSON snapshots of channel schedule state before risky apply operations; revert later if needed. Requires DB migration **006** (`schedule_history` table).
+
+#### Capture a snapshot
+
+```
+POST /api/schedule-history/capture
+```
+
+**Body (JSON):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `channel_ids` | array of integers | yes | Channels to include in the snapshot |
+| `persona_id` | string | no | Optional tag for automation/persona flows |
+| `label` | string | no | Human-readable label |
+
+**Response (201):** `{ "id": <history_id>, "persona_id": ..., "label": ... }`
+
+#### Revert from a snapshot
+
+```
+POST /api/schedule-history/{history_id}/revert?persona_id=<optional>
+```
+
+Restores channels from the stored **pre-apply** snapshot. Returns `{ "status": "ok", "items_restored": <n> }`.
+
+**Errors:** `404` if the row is missing or `persona_id` does not match; `409` if the entry was not marked applied, has no snapshot, or revert rules reject the operation.
+
+---
 
 ### Schedules
 

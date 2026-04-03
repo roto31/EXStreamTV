@@ -22,6 +22,8 @@
 * [[API-Reference]]
 * [[System-Design]]
 * [[Architecture-Diagrams]]
+* [[Pattern-Refactor-Sources]]
+* [[ADR-Channel-Manager-Database]]
 * [[Architecture]]
 * [[Streaming-Internals]]
 * [[HDHomeRun-Emulation]]

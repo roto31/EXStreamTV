@@ -1,8 +1,8 @@
 """Health check API endpoint for EXStreamTV"""
 
+import asyncio
 import logging
 import platform
-import subprocess
 from datetime import datetime
 from typing import Any
 
@@ -16,26 +16,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/health", tags=["Health"])
 
 
-def check_ffmpeg() -> dict[str, Any]:
-    """Check FFmpeg installation and version."""
+async def check_ffmpeg_async() -> dict[str, Any]:
+    """Check FFmpeg installation and version (non-blocking subprocess)."""
     config = get_config()
+    ffmpeg_path = config.ffmpeg.path or "ffmpeg"
     try:
-        ffmpeg_path = config.ffmpeg.path or "ffmpeg"
-        result = subprocess.run(
-            [ffmpeg_path, "-version"], 
-            check=False, 
-            capture_output=True, 
-            text=True, 
-            timeout=5
+        proc = await asyncio.create_subprocess_exec(
+            ffmpeg_path,
+            "-version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        if result.returncode == 0:
-            # Parse version from first line
-            version_line = result.stdout.split('\n')[0]
-            return {
-                "status": "ok",
-                "version": version_line,
-                "path": ffmpeg_path,
-            }
+        try:
+            stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=5.0)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            return {"status": "error", "error": "FFmpeg check timed out"}
+        text = (stdout or b"").decode(errors="replace")
+        if proc.returncode == 0:
+            version_line = text.split("\n")[0] if text else ""
+            return {"status": "ok", "version": version_line, "path": ffmpeg_path}
         return {
             "status": "error",
             "error": "FFmpeg returned non-zero exit code",
@@ -45,11 +46,6 @@ def check_ffmpeg() -> dict[str, Any]:
             "status": "error",
             "error": "FFmpeg not found in PATH",
         }
-    except subprocess.TimeoutExpired:
-        return {
-            "status": "error",
-            "error": "FFmpeg check timed out",
-        }
     except Exception as e:
         return {
             "status": "error",
@@ -57,25 +53,27 @@ def check_ffmpeg() -> dict[str, Any]:
         }
 
 
-def check_ffprobe() -> dict[str, Any]:
-    """Check FFprobe installation and version."""
+async def check_ffprobe_async() -> dict[str, Any]:
+    """Check FFprobe installation and version (non-blocking subprocess)."""
     config = get_config()
+    ffprobe_path = config.ffmpeg.ffprobe_path or "ffprobe"
     try:
-        ffprobe_path = config.ffmpeg.ffprobe_path or "ffprobe"
-        result = subprocess.run(
-            [ffprobe_path, "-version"], 
-            check=False, 
-            capture_output=True, 
-            text=True, 
-            timeout=5
+        proc = await asyncio.create_subprocess_exec(
+            ffprobe_path,
+            "-version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        if result.returncode == 0:
-            version_line = result.stdout.split('\n')[0]
-            return {
-                "status": "ok",
-                "version": version_line,
-                "path": ffprobe_path,
-            }
+        try:
+            stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=5.0)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            return {"status": "error", "error": "FFprobe check timed out"}
+        text = (stdout or b"").decode(errors="replace")
+        if proc.returncode == 0:
+            version_line = text.split("\n")[0] if text else ""
+            return {"status": "ok", "version": version_line, "path": ffprobe_path}
         return {
             "status": "error",
             "error": "FFprobe returned non-zero exit code",
@@ -116,7 +114,11 @@ async def detailed_health_check() -> dict[str, Any]:
         dict: Detailed health status for all components
     """
     config = get_config()
-    
+    ffmpeg_status, ffprobe_status = await asyncio.gather(
+        check_ffmpeg_async(),
+        check_ffprobe_async(),
+    )
+
     return {
         "status": "healthy",
         "version": __version__,
@@ -129,8 +131,8 @@ async def detailed_health_check() -> dict[str, Any]:
             "python_version": platform.python_version(),
         },
         "components": {
-            "ffmpeg": check_ffmpeg(),
-            "ffprobe": check_ffprobe(),
+            "ffmpeg": ffmpeg_status,
+            "ffprobe": ffprobe_status,
             "database": {"status": "ok"},
         },
         "config": {

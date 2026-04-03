@@ -340,6 +340,39 @@ class ScheduleGenerator:
                 )
                 slots.extend(block_slots)
         
+        try:
+            from exstreamtv.patterns.strategy.scheduling_strategies import (
+                ContentItem,
+                SchedulingPersona,
+                get_scheduling_strategy,
+            )
+
+            style = getattr(spec, "scheduling_style", None) or "balanced"
+            persona = SchedulingPersona(
+                genre_weights=dict(getattr(spec, "genre_weights", None) or {})
+            )
+            strategy = get_scheduling_strategy(style)
+            by_day: dict[int, list[TimeSlot]] = {}
+            for s in slots:
+                dk = s.day_of_week.value if s.day_of_week else 0
+                by_day.setdefault(dk, []).append(s)
+            reordered: list[TimeSlot] = []
+            for dk in sorted(by_day.keys()):
+                day_slots = by_day[dk]
+                items = [
+                    ContentItem(
+                        ref=str(i),
+                        genre=str(s.genre or "unknown"),
+                        show_id=str(s.title or f"slot-{i}"),
+                    )
+                    for i, s in enumerate(day_slots)
+                ]
+                ordered = strategy.order_content(items, persona)
+                reordered.extend(day_slots[int(o.ref)] for o in ordered)
+            slots = reordered
+        except Exception as e:
+            logger.debug("scheduling strategy pass skipped: %s", e)
+
         # Sort by day and time
         slots.sort(key=lambda s: (
             s.day_of_week.value if s.day_of_week else 0,

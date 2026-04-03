@@ -8,10 +8,10 @@ Provides unified configuration for AI features including:
 - One-click setup operations
 """
 
+import asyncio
 import logging
 import os
 import platform
-import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from exstreamtv.config import get_config, reload_config
+from exstreamtv.utils.async_subprocess import subprocess_run_thread
 
 logger = logging.getLogger(__name__)
 
@@ -121,10 +122,14 @@ async def _get_ollama_status() -> dict[str, Any]:
         get_system_info,
     )
 
-    installed = check_ollama_installed()
+    installed = await asyncio.to_thread(check_ollama_installed)
     server_running = check_ollama_server_running() if installed else False
-    system_info = get_system_info()
-    installed_models = get_installed_ollama_models() if installed and server_running else []
+    system_info = await asyncio.to_thread(get_system_info)
+    installed_models = (
+        await asyncio.to_thread(get_installed_ollama_models)
+        if installed and server_running
+        else []
+    )
 
     return {
         "installed": installed,
@@ -231,13 +236,15 @@ async def _install_ollama() -> dict[str, Any]:
     try:
         if system == "Darwin":  # macOS
             # Try Homebrew first
-            result = subprocess.run(
-                ["brew", "--version"], check=False, capture_output=True, text=True, timeout=5
+            result = await subprocess_run_thread(
+                ["brew", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0:
-                result = subprocess.run(
+                result = await subprocess_run_thread(
                     ["brew", "install", "ollama"],
-                    check=False,
                     capture_output=True,
                     text=True,
                     timeout=600,

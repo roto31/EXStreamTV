@@ -2,7 +2,21 @@
 
 All notable changes to the Documentation component will be documented in this file.
 
-**Last Revised:** 2026-03-22
+**Last Revised:** 2026-04-01
+
+## [2.6.0] - 2026-04-01 (wiki + architecture parity: schedule history, ADR, diagrams §19)
+
+### Added / updated
+- **`docs/architecture/DIAGRAMS.md`** — diagram **§19** (schedule history memento API flow).
+- **`docs/architecture/SYSTEM_DESIGN.md`** — component diagram refresh (optional SPA, `schedule_history`, async subprocess); new subsections.
+- **`docs/api/README.md`** — **Schedule history (memento)** API section (`/api/schedule-history/*`).
+- **`docs/README.md`**, **`docs/PLATFORM_GUIDE.md`** — diagram count **19**; links to **PATTERN_REFACTOR_SOURCES** and **ADR-channel-manager-database-sessions**.
+- **`docs/BUILD_PROGRESS.md`** — Phase **14** row + highlights.
+- **`scripts/sync_docs_to_wiki.py`** / **`scripts/wiki_sidebar_order.py`** — wiki pages **Pattern-Refactor-Sources**, **ADR-Channel-Manager-Database**.
+
+### Wiki / Confluence
+- Regenerate **`EXStreamTV.wiki/`** via `python scripts/sync_docs_to_wiki.py --wiki-dir EXStreamTV.wiki`, then push wiki + **`main`**.
+- Confluence: `uv run scripts/publish_confluence_wiki_tree.py` then `uv run scripts/verify_wiki_confluence_docs.py --kroki` (requires **`CONFLUENCE_*`** in `.env`).
 
 ## [2.6.0] - 2026-03-22 (doc parity LL-036, verify script, Confluence hardening)
 

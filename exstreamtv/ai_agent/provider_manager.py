@@ -7,6 +7,7 @@ Supports automatic failover and hybrid mode (cloud primary, local fallback).
 
 import logging
 import os
+import platform
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -248,7 +249,7 @@ class UnifiedAIProvider:
         
         model = self.config.local_model
         if model == "auto":
-            model = self._get_auto_model()
+            model = await self._get_auto_model_async()
         
         messages = []
         if system_prompt:
@@ -272,33 +273,27 @@ class UnifiedAIProvider:
             data = response.json()
             return data.get("message", {}).get("content", "")
     
-    def _get_auto_model(self) -> str:
-        """Auto-select local model based on system RAM."""
-        import subprocess
-        
+    async def _get_auto_model_async(self) -> str:
+        """Auto-select local model based on system RAM (async; no blocking sysctl)."""
+        if platform.system() != "Darwin":
+            return "qwen2.5:7b"
+        from exstreamtv.utils.async_subprocess import run_exec_text
+
         try:
-            result = subprocess.run(
-                ["sysctl", "-n", "hw.memsize"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode == 0:
-                ram_bytes = int(result.stdout.strip())
-                ram_gb = ram_bytes / (1024 ** 3)
-                
-                if ram_gb < 6:
-                    return "phi4-mini:3.8b-q4"
-                elif ram_gb < 12:
-                    return "granite3.1:2b-instruct"
-                elif ram_gb < 24:
-                    return "qwen2.5:7b"
-                else:
-                    return "qwen2.5:14b"
+            code, out, _err = await run_exec_text("sysctl", "-n", "hw.memsize", timeout=5.0)
+            if code != 0:
+                return "qwen2.5:7b"
+            ram_bytes = int(out.strip())
+            ram_gb = ram_bytes / (1024**3)
+            if ram_gb < 6:
+                return "phi4-mini:3.8b-q4"
+            if ram_gb < 12:
+                return "granite3.1:2b-instruct"
+            if ram_gb < 24:
+                return "qwen2.5:7b"
+            return "qwen2.5:14b"
         except Exception:
-            pass
-        
-        return "qwen2.5:7b"  # Default fallback
+            return "qwen2.5:7b"
     
     async def validate(self) -> dict[str, Any]:
         """
@@ -347,7 +342,7 @@ class UnifiedAIProvider:
         if self.config.provider_type in (ProviderType.LOCAL, ProviderType.HYBRID):
             model = self.config.local_model
             if model == "auto":
-                model = self._get_auto_model()
+                model = await self._get_auto_model_async()
             result["local_model"] = model
             
             try:

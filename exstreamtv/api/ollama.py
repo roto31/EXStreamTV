@@ -9,6 +9,7 @@ import logging
 import os
 import platform
 import re
+import asyncio
 import subprocess
 import tempfile
 from pathlib import Path
@@ -20,6 +21,7 @@ from fastapi.responses import HTMLResponse
 
 from ..config import get_config
 from ..constants import DEFAULT_TIMEOUT_SECONDS, PROCESS_CHECK_TIMEOUT
+from exstreamtv.utils.async_subprocess import subprocess_run_thread
 
 logger = logging.getLogger(__name__)
 
@@ -371,11 +373,15 @@ def get_recommended_models(system_info: dict | None = None) -> list[dict]:
 @router.get("/ollama/status")
 async def get_ollama_status():
     """Get Ollama installation status and system info"""
-    installed = check_ollama_installed()
+    installed = await asyncio.to_thread(check_ollama_installed)
     server_running = check_ollama_server_running() if installed else False
-    system_info = get_system_info()
+    system_info = await asyncio.to_thread(get_system_info)
     recommended_models = get_recommended_models(system_info)
-    installed_models = get_installed_ollama_models() if installed and server_running else []
+    installed_models = (
+        await asyncio.to_thread(get_installed_ollama_models)
+        if installed and server_running
+        else []
+    )
 
     return {
         "installed": installed,
@@ -397,14 +403,16 @@ async def install_ollama():
     try:
         if system == "Darwin":  # macOS
             # Try Homebrew first
-            result = subprocess.run(
-                ["brew", "--version"], check=False, capture_output=True, text=True, timeout=5
+            result = await subprocess_run_thread(
+                ["brew", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0:
                 # Install via Homebrew
-                result = subprocess.run(
+                result = await subprocess_run_thread(
                     ["brew", "install", "ollama"],
-                    check=False,
                     capture_output=True,
                     text=True,
                     timeout=600,
@@ -417,9 +425,8 @@ async def install_ollama():
                     }
 
             # Fallback: Direct download
-            result = subprocess.run(
+            result = await subprocess_run_thread(
                 ["curl", "-fsSL", "https://ollama.com/install.sh"],
-                check=False,
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -430,8 +437,11 @@ async def install_ollama():
                     f.write(install_script)
                     f.flush()
                     os.chmod(f.name, 0o755)
-                    result = subprocess.run(
-                        ["bash", f.name], check=False, capture_output=True, text=True, timeout=600
+                    result = await subprocess_run_thread(
+                        ["bash", f.name],
+                        capture_output=True,
+                        text=True,
+                        timeout=600,
                     )
                     os.unlink(f.name)
                     if result.returncode == 0:
@@ -443,9 +453,8 @@ async def install_ollama():
 
         elif system == "Linux":
             # Use official install script
-            result = subprocess.run(
+            result = await subprocess_run_thread(
                 ["curl", "-fsSL", "https://ollama.com/install.sh"],
-                check=False,
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -456,8 +465,11 @@ async def install_ollama():
                     f.write(install_script)
                     f.flush()
                     os.chmod(f.name, 0o755)
-                    result = subprocess.run(
-                        ["bash", f.name], check=False, capture_output=True, text=True, timeout=600
+                    result = await subprocess_run_thread(
+                        ["bash", f.name],
+                        capture_output=True,
+                        text=True,
+                        timeout=600,
                     )
                     os.unlink(f.name)
                     if result.returncode == 0:
@@ -474,12 +486,13 @@ async def install_ollama():
             installer_url = "https://ollama.com/download/OllamaSetup.exe"
             installer_path = os.path.join(tempfile.gettempdir(), "OllamaSetup.exe")
 
-            urllib.request.urlretrieve(installer_url, installer_path)
+            await asyncio.to_thread(urllib.request.urlretrieve, installer_url, installer_path)
 
             # Run installer
-            result = subprocess.run(
+            result = await subprocess_run_thread(
                 [installer_path, "/S"],  # Silent install
-                check=False,
+                capture_output=False,
+                text=False,
                 timeout=600,
             )
 
@@ -526,9 +539,8 @@ async def install_ollama_model(model_id: str):
         raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
 
     try:
-        result = subprocess.run(
+        result = await subprocess_run_thread(
             ["ollama", "pull", model_id],
-            check=False,
             capture_output=True,
             text=True,
             timeout=600,  # 10 minutes timeout
@@ -571,8 +583,11 @@ async def delete_ollama_model(model_id: str):
         raise HTTPException(status_code=400, detail="Ollama is not installed")
 
     try:
-        result = subprocess.run(
-            ["ollama", "rm", model_id], check=False, capture_output=True, text=True, timeout=60
+        result = await subprocess_run_thread(
+            ["ollama", "rm", model_id],
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
 
         if result.returncode == 0:

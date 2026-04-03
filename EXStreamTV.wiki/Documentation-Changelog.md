@@ -2,23 +2,36 @@
 
 All notable changes to the Documentation component will be documented in this file.
 
-**Last Revised:** 2026-03-22
+**Last Revised:** 2026-04-01
 
-## [2.6.0] - 2026-03-22 (doc parity, LL-036, verify script)
+## [2.6.0] - 2026-04-01 (wiki + architecture parity: schedule history, ADR, diagrams §19)
+
+### Added / updated
+- **`docs/architecture/DIAGRAMS.md`** — diagram **§19** (schedule history memento API flow).
+- **`docs/architecture/SYSTEM_DESIGN.md`** — component diagram refresh (optional SPA, `schedule_history`, async subprocess); new subsections.
+- **`docs/api/README.md`** — **Schedule history (memento)** API section (`/api/schedule-history/*`).
+- **`docs/README.md`**, **`docs/PLATFORM_GUIDE.md`** — diagram count **19**; links to **PATTERN_REFACTOR_SOURCES** and **ADR-channel-manager-database-sessions**.
+- **`docs/BUILD_PROGRESS.md`** — Phase **14** row + highlights.
+- **`scripts/sync_docs_to_wiki.py`** / **`scripts/wiki_sidebar_order.py`** — wiki pages **Pattern-Refactor-Sources**, **ADR-Channel-Manager-Database**.
+
+### Wiki / Confluence
+- Regenerate **`EXStreamTV.wiki/`** via `python scripts/sync_docs_to_wiki.py --wiki-dir EXStreamTV.wiki`, then push wiki + **`main`**.
+- Confluence: `uv run scripts/publish_confluence_wiki_tree.py` then `uv run scripts/verify_wiki_confluence_docs.py --kroki` (requires **`CONFLUENCE_*`** in `.env`).
+
+## [2.6.0] - 2026-03-22 (doc parity LL-036, verify script, Confluence hardening)
 
 ### Added
-- **`scripts/verify_wiki_confluence_docs.py`** — checks every **`SIDEBAR_STEMS`** wiki page exists; counts Mermaid; **`--kroki`** validates Kroki renders; optional **`--warn-thin`** for sparse pages.
-- **`.cursor/rules/exstreamtv-documentation-parity.mdc`** — **RULE DOC-07** (GitHub Wiki + Confluence dual publish), **RULE DOC-08** (mandatory verify before “done”).
-- **`.cursor/skills/exstreamtv-documentation-parity/SKILL.md`** — agent workflow for 100% documentation completion on both surfaces.
+- **`scripts/verify_wiki_confluence_docs.py`** — sidebar coverage; Mermaid counts; **`--kroki`** validates Kroki; **`--warn-thin`** optional.
+- **`.cursor/rules/exstreamtv-documentation-parity.mdc`** — **RULE DOC-07** / **DOC-08** (GitHub Wiki + Confluence + mandatory verify).
+- **`.cursor/skills/exstreamtv-documentation-parity/SKILL.md`**.
 
 ### Changed
-- **`docs/LESSONS_LEARNED.md`** — **LL-036** (missing Mermaid / blank Confluence vs wiki); stats **36** lessons.
-- **`EXStreamTV.wiki/CI-CD-And-Testing.md`**, **`Deployment.md`** — expanded hub text so pages are not mistaken for empty stubs.
-- **`AGENTS.md`**, **`docs/confluence/README.md`**, Confluence publish skill — pointers to parity rule and verify script.
+- **`docs/LESSONS_LEARNED.md`** — **LL-031–LL-036**; version **1.4**; **36** lessons.
+- **`EXStreamTV.wiki/Lessons-Learned.md`**, **`CI-CD-And-Testing.md`**, **`Deployment.md`**, **`Documentation-Changelog.md`** — sync / hub text.
+- **`scripts/publish_confluence_wiki_tree.py`**, **`publish_confluence_mirror.py`**, **`confluence_markdown_storage.py`**, **`docs/confluence/README.md`**, **`AGENTS.md`**, Confluence publish skill — multipart **415** fix, upload abort, Kroki stderr, verify pointers.
 
-### Also this date (earlier 2026-03-22 publish hardening)
-- **`docs/LESSONS_LEARNED.md`** — **LL-031–LL-035** (Confluence REST vs MCP, uv, titles, **415** multipart fix, root **400** reuse).
-- **`scripts/publish_confluence_wiki_tree.py`** / **`publish_confluence_mirror.py`**, **`.env.example`**, Confluence rule/skill updates; ESTV republish for Mermaid SVG attachments.
+### Confluence (ESTV)
+- `uv run scripts/publish_confluence_wiki_tree.py` then `uv run scripts/verify_wiki_confluence_docs.py --kroki`.
 
 ## [2.6.0] - 2026-03-21 (documentation, Mermaid, wiki sync)
 

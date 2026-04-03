@@ -1,9 +1,9 @@
 # EXStreamTV Documentation
 
-Architecture diagrams: [docs/architecture/DIAGRAMS.md](architecture/DIAGRAMS.md) — Mermaid-only, **18** standardized diagrams (includes six-layer AI/coding safety, §18).
+Architecture diagrams: [docs/architecture/DIAGRAMS.md](architecture/DIAGRAMS.md) — Mermaid-only, **19** standardized diagrams (includes schedule history memento flow, §19).
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-03-21
+**Last Updated:** 2026-04-01
 
 Welcome to the EXStreamTV documentation. This guide will help you set up, configure, and use EXStreamTV for your IPTV streaming needs.
 
@@ -18,6 +18,8 @@ Welcome to the EXStreamTV documentation. This guide will help you set up, config
 | [Installation](guides/INSTALLATION.md) | Complete installation guide |
 | [API Reference](api/README.md) | REST API documentation |
 | [System Design](architecture/SYSTEM_DESIGN.md) | Architecture overview |
+| [Pattern refactor sources](architecture/PATTERN_REFACTOR_SOURCES.md) | Refactor inventory + Alembic stamp note |
+| [ADR: ChannelManager DB sessions](architecture/ADR-channel-manager-database-sessions.md) | Sync vs async SQLAlchemy boundaries |
 
 ---
 
@@ -52,8 +54,10 @@ docs/
 │
 ├── architecture/                # Architecture Documentation
 │   ├── SYSTEM_DESIGN.md        # System architecture
-│   ├── DIAGRAMS.md             # 18 Mermaid diagrams (canonical)
-│   └── TUNARR_DIZQUETV_INTEGRATION.md # v2.6.0 integration (NEW)
+│   ├── DIAGRAMS.md             # 19 Mermaid diagrams (canonical)
+│   ├── PATTERN_REFACTOR_SOURCES.md
+│   ├── ADR-channel-manager-database-sessions.md
+│   └── TUNARR_DIZQUETV_INTEGRATION.md # v2.6.0 integration
 │
 ├── development/                 # Development Documentation
 │   └── DISTRIBUTION.md         # Distribution guide

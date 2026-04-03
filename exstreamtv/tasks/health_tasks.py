@@ -20,6 +20,18 @@ _channel_metrics: dict[int, dict[str, Any]] = {}
 # Reference to channel manager (set during app startup)
 _channel_manager: Optional["ChannelManager"] = None
 
+# Optional: serialized restarts via StreamCommandQueue + StreamService (Task 2)
+_restart_command_queue: Any = None
+_restart_stream_service: Any = None
+
+
+def set_stream_restart_queue(queue: Any, stream_service: Any) -> None:
+    """Use command queue for channel restarts when set from app lifespan."""
+    global _restart_command_queue, _restart_stream_service
+    _restart_command_queue = queue
+    _restart_stream_service = stream_service
+    logger.info("Stream restart queue registered with health tasks")
+
 
 def set_channel_manager(manager: "ChannelManager") -> None:
     """Set the channel manager reference for restart operations."""
@@ -192,7 +204,19 @@ async def _trigger_channel_restart(channel_id: int) -> bool:
                 "Metrics updated but no actual restart performed."
             )
             return False
-        
+
+        if _restart_command_queue is not None and _restart_stream_service is not None:
+            from exstreamtv.patterns.commands.stream_commands import RestartStreamCommand
+
+            cmd = RestartStreamCommand(str(channel_id), _restart_stream_service)
+            ok = await _restart_command_queue.enqueue_wait(cmd, timeout=120.0)
+            if ok:
+                logger.info(
+                    f"Successfully restarted channel {channel_id} via command queue "
+                    f"(restart #{restart_count})"
+                )
+            return ok
+
         # Get channel info from database
         from exstreamtv.database.connection import get_sync_session
         from exstreamtv.database.models import Channel
