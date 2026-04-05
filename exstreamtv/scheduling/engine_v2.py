@@ -5,6 +5,7 @@ import random
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from cachetools import TTLCache
 from sqlalchemy.orm import Session
 
 from ..database.models_v2 import (
@@ -44,11 +45,12 @@ class ScheduleEngineV2:
             seed: Optional random seed for reproducible shuffling
         """
         self.db = db
-        self._collection_cache: dict[str, list[MediaItem]] = {}
-        self._playlist_cache: dict[str, Playlist] = {}
+        # Issue 4.1: Bounded caches with TTL prevent unbounded RAM growth.
+        self._collection_cache: TTLCache = TTLCache(maxsize=500, ttl=600)
+        self._playlist_cache: TTLCache = TTLCache(maxsize=500, ttl=600)
         self._seed = seed or random.randint(1, 1000000)
         self._random = random.Random(self._seed)
-        self._shuffled_sequences: dict[str, list[dict[str, Any]]] = {}
+        self._shuffled_sequences: TTLCache = TTLCache(maxsize=500, ttl=600)
 
         # Timeline tracking
         self._timeline_start: datetime | None = None

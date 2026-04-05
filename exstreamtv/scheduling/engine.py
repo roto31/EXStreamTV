@@ -6,6 +6,7 @@ import random
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from cachetools import TTLCache
 from sqlalchemy.orm import Session
 
 
@@ -24,11 +25,13 @@ class ScheduleEngine:
 
     def __init__(self, db: Session, seed: int | None = None):
         self.db = db
-        self._collection_cache: dict[str, list[MediaItem]] = {}
-        self._playlist_cache: dict[str, Playlist] = {}
+        # Issue 4.1: Bounded caches with TTL prevent unbounded RAM growth.
+        # maxsize=500 collections, ttl=600s (10 min) before re-query.
+        self._collection_cache: TTLCache = TTLCache(maxsize=500, ttl=600)
+        self._playlist_cache: TTLCache = TTLCache(maxsize=500, ttl=600)
         self._seed = seed or random.randint(1, 1000000)
         self._random = random.Random(self._seed)
-        self._shuffled_sequences: dict[str, list[dict[str, Any]]] = {}  # Cache shuffled sequences
+        self._shuffled_sequences: TTLCache = TTLCache(maxsize=500, ttl=600)
 
     def get_collection_media(self, collection_name: str) -> list[MediaItem]:
         """Get all media items from a collection by name"""
