@@ -78,7 +78,14 @@ Use this when you want one Confluence page that mirrors the **current repo READM
 
 Publishes a root page **EXStreamTV** (full `README.md` plus a wiki index table, top-level folder list, and Confluence links) and one child page per wiki file in sidebar order. Bodies use **storage** format. **Mermaid**: each ```mermaid``` block is sent to **[Kroki](https://kroki.io)** (`POST`), the returned **SVG** is uploaded to that page, and storage references it via **`ri:attachment`** so diagrams appear without a Mermaid Confluence app. Wiki screenshots are attached per page when referenced. Set `CONFLUENCE_SKIP_KROKI=1` to use code macros only (needs a Mermaid renderer app to display).
 
-Titles match the wiki (e.g. **Platform Guide**), with no `Mirror —` prefix. Existing children named `Mirror — …` are reused and renamed on update. The wiki file `EXStreamTV.md` becomes **EXStreamTV Wiki** so it does not collide with the root title.
+Titles match the wiki (e.g. **Platform Guide**), with no `Mirror —` prefix. The publisher looks up an existing child by canonical title **or** legacy `Mirror — …` and **renames** it on update. If both titles ever existed as siblings, orphan `Mirror — …` pages remain until removed:
+
+```bash
+uv run scripts/delete_confluence_mirror_legacy_pages.py --dry-run   # list
+uv run scripts/delete_confluence_mirror_legacy_pages.py             # trash in ESTV
+```
+
+The wiki file `EXStreamTV.md` becomes **EXStreamTV Wiki** so it does not collide with the root title.
 
 ```bash
 # Either export variables, or put CONFLUENCE_USER=… and CONFLUENCE_API_TOKEN=… in repo-root .env
