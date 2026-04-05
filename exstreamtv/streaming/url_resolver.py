@@ -6,7 +6,6 @@ URL caching with expiration tracking.
 """
 
 import logging
-from datetime import datetime
 from typing import Any, Optional
 
 from exstreamtv.streaming.resolvers.base import (
@@ -16,6 +15,7 @@ from exstreamtv.streaming.resolvers.base import (
     ResolverError,
     SourceType,
 )
+from exstreamtv.streaming.source_type_detector import build_source_type_detection_chain
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ class MediaURLResolver:
         from cachetools import TTLCache
         self._global_cache: TTLCache = TTLCache(maxsize=5000, ttl=7200)
         self._initialized = False
+        self._detection_chain = build_source_type_detection_chain()
     
     def _lazy_init(self) -> None:
         """Lazily initialize resolvers on first use."""
@@ -96,121 +97,22 @@ class MediaURLResolver:
     def _detect_source_type(self, media_item: Any) -> SourceType:
         """
         Detect the source type from a media item.
-        
-        Uses multiple detection strategies in order of priority:
-        1. Explicit source attribute
-        2. Archive.org-specific metadata fields (archive_org_identifier, etc.)
-        3. URL pattern matching
-        4. raw_metadata JSON content
-        
+
+        Delegates to a Chain of Responsibility (see source_type_detector.py)
+        that checks in priority order:
+            1. Explicit Plex rating key
+            2. Explicit source/source_type attribute keyword match
+            3. Archive.org-specific metadata fields
+            4. raw_metadata JSON content
+            5. URL pattern matching
+
         Args:
             media_item: Media item (dict, model, or object)
-            
+
         Returns:
             Detected SourceType
         """
-        # Check for explicit source attribute
-        source = None
-        if hasattr(media_item, "source"):
-            source = media_item.source
-        elif hasattr(media_item, "source_type"):
-            source = media_item.source_type
-        elif isinstance(media_item, dict):
-            source = media_item.get("source") or media_item.get("source_type")
-
-        if isinstance(media_item, dict) and media_item.get("plex_rating_key"):
-            return SourceType.PLEX
-        if hasattr(media_item, "plex_rating_key") and getattr(media_item, "plex_rating_key", None):
-            return SourceType.PLEX
-
-        if source:
-            source_lower = str(source).lower()
-            if "youtube" in source_lower:
-                return SourceType.YOUTUBE
-            elif "plex" in source_lower:
-                return SourceType.PLEX
-            elif "jellyfin" in source_lower:
-                return SourceType.JELLYFIN
-            elif "emby" in source_lower:
-                return SourceType.EMBY
-            elif "archive" in source_lower:
-                return SourceType.ARCHIVE_ORG
-            elif "local" in source_lower or "file" in source_lower:
-                return SourceType.LOCAL
-            elif "m3u" in source_lower:
-                return SourceType.M3U
-        
-        # FALLBACK 1: Check for Archive.org-specific fields
-        # This catches items imported from StreamTV where source wasn't set properly
-        archive_org_fields = [
-            "archive_org_identifier",
-            "archive_org_collection", 
-            "archive_org_creator",
-            "archive_org_filename",
-            "archive_org_subject",
-        ]
-        for field in archive_org_fields:
-            if hasattr(media_item, field) and getattr(media_item, field):
-                logger.debug(f"Detected Archive.org source from field: {field}")
-                return SourceType.ARCHIVE_ORG
-            if isinstance(media_item, dict) and media_item.get(field):
-                logger.debug(f"Detected Archive.org source from dict field: {field}")
-                return SourceType.ARCHIVE_ORG
-        
-        # FALLBACK 2: Check raw_metadata for Archive.org identifiers
-        raw_metadata = None
-        if hasattr(media_item, "raw_metadata"):
-            raw_metadata = media_item.raw_metadata
-        elif hasattr(media_item, "meta_data"):
-            raw_metadata = media_item.meta_data
-        elif isinstance(media_item, dict):
-            raw_metadata = media_item.get("raw_metadata") or media_item.get("meta_data")
-        
-        if raw_metadata:
-            try:
-                import json
-                if isinstance(raw_metadata, str):
-                    meta_dict = json.loads(raw_metadata)
-                else:
-                    meta_dict = raw_metadata
-                
-                # Check for Archive.org identifiers in metadata
-                if meta_dict.get("identifier") or meta_dict.get("archive_org_id"):
-                    logger.debug("Detected Archive.org source from raw_metadata identifier")
-                    return SourceType.ARCHIVE_ORG
-                if meta_dict.get("collection") and "archive" in str(meta_dict.get("collection", "")).lower():
-                    logger.debug("Detected Archive.org source from raw_metadata collection")
-                    return SourceType.ARCHIVE_ORG
-            except (json.JSONDecodeError, TypeError, AttributeError):
-                pass  # Not valid JSON, skip
-        
-        # FALLBACK 3: Detect from URL patterns
-        url = None
-        if hasattr(media_item, "url"):
-            url = media_item.url
-        elif hasattr(media_item, "path"):
-            url = media_item.path
-        elif isinstance(media_item, dict):
-            url = media_item.get("url") or media_item.get("path")
-        
-        if url:
-            url_lower = str(url).lower()
-            if (
-                "youtube.com" in url_lower
-                or "youtu.be" in url_lower
-                or "googlevideo.com" in url_lower
-            ):
-                return SourceType.YOUTUBE
-            elif "archive.org" in url_lower:
-                return SourceType.ARCHIVE_ORG
-            elif url_lower.startswith("/") or url_lower.startswith("file://"):
-                return SourceType.LOCAL
-            elif "/library/metadata/" in url_lower:
-                return SourceType.PLEX
-            elif ":8096" in url_lower or "jellyfin" in url_lower:
-                return SourceType.JELLYFIN
-        
-        return SourceType.UNKNOWN
+        return self._detection_chain.detect(media_item)
     
     def _get_resolver(self, source_type: SourceType) -> Optional[BaseResolver]:
         """Get resolver for a source type."""

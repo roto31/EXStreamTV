@@ -14,6 +14,7 @@ def _utcnow() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 from exstreamtv.database import Channel, Collection, CollectionItem, MediaItem, Playlist, PlaylistItem
+from exstreamtv.scheduling.directive_handlers import build_directive_handlers
 
 from .parser import ParsedSchedule, ScheduleParser
 
@@ -32,6 +33,7 @@ class ScheduleEngine:
         self._seed = seed or random.randint(1, 1000000)
         self._random = random.Random(self._seed)
         self._shuffled_sequences: TTLCache = TTLCache(maxsize=500, ttl=600)
+        self._directive_handlers = build_directive_handlers()
 
     def get_collection_media(self, collection_name: str) -> list[MediaItem]:
         """Get all media items from a collection by name"""
@@ -161,145 +163,16 @@ class ScheduleEngine:
         mid_roll_active: bool = False,
         post_roll_active: bool = False,
     ) -> list[dict[str, Any]]:
-        """Resolve a single sequence item to media items with metadata (ErsatzTV-compatible)"""
-        resolved = []
+        """Resolve a single sequence item to media items with metadata (ErsatzTV-compatible).
 
-        # Handle ErsatzTV-style advanced directives first
-        if "padToNext" in item:
-            # Pad to next hour/half-hour boundary (ErsatzTV feature)
-            return self._handle_pad_to_next(item, schedule, current_time)
-
-        if "padUntil" in item:
-            # Pad until a specific time (ErsatzTV feature)
-            return self._handle_pad_until(item, schedule, current_time)
-
-        if "waitUntil" in item:
-            # Wait until a specific time (ErsatzTV feature) - returns empty, updates time
-            return self._handle_wait_until(item, current_time)
-
-        if "skipItems" in item:
-            # Skip items from a collection (ErsatzTV feature)
-            return self._handle_skip_items(item, schedule)
-
-        if "shuffleSequence" in item:
-            # Shuffle a sequence (ErsatzTV feature)
-            return self._handle_shuffle_sequence(item, schedule)
-
-        # Handle pre-roll, mid-roll, post-roll flags
-        if "pre_roll" in item:
-            # This is a flag, not a media item
-            return []
-
-        if "mid_roll" in item:
-            # This is a flag, not a media item
-            return []
-
-        if "post_roll" in item:
-            # This is a flag, not a media item
-            return []
-
-        # Handle sequence reference
-        if "sequence" in item:
-            sequence_key = item["sequence"]
-            media_items = self.get_sequence_media(sequence_key, schedule)
-
-            for media_item in media_items:
-                # Extract metadata from media_item
-                metadata = self._extract_metadata_from_media_item(media_item)
-
-                resolved.append(
-                    {
-                        "media_item": media_item,
-                        "custom_title": item.get("custom_title"),
-                        "filler_kind": item.get("filler_kind"),
-                        "start_time": current_time,
-                        "metadata": metadata,
-                    }
-                )
-
-            return resolved
-
-        # Handle content reference (all items from a collection)
-        if "all" in item:
-            content_key = item["all"]
-            if content_key in schedule.content_map:
-                collection_name = schedule.content_map[content_key]["collection"]
-                media_items = self.get_collection_media(collection_name)
-
-                # Handle order
-                order = schedule.content_map[content_key].get("order", "chronological")
-                if order == "shuffle":
-                    import random
-
-                    media_items = media_items.copy()
-                    random.shuffle(media_items)
-
-                for media_item in media_items:
-                    resolved.append(
-                        {
-                            "media_item": media_item,
-                            "custom_title": item.get("custom_title"),
-                            "filler_kind": item.get("filler_kind"),
-                            "start_time": current_time,
-                        }
-                    )
-
-            return resolved
-
-        # Handle duration-based filler
-        if "duration" in item and "content" in item:
-            content_key = item["content"]
-            duration_str = item["duration"]
-            duration_seconds = ScheduleParser.parse_duration(duration_str)
-
-            if duration_seconds and content_key in schedule.content_map:
-                collection_name = schedule.content_map[content_key]["collection"]
-                media_items = self.get_collection_media(collection_name)
-
-                # Handle order
-                order = schedule.content_map[content_key].get("order", "shuffle")
-                if order == "shuffle":
-                    import random
-
-                    media_items = media_items.copy()
-                    random.shuffle(media_items)
-
-                # Select items to fill the duration
-                selected_items = []
-                total_duration = 0
-                discard_attempts = item.get("discard_attempts", 0)
-                attempts = 0
-
-                for media_item in media_items:
-                    if total_duration >= duration_seconds:
-                        break
-
-                    item_duration = media_item.duration or 0
-                    if item_duration > 0:
-                        if (
-                            total_duration + item_duration <= duration_seconds * 1.1
-                        ):  # 10% tolerance
-                            selected_items.append(media_item)
-                            total_duration += item_duration
-                        elif attempts < discard_attempts:
-                            attempts += 1
-                            continue
-                        else:
-                            break
-
-                for media_item in selected_items:
-                    resolved.append(
-                        {
-                            "media_item": media_item,
-                            "custom_title": item.get("custom_title"),
-                            "filler_kind": item.get("filler_kind", "Commercial"),
-                            "start_time": current_time,
-                        }
-                    )
-
-            return resolved
-
-        return resolved
+        Delegates to the first matching DirectiveHandler from the strategy
+        registry (see ``directive_handlers.py``).  Falls back to an empty list
+        if no handler claims the item.
+        """
+        for handler in self._directive_handlers:
+            if handler.can_handle(item):
+                return handler.handle(item, schedule, current_time, self)
+        return []
 
     def _extract_metadata_from_media_item(self, media_item) -> dict[str, Any]:
         """
