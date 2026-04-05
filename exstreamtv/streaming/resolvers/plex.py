@@ -23,7 +23,11 @@ PLEX_URL_EXPIRY_HOURS = 2  # Refresh every 2 hours to be safe (Plex typically ex
 # Module-level cache for Plex library info to avoid repeated DB queries
 import time as _time
 
-_plex_library_cache: dict[int, dict] = {}
+# Issue 5.1: Use bounded dict. The existing TTL reload (300s) already
+# handles staleness; this caps size to prevent unbounded growth if a
+# Plex server has thousands of libraries.
+from cachetools import LRUCache
+_plex_library_cache: LRUCache = LRUCache(maxsize=200)
 _plex_first_library_cache: Optional[dict] = None
 _plex_cache_loaded: bool = False
 _plex_cache_loaded_at: float = 0.0
