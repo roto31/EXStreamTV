@@ -131,8 +131,6 @@ class AllContentHandler(DirectiveHandler):
         return "all" in item
 
     def handle(self, item, schedule, current_time, engine):
-        import random as _random
-
         content_key = item["all"]
         if content_key not in schedule.content_map:
             return []
@@ -141,7 +139,7 @@ class AllContentHandler(DirectiveHandler):
         order = schedule.content_map[content_key].get("order", "chronological")
         if order == "shuffle":
             media_items = media_items.copy()
-            _random.shuffle(media_items)
+            engine._random.shuffle(media_items)
         return [
             {
                 "media_item": mi,
@@ -158,8 +156,6 @@ class DurationFillerHandler(DirectiveHandler):
         return "duration" in item and "content" in item
 
     def handle(self, item, schedule, current_time, engine):
-        import random as _random
-
         from exstreamtv.scheduling.parser import ScheduleParser
 
         content_key = item["content"]
@@ -174,7 +170,7 @@ class DurationFillerHandler(DirectiveHandler):
         order = schedule.content_map[content_key].get("order", "shuffle")
         if order == "shuffle":
             media_items = media_items.copy()
-            _random.shuffle(media_items)
+            engine._random.shuffle(media_items)
 
         selected: list = []
         total_duration = 0.0

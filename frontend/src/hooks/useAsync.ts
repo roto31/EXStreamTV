@@ -32,7 +32,7 @@ export function useAsync<T>(
 ): AsyncState<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!!fetcher);
 
   useEffect(() => {
     if (!fetcher) {
@@ -43,6 +43,7 @@ export function useAsync<T>(
     }
 
     let cancelled = false;
+    setData(null);
     setLoading(true);
     setError(null);
 

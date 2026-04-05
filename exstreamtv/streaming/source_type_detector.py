@@ -150,23 +150,50 @@ class RawMetadataArchiveDetector(SourceTypeDetector):
 
 
 class URLPatternDetector(SourceTypeDetector):
-    """Detect source type from the URL string itself."""
+    """Detect source type from the URL string itself.
+
+    Uses ``urllib.parse`` to extract the hostname for domain checks,
+    falling back to substring matching only for path-based heuristics.
+    """
+
+    # Domains checked against the parsed hostname (suffix match).
+    _YOUTUBE_DOMAINS = (".youtube.com", ".youtu.be", ".googlevideo.com",
+                        "youtube.com", "youtu.be", "googlevideo.com")
+    _ARCHIVE_DOMAINS = (".archive.org", "archive.org")
+    _JELLYFIN_DOMAINS = (".jellyfin.", "jellyfin.")
 
     def _try_detect(self, media_item: Any) -> SourceType | None:
         url = _get_attr_or_key(media_item, "url", "path")
         if not url:
             return None
-        url_lower = str(url).lower()
-        if "youtube.com" in url_lower or "youtu.be" in url_lower or "googlevideo.com" in url_lower:
-            return SourceType.YOUTUBE
-        if "archive.org" in url_lower:
-            return SourceType.ARCHIVE_ORG
+        url_str = str(url)
+        url_lower = url_str.lower()
+
+        # Local files — check before parsing (no hostname)
         if url_lower.startswith("/") or url_lower.startswith("file://"):
             return SourceType.LOCAL
+
+        # Parse hostname for domain-level checks
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url_str)
+            host = (parsed.hostname or "").lower()
+        except Exception:
+            host = ""
+
+        if host:
+            if any(host == d or host.endswith(d) for d in self._YOUTUBE_DOMAINS):
+                return SourceType.YOUTUBE
+            if any(host == d or host.endswith(d) for d in self._ARCHIVE_DOMAINS):
+                return SourceType.ARCHIVE_ORG
+            if any(d in host for d in self._JELLYFIN_DOMAINS):
+                return SourceType.JELLYFIN
+            if ":8096" in url_lower:
+                return SourceType.JELLYFIN
+
+        # Path-based heuristic (Plex uses metadata paths)
         if "/library/metadata/" in url_lower:
             return SourceType.PLEX
-        if ":8096" in url_lower or "jellyfin" in url_lower:
-            return SourceType.JELLYFIN
         return None
 
 
