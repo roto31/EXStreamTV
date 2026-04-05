@@ -18,8 +18,6 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
-from cachetools import TTLCache
-
 # Issue 1.1: Global semaphore caps concurrent FFmpeg processes to prevent
 # resource exhaustion when many channels cycle through short items.
 MAX_CONCURRENT_FFMPEG = 20
