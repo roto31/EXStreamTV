@@ -37,7 +37,10 @@ class MediaURLResolver:
     
     def __init__(self):
         self._resolvers: dict[SourceType, BaseResolver] = {}
-        self._global_cache: dict[str, CachedURL] = {}
+        # Issue 5.2: Bounded cache prevents unbounded growth from millions
+        # of unique URLs. TTL=7200s (2h) matches typical URL expiry windows.
+        from cachetools import TTLCache
+        self._global_cache: TTLCache = TTLCache(maxsize=5000, ttl=7200)
         self._initialized = False
     
     def _lazy_init(self) -> None:

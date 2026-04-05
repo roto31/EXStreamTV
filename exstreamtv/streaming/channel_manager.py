@@ -18,6 +18,22 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
+# Issue 1.1: Global semaphore caps concurrent FFmpeg processes to prevent
+# resource exhaustion when many channels cycle through short items.
+MAX_CONCURRENT_FFMPEG = 20
+_ffmpeg_semaphore = asyncio.Semaphore(MAX_CONCURRENT_FFMPEG)
+
+# Issue 7.3: Module-level task registry so fire-and-forget tasks are tracked
+# and can be inspected/cancelled during shutdown.
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _track_task(task: asyncio.Task) -> asyncio.Task:
+    """Register *task* and auto-discard when done (Issue 7.3)."""
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,8 +135,8 @@ class ChannelStream:
     # Buffer configuration
     BUFFER_SIZE = 2 * 1024 * 1024  # 2MB buffer
     CHUNK_SIZE = 64 * 1024  # 64KB read chunks
-    QUEUE_MAX_SIZE = 50  # Max items in broadcast queue
-    SLOW_CLIENT_THRESHOLD = 20  # Consecutive QueueFull events before disconnection
+    QUEUE_MAX_SIZE = 30  # Issue 8.1: Reduced from 50 to limit per-channel memory
+    SLOW_CLIENT_THRESHOLD = 8  # Issue 8.2: Reduced from 20 — disconnect slow clients faster
 
     def __init__(
         self,
@@ -171,6 +187,8 @@ class ChannelStream:
         # Health tracking
         self._last_output_time: datetime | None = None
         self._bytes_streamed = 0
+        self._last_client_activity: datetime = _utcnow()  # Issue 2.1/2.2: idle tracking
+        self._error_screen_active = False  # Issue 1.3: prevent overlapping error-screen spawns
 
         # Process pool manager for FFmpeg lifecycle (optional)
         self._process_pool_manager = process_pool_manager
@@ -220,98 +238,114 @@ class ChannelStream:
                 f"({self.channel_name})"
             )
             
-            self._stream_task = asyncio.create_task(self._run_continuous_stream())
+            self._stream_task = _track_task(
+                asyncio.create_task(self._run_continuous_stream())
+            )
 
     async def _load_or_initialize_position(self) -> None:
         """
         Load saved anchor time or initialize for continuous streaming.
-        
-        ErsatzTV-style approach: Use an anchor time to calculate the current
-        position based on elapsed wall-clock time. This ensures:
-        1. All viewers see the same content at the same time
-        2. Restarting the server continues from the correct time-based position
-        3. The EPG matches what's actually playing
+
+        Issue 6.1 fix: All blocking SQLAlchemy calls are executed in a
+        thread-pool via run_in_executor, matching the pattern at line 393.
         """
-        from exstreamtv.database.models import ChannelPlaybackPosition, Playout, PlayoutItem, MediaItem
-        from sqlalchemy import select, func
-        
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self._load_or_initialize_position_sync)
+
+    def _load_or_initialize_position_sync(self) -> None:
+        """Synchronous DB work — always called via run_in_executor (Issue 6.1)."""
+        from exstreamtv.database.models import (
+            ChannelPlaybackPosition,
+            Playout,
+            PlayoutItem,
+            MediaItem,
+        )
+        from sqlalchemy import select
+
         db = self.db_session_factory()
         try:
-            # First, get the playout and calculate total duration
             playout_stmt = select(Playout).where(
                 Playout.channel_id == self.channel_id,
-                Playout.is_active == True
+                Playout.is_active == True,
             )
             playout_result = db.execute(playout_stmt)
             playout = playout_result.scalar_one_or_none()
-            
+
             total_duration = 0
             item_count = 0
-            
+            items: list = []
+
             if playout:
-                # Calculate total schedule duration
-                items_stmt = select(PlayoutItem, MediaItem).outerjoin(
-                    MediaItem, PlayoutItem.media_item_id == MediaItem.id
-                ).where(
-                    PlayoutItem.playout_id == playout.id
-                ).order_by(PlayoutItem.start_time)
-                
+                items_stmt = (
+                    select(PlayoutItem, MediaItem)
+                    .outerjoin(MediaItem, PlayoutItem.media_item_id == MediaItem.id)
+                    .where(PlayoutItem.playout_id == playout.id)
+                    .order_by(PlayoutItem.start_time)
+                )
                 items_result = db.execute(items_stmt)
                 items = items_result.all()
                 item_count = len(items)
-                
+
                 for playout_item, media_item in items:
-                    d = _duration_to_seconds(media_item.duration if media_item else None) or _duration_to_seconds(playout_item.duration)
-                    total_duration += d if d else 1800  # Default 30 min
-            
-            # Load or create anchor time
+                    d = _duration_to_seconds(
+                        media_item.duration if media_item else None
+                    ) or _duration_to_seconds(playout_item.duration)
+                    total_duration += d if d else 1800
+
             stmt = select(ChannelPlaybackPosition).where(
                 ChannelPlaybackPosition.channel_id == self.channel_id
             )
             result = db.execute(stmt)
             position = result.scalar_one_or_none()
-            
+
             now = _utcnow()
-            
+
             if position and position.playout_start_time:
                 self._playout_start_time = _ensure_utc(position.playout_start_time)
-                
-                # Calculate current position based on elapsed time
+
                 if total_duration > 0:
                     elapsed = (now - self._playout_start_time).total_seconds()
                     cycle_position = elapsed % total_duration
-                    
-                    # Find which item corresponds to this cycle position
+
                     current_time = 0
                     calculated_index = 0
                     for idx, (playout_item, media_item) in enumerate(items):
-                        item_duration = _duration_to_seconds(media_item.duration if media_item else None) or _duration_to_seconds(playout_item.duration) or 1800
+                        item_duration = (
+                            _duration_to_seconds(
+                                media_item.duration if media_item else None
+                            )
+                            or _duration_to_seconds(playout_item.duration)
+                            or 1800
+                        )
                         if current_time + item_duration > cycle_position:
                             calculated_index = idx
-                            # Calculate seek offset within this item
                             raw_seek_offset = cycle_position - current_time
-                            # Clamp seek offset to ensure it's within the item's duration
-                            # Leave at least 10 seconds of content to play
-                            max_seek = max(0, item_duration - 10) if item_duration > 10 else 0
+                            max_seek = (
+                                max(0, item_duration - 10)
+                                if item_duration > 10
+                                else 0
+                            )
                             self._seek_offset = min(raw_seek_offset, max_seek)
                             if raw_seek_offset > max_seek:
                                 logger.debug(
-                                    f"Channel {self.channel_number}: Clamped seek offset from "
-                                    f"{raw_seek_offset:.0f}s to {self._seek_offset:.0f}s (duration: {item_duration}s)"
+                                    f"Channel {self.channel_number}: Clamped seek "
+                                    f"offset from {raw_seek_offset:.0f}s to "
+                                    f"{self._seek_offset:.0f}s (duration: {item_duration}s)"
                                 )
                             break
                         current_time += item_duration
                         calculated_index = idx + 1
-                    
+
                     if calculated_index >= item_count:
                         calculated_index = 0
                         self._seek_offset = 0
-                    
-                    self._current_item_index = calculated_index
 
+                    self._current_item_index = calculated_index
                     logger.info(
-                        f"Resuming channel {self.channel_number} at calculated index "
-                        f"{self._current_item_index} (elapsed: {elapsed:.0f}s, seek: {self._seek_offset:.0f}s, anchor: {self._playout_start_time})"
+                        f"Resuming channel {self.channel_number} at calculated "
+                        f"index {self._current_item_index} (elapsed: {elapsed:.0f}s, "
+                        f"seek: {self._seek_offset:.0f}s, "
+                        f"anchor: {self._playout_start_time})"
                     )
                 else:
                     self._current_item_index = position.current_index or 0
@@ -320,36 +354,37 @@ class ChannelStream:
                         f"{self._current_item_index} (no duration info)"
                     )
             else:
-                # No anchor - initialize new continuous stream
                 self._playout_start_time = now
                 self._current_item_index = 0
-                
-                # Save the anchor time
+
                 if position:
                     position.playout_start_time = now
                     position.current_index = 0
                     position.last_item_index = 0
                 else:
-                    from exstreamtv.database.models import ChannelPlaybackPosition as CPP
+                    from exstreamtv.database.models import (
+                        ChannelPlaybackPosition as CPP,
+                    )
+
                     position = CPP(
                         channel_id=self.channel_id,
                         channel_number=str(self.channel_number),
                         current_index=0,
                         last_item_index=0,
                         playout_start_time=now,
-                        last_played_at=now
+                        last_played_at=now,
                     )
                     db.add(position)
                 db.commit()
 
                 logger.info(
-                    f"Starting channel {self.channel_number} from beginning with anchor: "
-                    f"{self._playout_start_time}"
+                    f"Starting channel {self.channel_number} from beginning "
+                    f"with anchor: {self._playout_start_time}"
                 )
         except Exception as e:
             logger.error(
                 f"Error loading position for channel {self.channel_number}: {e}",
-                exc_info=True
+                exc_info=True,
             )
             self._playout_start_time = _utcnow()
             self._current_item_index = 0
@@ -469,12 +504,15 @@ class ChannelStream:
         if not self._is_running:
             await self.start()
         
-        client_queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+        # Issue 8.1: Reduced from 100 to 50 — with 50 channels × 10 clients
+        # the max in-flight memory drops from ~3.2GB to ~1.6GB.
+        client_queue: asyncio.Queue = asyncio.Queue(maxsize=50)
         slow_count: list[int] = [0]
         async with self._lock:
             self._client_queues.append((client_queue, slow_count))
             self._client_count += 1
-            
+            self._last_client_activity = _utcnow()
+
         logger.info(
             f"Client joined channel {self.channel_number} ({self.channel_name}), "
             f"total clients: {self._client_count}, is_running: {self._is_running}"
@@ -575,67 +613,95 @@ class ChannelStream:
     async def _get_next_playout_item(self) -> Optional[dict[str, Any]]:
         """
         Get the next item to play from the schedule.
-        
+
+        Issue 6.2 fix: DB queries run in thread pool via run_in_executor,
+        matching the pattern at line 393 (_save_position_sync).
+
         Returns:
             Dictionary with media_url and metadata, or None if no items available.
         """
+        loop = asyncio.get_event_loop()
+        raw = await loop.run_in_executor(None, self._get_next_playout_item_sync)
+        if raw is None:
+            return None
+
+        # URL resolution is async (may call external resolvers) so it stays here.
+        media_item_obj = raw.pop("_media_item_obj", None)
+        if media_item_obj is not None:
+            raw["media_url"] = await self._resolve_media_url(media_item_obj)
+        return raw
+
+    def _get_next_playout_item_sync(self) -> Optional[dict[str, Any]]:
+        """Synchronous DB work — always called via run_in_executor (Issue 6.2)."""
         from exstreamtv.database.models import Playout, PlayoutItem, MediaItem
         from sqlalchemy import select
-        from datetime import datetime
-        
+
         db = self.db_session_factory()
         try:
-            # First, get the playout for this channel
             playout_stmt = select(Playout).where(
                 Playout.channel_id == self.channel_id,
-                Playout.is_active == True
+                Playout.is_active == True,
             )
             playout_result = db.execute(playout_stmt)
             playout = playout_result.scalar_one_or_none()
-            
+
             if not playout:
                 logger.debug(f"No active playout for channel {self.channel_id}")
                 return None
-            
-            # Get playout items for THIS channel's playout
-            items_stmt = select(PlayoutItem, MediaItem).outerjoin(
-                MediaItem, PlayoutItem.media_item_id == MediaItem.id
-            ).where(
-                PlayoutItem.playout_id == playout.id
-            ).order_by(PlayoutItem.start_time)
-            
+
+            items_stmt = (
+                select(PlayoutItem, MediaItem)
+                .outerjoin(MediaItem, PlayoutItem.media_item_id == MediaItem.id)
+                .where(PlayoutItem.playout_id == playout.id)
+                .order_by(PlayoutItem.start_time)
+            )
             items_result = db.execute(items_stmt)
             items = items_result.all()
-            
+
             if not items:
-                logger.debug(f"No playout items for channel {self.channel_id}, playout {playout.id}")
+                logger.debug(
+                    f"No playout items for channel {self.channel_id}, "
+                    f"playout {playout.id}"
+                )
                 return None
-            
-            # Get item at current index (wrap around if needed)
+
             if self._current_item_index >= len(items):
                 self._current_item_index = 0
-            
+
             playout_item, media_item = items[self._current_item_index]
-            
-            # Handle case where media_item is None (source_url only items)
+
             if media_item:
-                stream_url = await self._resolve_media_url(media_item)
+                # Pass the ORM object back so the async caller can resolve it.
                 title = media_item.title
                 duration = _duration_to_seconds(media_item.duration)
                 source = media_item.source
                 media_id = media_item.id
-                logger.info(
-                    f"Channel {self.channel_number} resolved URL for '{title}': "
-                    f"{stream_url[:100]}..." if len(stream_url) > 100 else stream_url
-                )
+                # Detach enough info for the log line
+                stream_url_preview = f"(pending resolution for {title})"
+                result_dict: dict[str, Any] = {
+                    "_media_item_obj": media_item,
+                    "media_url": "",  # placeholder — filled by async caller
+                    "title": title,
+                    "duration": duration,
+                    "source": source,
+                    "media_id": media_id,
+                }
             else:
                 stream_url = playout_item.source_url
                 title = playout_item.title
                 duration = _duration_to_seconds(playout_item.duration)
                 source = "url"
                 media_id = None
+                result_dict = {
+                    "media_url": stream_url,
+                    "title": title,
+                    "duration": duration,
+                    "source": source,
+                    "media_id": media_id,
+                }
 
-            url_lower = stream_url.lower() if stream_url else ""
+            url_for_detect = result_dict.get("media_url", "") or ""
+            url_lower = url_for_detect.lower()
             source_type = "unknown"
             if "archive.org" in url_lower or "yt-dlp" in url_lower:
                 source_type = "archive_org"
@@ -650,29 +716,29 @@ class ChannelStream:
                 max_seek = max(0, duration - 10)
                 if seek_offset >= duration:
                     logger.warning(
-                        f"Channel {self.channel_number}: Seek offset {seek_offset:.0f}s exceeds "
-                        f"duration {duration}s for '{title}'. Resetting to 0."
+                        f"Channel {self.channel_number}: Seek offset "
+                        f"{seek_offset:.0f}s exceeds duration {duration}s "
+                        f"for '{title}'. Resetting to 0."
                     )
                     seek_offset = 0.0
                 elif seek_offset > max_seek:
                     logger.debug(
-                        f"Channel {self.channel_number}: Clamping seek offset from {seek_offset:.0f}s "
-                        f"to {max_seek:.0f}s for '{title}' (duration: {duration}s)"
+                        f"Channel {self.channel_number}: Clamping seek offset "
+                        f"from {seek_offset:.0f}s to {max_seek:.0f}s "
+                        f"for '{title}' (duration: {duration}s)"
                     )
                     seek_offset = max_seek
 
-            return {
-                "media_id": media_id,
-                "media_url": stream_url,
-                "title": title,
-                "duration": duration,
-                "source": source,
-                "source_type": source_type,
-                "position": self._current_item_index,
-                "expires_at": None,
-                "seek_offset": seek_offset,
-            }
-            
+            result_dict.update(
+                {
+                    "source_type": source_type,
+                    "position": self._current_item_index,
+                    "expires_at": None,
+                    "seek_offset": seek_offset,
+                }
+            )
+            return result_dict
+
         except Exception as e:
             logger.error(f"Error getting next playout item: {e}")
             return None
@@ -775,51 +841,59 @@ class ChannelStream:
             # Reset failure counter on successful item start
             self._consecutive_failures = 0
             
-            # Stream the item
+            # Stream the item — gated by global semaphore (Issue 1.1)
             try:
                 media_url = playout_item.get("media_url")
                 if not media_url:
-                    logger.warning(f"Channel {self.channel_number}: No media_url for item {playout_item.get('title')}")
+                    logger.warning(
+                        f"Channel {self.channel_number}: No media_url for item "
+                        f"{playout_item.get('title')}"
+                    )
                     self._current_item_index += 1
-                    await asyncio.sleep(0.1)  # Small delay before next item
+                    await asyncio.sleep(0.1)
                     continue
-                    
+
                 from exstreamtv.streaming.mpegts_streamer import StreamSource
+
                 source_type_str = playout_item.get("source_type", "unknown")
                 try:
                     stream_source = StreamSource(source_type_str)
                 except ValueError:
                     stream_source = StreamSource.UNKNOWN
-                if self._process_pool_manager:
-                    stream_iter = streamer.stream_via_pool(
-                        media_url,
-                        self.channel_id,
-                        self._process_pool_manager,
-                        seek_offset=seek_offset,
-                    )
-                else:
-                    stream_iter = streamer.stream(
-                        media_url,
-                        source=stream_source,
-                        seek_offset=seek_offset,
-                    )
-                async for chunk in stream_iter:
-                    self._last_output_time = _utcnow()
-                    self._bytes_streamed += len(chunk)
-                    if update_channel_metric:
-                        update_channel_metric(
+
+                # Issue 1.1: Acquire semaphore before spawning FFmpeg so at
+                # most MAX_CONCURRENT_FFMPEG processes run simultaneously.
+                async with _ffmpeg_semaphore:
+                    if self._process_pool_manager:
+                        stream_iter = streamer.stream_via_pool(
+                            media_url,
                             self.channel_id,
-                            "last_output_time",
-                            self._last_output_time,
+                            self._process_pool_manager,
+                            seek_offset=seek_offset,
                         )
-                    if watchdog:
-                        watchdog.report_output(
-                            str(self.channel_id),
-                            bytes_count=len(chunk),
+                    else:
+                        stream_iter = streamer.stream(
+                            media_url,
+                            source=stream_source,
+                            seek_offset=seek_offset,
                         )
-                    await self._broadcast_chunk(chunk)
-                    if not self._is_running:
-                        break
+                    async for chunk in stream_iter:
+                        self._last_output_time = _utcnow()
+                        self._bytes_streamed += len(chunk)
+                        if update_channel_metric:
+                            update_channel_metric(
+                                self.channel_id,
+                                "last_output_time",
+                                self._last_output_time,
+                            )
+                        if watchdog:
+                            watchdog.report_output(
+                                str(self.channel_id),
+                                bytes_count=len(chunk),
+                            )
+                        await self._broadcast_chunk(chunk)
+                        if not self._is_running:
+                            break
             except Exception as e:
                 logger.error(
                     f"Error streaming item on channel {self.channel_number}: {e}"
@@ -835,20 +909,25 @@ class ChannelStream:
             await self._save_position()
     
     async def _auto_restart(self) -> None:
-        """Restart channel after failure with exponential backoff."""
+        """Restart channel after failure with exponential backoff.
+
+        Issue 1.3 fix: Guard _error_screen_active so a fast-failing restart
+        loop cannot pile up overlapping error-screen FFmpeg processes.
+        """
         self._restart_count += 1
         delay = self._restart_backoff_base * (2 ** self._restart_count)
         delay = min(delay, 60.0)  # Cap at 60 seconds
-        
+
         logger.info(
             f"Auto-restarting channel {self.channel_number} "
             f"(attempt {self._restart_count}/{self._max_restarts}) in {delay:.1f}s"
         )
-        
+
         self._last_restart_time = _utcnow()
-        
-        # Broadcast error screen during restart delay if available
-        if self._use_error_screens:
+
+        # Issue 1.3: Only spawn error screen if none is already running
+        if self._use_error_screens and not self._error_screen_active:
+            self._error_screen_active = True
             try:
                 await self._broadcast_error_screen(
                     title="Restarting",
@@ -857,7 +936,9 @@ class ChannelStream:
                 )
             except Exception as e:
                 logger.debug(f"Error screen failed: {e}")
-        
+            finally:
+                self._error_screen_active = False
+
         await asyncio.sleep(delay)
     
     async def _broadcast_error_screen(
@@ -1118,9 +1199,18 @@ class ChannelStream:
 class ChannelManager:
     """
     Manages all channel streams.
-    
+
     Provides centralized control over channel lifecycle and client connections.
+
+    Issue 2.1/2.2 fix: Idle channel eviction loop stops channels that have
+    had zero clients for IDLE_CHANNEL_TIMEOUT seconds.
     """
+
+    # Issue 2.2: Idle channels are stopped after this many seconds with 0 clients.
+    IDLE_CHANNEL_TIMEOUT = 600  # 10 minutes
+
+    # Issue 2.3: Stagger prewarm starts to avoid thundering herd.
+    PREWARM_INTERVAL_SECONDS = 0.5
 
     def __init__(
         self,
@@ -1139,95 +1229,146 @@ class ChannelManager:
         self._channels: dict[int, ChannelStream] = {}
         self._lock = asyncio.Lock()
         self._is_running = False
+        self._idle_cleanup_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         """Start the channel manager (lazy startup - channels start on first request)."""
         async with self._lock:
             if self._is_running:
                 return
-            
+
             self._is_running = True
+
+            # Issue 2.2: Start background idle-channel eviction loop
+            self._idle_cleanup_task = _track_task(
+                asyncio.create_task(self._idle_channel_cleanup_loop())
+            )
             logger.info("Channel manager started (lazy mode - channels start on demand)")
-    
-    async def prewarm_channels(self, channel_ids: list[int] | None = None) -> dict[int, bool]:
+
+    async def _idle_channel_cleanup_loop(self) -> None:
+        """Periodically stop channels with no clients (Issue 2.1/2.2).
+
+        TEST: assert channels with 0 clients for > IDLE_CHANNEL_TIMEOUT
+        are removed from self._channels and their FFmpeg process is gone.
+        """
+        while self._is_running:
+            try:
+                await asyncio.sleep(60)
+                await self._evict_idle_channels()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Idle channel cleanup error: {e}")
+
+    async def _evict_idle_channels(self) -> None:
+        """Stop and remove channels idle beyond IDLE_CHANNEL_TIMEOUT."""
+        now = _utcnow()
+        to_evict: list[int] = []
+
+        async with self._lock:
+            for channel_id, stream in self._channels.items():
+                if stream.client_count > 0:
+                    continue
+                idle_seconds = (now - stream._last_client_activity).total_seconds()
+                if idle_seconds >= self.IDLE_CHANNEL_TIMEOUT:
+                    to_evict.append(channel_id)
+
+        for channel_id in to_evict:
+            try:
+                async with self._lock:
+                    stream = self._channels.pop(channel_id, None)
+                if stream:
+                    await stream.stop()
+                    logger.info(
+                        f"Evicted idle channel {stream.channel_number} "
+                        f"({stream.channel_name}) after "
+                        f"{self.IDLE_CHANNEL_TIMEOUT}s with 0 clients"
+                    )
+            except Exception as e:
+                logger.error(f"Error evicting idle channel {channel_id}: {e}")
+
+    async def prewarm_channels(
+        self, channel_ids: list[int] | None = None
+    ) -> dict[int, bool]:
         """
         Pre-warm channels by starting them before first client request.
-        
-        This eliminates cold-start delays by ensuring channels are already
-        streaming when clients tune in.
-        
+
+        Issue 2.3 fix: Stagger channel starts by PREWARM_INTERVAL_SECONDS
+        to prevent a thundering herd of FFmpeg process spawns at startup.
+
         Args:
             channel_ids: Optional list of channel IDs to pre-warm.
                         If None, pre-warms all enabled channels.
-        
+
         Returns:
             Dictionary mapping channel_id to success status.
         """
         from exstreamtv.database.models import Channel
         from sqlalchemy import select
-        
+
         results: dict[int, bool] = {}
-        
-        # Get channels to pre-warm
+
         db = self.db_session_factory()
         try:
             if channel_ids:
                 stmt = select(Channel).where(
-                    Channel.id.in_(channel_ids),
-                    Channel.enabled == True
+                    Channel.id.in_(channel_ids), Channel.enabled == True
                 )
             else:
                 stmt = select(Channel).where(Channel.enabled == True)
-            
+
             result = db.execute(stmt)
             channels = result.scalars().all()
-            
+
             if not channels:
                 logger.info("No enabled channels found to pre-warm")
                 return results
-            
+
             logger.info(f"Pre-warming {len(channels)} channels...")
-            
-            for channel in channels:
+
+            for idx, channel in enumerate(channels):
                 try:
-                    # Get or create the channel stream
                     channel_stream = await self.get_channel_stream(
                         channel_id=channel.id,
                         channel_number=channel.number,
                         channel_name=channel.name,
                     )
-                    
-                    # Start the stream if not already running
+
                     if not channel_stream.is_running:
                         await channel_stream.start()
                         logger.info(
                             f"Pre-warmed channel {channel.number} ({channel.name})"
                         )
+                        # Issue 2.3: Stagger starts to avoid thundering herd
+                        if idx < len(channels) - 1:
+                            await asyncio.sleep(self.PREWARM_INTERVAL_SECONDS)
                     else:
                         logger.debug(
-                            f"Channel {channel.number} already running, skipping pre-warm"
+                            f"Channel {channel.number} already running, "
+                            f"skipping pre-warm"
                         )
-                    
+
                     results[channel.id] = True
-                    
+
                 except Exception as e:
                     logger.error(
-                        f"Failed to pre-warm channel {channel.number} ({channel.name}): {e}"
+                        f"Failed to pre-warm channel {channel.number} "
+                        f"({channel.name}): {e}"
                     )
                     results[channel.id] = False
-            
-            # Summary
+
             success_count = sum(1 for v in results.values() if v)
             fail_count = len(results) - success_count
             logger.info(
-                f"Pre-warming complete: {success_count} succeeded, {fail_count} failed"
+                f"Pre-warming complete: {success_count} succeeded, "
+                f"{fail_count} failed"
             )
-            
+
         except Exception as e:
             logger.error(f"Error during channel pre-warming: {e}")
         finally:
             db.close()
-        
+
         return results
 
     async def stop(self) -> None:
@@ -1235,16 +1376,24 @@ class ChannelManager:
         async with self._lock:
             if not self._is_running:
                 return
-                
+
             self._is_running = False
-            
+
+            # Cancel idle cleanup loop
+            if self._idle_cleanup_task:
+                self._idle_cleanup_task.cancel()
+                try:
+                    await self._idle_cleanup_task
+                except asyncio.CancelledError:
+                    pass
+
             # Stop all channels
             for channel_id, channel_stream in list(self._channels.items()):
                 try:
                     await channel_stream.stop()
                 except Exception as e:
                     logger.error(f"Error stopping channel {channel_id}: {e}")
-            
+
             self._channels.clear()
             logger.info("Channel manager stopped")
 
@@ -1256,12 +1405,12 @@ class ChannelManager:
     ) -> ChannelStream:
         """
         Get or create a channel stream.
-        
+
         Args:
             channel_id: Database ID of the channel.
             channel_number: Channel number for display.
             channel_name: Channel name for logging.
-            
+
         Returns:
             ChannelStream for the channel.
         """
@@ -1290,12 +1439,12 @@ class ChannelManager:
     ) -> ChannelStream:
         """
         Start a specific channel.
-        
+
         Args:
             channel_id: Database ID of the channel.
             channel_number: Channel number for display.
             channel_name: Channel name for logging.
-            
+
         Returns:
             Started ChannelStream.
         """
@@ -1328,7 +1477,6 @@ class ChannelManager:
 
         db = self.db_session_factory()
         try:
-            # Active playout with at least one item
             playout_stmt = (
                 select(Playout.id)
                 .where(
@@ -1340,14 +1488,15 @@ class ChannelManager:
             )
             if db.execute(playout_stmt).first():
                 return True
-            # Filler: channel has fallback_filler_id and preset has items
             channel_stmt = select(Channel).where(Channel.id == channel_id)
             channel = db.execute(channel_stmt).scalar_one_or_none()
             if not channel or not channel.fallback_filler_id:
                 return False
-            filler_stmt = select(FillerPresetItem.id).where(
-                FillerPresetItem.preset_id == channel.fallback_filler_id
-            ).limit(1)
+            filler_stmt = (
+                select(FillerPresetItem.id)
+                .where(FillerPresetItem.preset_id == channel.fallback_filler_id)
+                .limit(1)
+            )
             if db.execute(filler_stmt).first():
                 return True
             preset_stmt = select(FillerPreset).where(
@@ -1356,9 +1505,12 @@ class ChannelManager:
             preset = db.execute(preset_stmt).scalar_one_or_none()
             if preset and preset.collection_id:
                 from exstreamtv.database.models import PlaylistItem
-                coll_stmt = select(PlaylistItem.id).where(
-                    PlaylistItem.playlist_id == preset.collection_id
-                ).limit(1)
+
+                coll_stmt = (
+                    select(PlaylistItem.id)
+                    .where(PlaylistItem.playlist_id == preset.collection_id)
+                    .limit(1)
+                )
                 if db.execute(coll_stmt).first():
                     return True
             return False
@@ -1379,7 +1531,7 @@ class ChannelManager:
         """Get status of a specific channel."""
         if channel_id not in self._channels:
             return {"running": False, "clients": 0}
-            
+
         stream = self._channels[channel_id]
         return {
             "running": stream.is_running,

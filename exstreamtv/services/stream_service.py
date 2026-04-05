@@ -7,6 +7,7 @@ calling start_channel/stop_channel directly when serialized semantics are requir
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -28,6 +29,9 @@ class StreamService:
         self._channel_manager = channel_manager
         self._contexts: dict[str, ChannelContext] = {}
         self._transcode_configs: dict[str, TranscodeConfig] = {}
+        # Issue 6.4: Lock guards check-then-set on _contexts to prevent
+        # duplicate ChannelStream creation under concurrent requests.
+        self._lock = asyncio.Lock()
 
     @property
     def contexts(self) -> dict[str, ChannelContext]:
@@ -43,8 +47,15 @@ class StreamService:
         return self._contexts.get(channel_id)
 
     async def get_or_create_context(self, channel_id: str) -> ChannelContext:
-        if channel_id in self._contexts:
-            return self._contexts[channel_id]
+        # Issue 6.4: Lock prevents two concurrent requests from both
+        # passing the membership check and creating duplicate contexts.
+        async with self._lock:
+            if channel_id in self._contexts:
+                return self._contexts[channel_id]
+            return await self._create_context_locked(channel_id)
+
+    async def _create_context_locked(self, channel_id: str) -> ChannelContext:
+        """Create and register a new context. Caller must hold self._lock."""
         try:
             cid = int(channel_id, 10)
         except ValueError as e:
@@ -75,7 +86,7 @@ class StreamService:
             ctx.sync_state_from_stream_running(stream.is_running)
         except Exception as e:
             logger.debug(
-                "get_or_create_context: could not sync stream state for %s: %s",
+                "_create_context_locked: could not sync stream state for %s: %s",
                 channel_id,
                 e,
             )
@@ -89,10 +100,18 @@ class StreamService:
         return True
 
     async def stop_channel(self, channel_id: str) -> bool:
+        """Stop channel and clean up context (Issue 3.1: prevents unbounded growth)."""
         ctx = await self.get_context(channel_id)
         if ctx is None:
             return True
-        await ctx.get_state().stop(ctx)
+        try:
+            await ctx.get_state().stop(ctx)
+        finally:
+            # Issue 3.1/3.2: Remove context and config to prevent unbounded dict growth.
+            # Cleanup runs even if stop() raises so dicts never grow unbounded.
+            async with self._lock:
+                self._contexts.pop(channel_id, None)
+                self._transcode_configs.pop(channel_id, None)
         return True
 
     async def on_health_check_passed(self, channel_id: str) -> None:

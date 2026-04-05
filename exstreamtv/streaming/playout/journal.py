@@ -15,7 +15,10 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 # Module-level cache: channel_id -> latest journal row (in-memory for quick reads)
-_journal_cache: dict[int, dict[str, Any]] = {}
+# Issue 5.3: Bounded cache prevents memory growth from deleted channels.
+# maxsize=200 channels, ttl=1800s (30 min) before stale entries are evicted.
+from cachetools import TTLCache
+_journal_cache: TTLCache = TTLCache(maxsize=200, ttl=1800)
 _cache_lock: Any = None  # Set at runtime if needed
 
 
