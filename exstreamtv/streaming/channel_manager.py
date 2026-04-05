@@ -1,9 +1,9 @@
 """
-Channel Manager for continuous background streaming (ErsatzTV-style).
+Channel Manager for continuous background streaming.
 
-Ported from StreamTV with playout timeline tracking and resume capability.
+Provides playout timeline tracking and resume capability.
 
-Enhanced with Tunarr/dizqueTV integrations:
+Enhanced with integrations:
 - Session tracking for connection management
 - Stream throttling for buffer control
 - Error screen fallback for graceful failures
@@ -107,7 +107,7 @@ except ImportError:
 
 class ChannelStream:
     """
-    Manages a continuous stream for a single channel (ErsatzTV-style).
+    Manages a continuous stream for a single channel.
     
     Features:
     - Continuous background streaming
@@ -153,7 +153,7 @@ class ChannelStream:
         self._lock = asyncio.Lock()
         self._client_count = 0
         
-        # Playout timeline tracking (ErsatzTV-style)
+        # Playout timeline tracking
         self._playout_start_time: datetime | None = None
         self._schedule_items: list[dict] = []
         self._current_item_index = 0
@@ -226,7 +226,7 @@ class ChannelStream:
         """
         Load saved anchor time or initialize for continuous streaming.
         
-        ErsatzTV-style approach: Use an anchor time to calculate the current
+        Uses an anchor time to calculate the current
         position based on elapsed wall-clock time. This ensures:
         1. All viewers see the same content at the same time
         2. Restarting the server continues from the correct time-based position
@@ -460,7 +460,7 @@ class ChannelStream:
         """
         Get the current stream.
         
-        Joins existing continuous stream at current position (ErsatzTV-style).
+        Joins existing continuous stream at current position.
         
         Yields:
             MPEG-TS data chunks.
@@ -763,7 +763,7 @@ class ChannelStream:
                 f"Channel {self.channel_number} playing: {playout_item.get('title')}"
             )
             
-            # Get seek offset from playout item (ErsatzTV-style)
+            # Get seek offset from playout item
             seek_offset = playout_item.get("seek_offset", 0.0)
 
             # Update current item tracking (EPG uses this for guide alignment)

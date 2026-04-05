@@ -2,7 +2,7 @@
 Template Database Models
 
 Defines Template, TemplateGroup, and TemplateItem for scheduling templates.
-ErsatzTV feature: reusable schedule patterns.
+Reusable schedule patterns for programming automation.
 """
 
 from datetime import time
@@ -42,7 +42,7 @@ class Template(Base, TimestampMixin):
     """
     Schedule template for reusable programming patterns.
     
-    ErsatzTV feature: define a day's programming once, apply to multiple days.
+    Define a day's programming once, then apply to multiple days.
     """
     
     __tablename__ = "templates"

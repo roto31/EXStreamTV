@@ -1,7 +1,7 @@
 """
 Playout scheduler for determining what plays when.
 
-Ported from ErsatzTV PlayoutModeScheduler*.cs files.
+Supports four scheduling modes: ONE, MULTIPLE, DURATION, and FLOOD.
 """
 
 from abc import ABC, abstractmethod
@@ -22,7 +22,8 @@ class ScheduleMode(Enum):
     """
     Schedule item playback mode.
 
-    Ported from ErsatzTV PlayoutMode.
+    ONE: play one item then advance. MULTIPLE: play N items. DURATION: play
+    for a time span. FLOOD: play until a fixed end time.
     """
 
     ONE = "one"  # Play one item, then move to next schedule item
@@ -35,8 +36,6 @@ class ScheduleMode(Enum):
 class ScheduleItem:
     """
     A schedule item defining what to play and when.
-
-    Ported from ErsatzTV ProgramScheduleItem.
     """
 
     id: int
@@ -84,7 +83,8 @@ class PlayoutScheduler:
     """
     Main scheduler that determines playout items.
 
-    Ported from ErsatzTV PlayoutModeScheduler* classes.
+    Processes schedule items in sequence, delegating to mode-specific logic
+    (ONE, MULTIPLE, DURATION, FLOOD) to fill a playout timeline.
     """
 
     def __init__(

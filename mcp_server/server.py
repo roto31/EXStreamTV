@@ -94,7 +94,7 @@ def get_project_info() -> dict[str, Any]:
             if description:
                 break
     if not description:
-        description = "Unified IPTV streaming platform (StreamTV + ErsatzTV)."
+        description = "Unified IPTV streaming platform."
 
     features = [
         "Direct online streaming (YouTube, Archive.org)",

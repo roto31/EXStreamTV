@@ -1,7 +1,7 @@
 """
 EXStreamTV Main Application
 
-FastAPI application entry point combining StreamTV and ErsatzTV features.
+FastAPI application entry point — unified IPTV streaming platform.
 """
 
 import asyncio
