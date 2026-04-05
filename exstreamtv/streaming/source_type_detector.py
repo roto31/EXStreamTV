@@ -157,9 +157,8 @@ class URLPatternDetector(SourceTypeDetector):
     """
 
     # Domains checked against the parsed hostname (suffix match).
-    _YOUTUBE_DOMAINS = (".youtube.com", ".youtu.be", ".googlevideo.com",
-                        "youtube.com", "youtu.be", "googlevideo.com")
-    _ARCHIVE_DOMAINS = (".archive.org", "archive.org")
+    _YOUTUBE_DOMAINS = (".youtube.com", ".youtu.be", ".googlevideo.com")
+    _ARCHIVE_DOMAINS = (".archive.org",)
     _JELLYFIN_DOMAINS = (".jellyfin.", "jellyfin.")
 
     def _try_detect(self, media_item: Any) -> SourceType | None:
@@ -178,17 +177,19 @@ class URLPatternDetector(SourceTypeDetector):
             from urllib.parse import urlparse
             parsed = urlparse(url_str)
             host = (parsed.hostname or "").lower()
+            port = parsed.port
         except Exception:
             host = ""
+            port = None
 
         if host:
-            if any(host == d or host.endswith(d) for d in self._YOUTUBE_DOMAINS):
+            if any(host.endswith(d) or host == d.lstrip(".") for d in self._YOUTUBE_DOMAINS):
                 return SourceType.YOUTUBE
-            if any(host == d or host.endswith(d) for d in self._ARCHIVE_DOMAINS):
+            if any(host.endswith(d) or host == d.lstrip(".") for d in self._ARCHIVE_DOMAINS):
                 return SourceType.ARCHIVE_ORG
             if any(d in host for d in self._JELLYFIN_DOMAINS):
                 return SourceType.JELLYFIN
-            if ":8096" in url_lower:
+            if port == 8096:
                 return SourceType.JELLYFIN
 
         # Path-based heuristic (Plex uses metadata paths)

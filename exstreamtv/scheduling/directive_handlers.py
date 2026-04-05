@@ -58,7 +58,7 @@ class PadToNextHandler(DirectiveHandler):
     def can_handle(self, item: dict[str, Any]) -> bool:
         return "padToNext" in item
 
-    def handle(self, item, schedule, current_time, engine):
+    def handle(self, item: dict[str, Any], schedule: ParsedSchedule, current_time: datetime, engine: ScheduleEngine) -> list[dict[str, Any]]:
         return engine._handle_pad_to_next(item, schedule, current_time)
 
 
@@ -66,7 +66,7 @@ class PadUntilHandler(DirectiveHandler):
     def can_handle(self, item: dict[str, Any]) -> bool:
         return "padUntil" in item
 
-    def handle(self, item, schedule, current_time, engine):
+    def handle(self, item: dict[str, Any], schedule: ParsedSchedule, current_time: datetime, engine: ScheduleEngine) -> list[dict[str, Any]]:
         return engine._handle_pad_until(item, schedule, current_time)
 
 
@@ -74,7 +74,7 @@ class WaitUntilHandler(DirectiveHandler):
     def can_handle(self, item: dict[str, Any]) -> bool:
         return "waitUntil" in item
 
-    def handle(self, item, schedule, current_time, engine):
+    def handle(self, item: dict[str, Any], schedule: ParsedSchedule, current_time: datetime, engine: ScheduleEngine) -> list[dict[str, Any]]:
         return engine._handle_wait_until(item, current_time)
 
 
@@ -82,7 +82,7 @@ class SkipItemsHandler(DirectiveHandler):
     def can_handle(self, item: dict[str, Any]) -> bool:
         return "skipItems" in item
 
-    def handle(self, item, schedule, current_time, engine):
+    def handle(self, item: dict[str, Any], schedule: ParsedSchedule, current_time: datetime, engine: ScheduleEngine) -> list[dict[str, Any]]:
         return engine._handle_skip_items(item, schedule)
 
 
@@ -90,7 +90,7 @@ class ShuffleSequenceHandler(DirectiveHandler):
     def can_handle(self, item: dict[str, Any]) -> bool:
         return "shuffleSequence" in item
 
-    def handle(self, item, schedule, current_time, engine):
+    def handle(self, item: dict[str, Any], schedule: ParsedSchedule, current_time: datetime, engine: ScheduleEngine) -> list[dict[str, Any]]:
         return engine._handle_shuffle_sequence(item, schedule)
 
 
@@ -102,7 +102,7 @@ class RollFlagHandler(DirectiveHandler):
     def can_handle(self, item: dict[str, Any]) -> bool:
         return bool(self._KEYS & item.keys())
 
-    def handle(self, item, schedule, current_time, engine):
+    def handle(self, item: dict[str, Any], schedule: ParsedSchedule, current_time: datetime, engine: ScheduleEngine) -> list[dict[str, Any]]:
         return []
 
 
@@ -110,7 +110,7 @@ class SequenceReferenceHandler(DirectiveHandler):
     def can_handle(self, item: dict[str, Any]) -> bool:
         return "sequence" in item
 
-    def handle(self, item, schedule, current_time, engine):
+    def handle(self, item: dict[str, Any], schedule: ParsedSchedule, current_time: datetime, engine: ScheduleEngine) -> list[dict[str, Any]]:
         sequence_key = item["sequence"]
         media_items = engine.get_sequence_media(sequence_key, schedule)
         resolved: list[dict[str, Any]] = []
@@ -130,7 +130,7 @@ class AllContentHandler(DirectiveHandler):
     def can_handle(self, item: dict[str, Any]) -> bool:
         return "all" in item
 
-    def handle(self, item, schedule, current_time, engine):
+    def handle(self, item: dict[str, Any], schedule: ParsedSchedule, current_time: datetime, engine: ScheduleEngine) -> list[dict[str, Any]]:
         content_key = item["all"]
         if content_key not in schedule.content_map:
             return []
@@ -155,7 +155,7 @@ class DurationFillerHandler(DirectiveHandler):
     def can_handle(self, item: dict[str, Any]) -> bool:
         return "duration" in item and "content" in item
 
-    def handle(self, item, schedule, current_time, engine):
+    def handle(self, item: dict[str, Any], schedule: ParsedSchedule, current_time: datetime, engine: ScheduleEngine) -> list[dict[str, Any]]:
         from exstreamtv.scheduling.parser import ScheduleParser
 
         content_key = item["content"]
