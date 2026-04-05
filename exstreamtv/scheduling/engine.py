@@ -16,7 +16,7 @@ def _utcnow() -> datetime:
 from exstreamtv.database import Channel, Collection, CollectionItem, MediaItem, Playlist, PlaylistItem
 from exstreamtv.scheduling.directive_handlers import build_directive_handlers
 
-from .parser import ParsedSchedule, ScheduleParser
+from .parser import ParsedSchedule
 
 logger = logging.getLogger(__name__)
 

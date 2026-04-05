@@ -20,9 +20,10 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from exstreamtv.scheduling.parser import ParsedSchedule
+
 if TYPE_CHECKING:
     from exstreamtv.scheduling.engine import ScheduleEngine
-    from exstreamtv.scheduling.parser import ParsedSchedule
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +43,9 @@ class DirectiveHandler(ABC):
     def handle(
         self,
         item: dict[str, Any],
-        schedule: "ParsedSchedule",
+        schedule: ParsedSchedule,
         current_time: datetime,
-        engine: "ScheduleEngine",
+        engine: ScheduleEngine,
     ) -> list[dict[str, Any]]:
         """Resolve the directive to a (possibly empty) list of media dicts."""
 

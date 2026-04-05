@@ -1,32 +1,12 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ApiError } from "../api/client";
 import { listSchedules, type ScheduleRow } from "../api/schedules";
+import { useAsync } from "../hooks/useAsync";
 
 export default function SchedulesPage() {
-  const [rows, setRows] = useState<ScheduleRow[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await listSchedules();
-        if (!cancelled) {
-          setRows(data);
-          setErr(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setRows(null);
-          setErr(e instanceof ApiError ? e.message : String(e));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: rows, error: err, loading } = useAsync<ScheduleRow[]>(
+    () => listSchedules(),
+    []
+  );
 
   if (err) {
     return (
@@ -37,7 +17,7 @@ export default function SchedulesPage() {
     );
   }
 
-  if (!rows) {
+  if (loading || !rows) {
     return (
       <div>
         <h1 className="text-2xl font-bold text-white">Schedules</h1>

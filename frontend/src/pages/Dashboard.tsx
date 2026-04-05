@@ -1,33 +1,14 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ApiError, fetchJson } from "../api/client";
+import { fetchJson } from "../api/client";
+import { useAsync } from "../hooks/useAsync";
 
 type HealthPayload = Record<string, unknown>;
 
 export default function Dashboard() {
-  const [health, setHealth] = useState<HealthPayload | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const h = await fetchJson<HealthPayload>("/api/health");
-        if (!cancelled) {
-          setHealth(h);
-          setErr(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setHealth(null);
-          setErr(e instanceof ApiError ? e.message : String(e));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: health, error: err, loading } = useAsync(
+    () => fetchJson<HealthPayload>("/api/health"),
+    []
+  );
 
   return (
     <div className="space-y-8">
@@ -50,9 +31,9 @@ export default function Dashboard() {
           <pre className="mt-2 overflow-x-auto text-xs text-slate-300">
             {JSON.stringify(health, null, 2)}
           </pre>
-        ) : (
+        ) : loading ? (
           <p className="mt-2 text-slate-500">Loading…</p>
-        )}
+        ) : null}
       </section>
 
       <ul className="flex flex-wrap gap-3 text-sm">
