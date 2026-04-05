@@ -67,7 +67,7 @@ class FFmpegWatchdog:
     def __init__(
         self,
         timeout_seconds: int = 30,
-        check_interval: float = 5.0,
+        check_interval: float = 15.0,  # Issue 4.2: Increased from 5s to reduce polling load
     ):
         """
         Initialize the watchdog.
@@ -267,7 +267,7 @@ _watchdog: Optional[FFmpegWatchdog] = None
 
 def get_ffmpeg_watchdog(
     timeout_seconds: int = 30,
-    check_interval: float = 5.0,
+    check_interval: float = 15.0,  # Issue 4.2: match class default
 ) -> FFmpegWatchdog:
     """Get the global FFmpeg watchdog instance."""
     global _watchdog
