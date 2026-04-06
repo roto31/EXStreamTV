@@ -1,32 +1,12 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ApiError } from "../api/client";
 import { listChannels, type ChannelRow } from "../api/channels";
+import { useAsync } from "../hooks/useAsync";
 
 export default function ChannelsPage() {
-  const [rows, setRows] = useState<ChannelRow[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await listChannels();
-        if (!cancelled) {
-          setRows(data);
-          setErr(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setRows(null);
-          setErr(e instanceof ApiError ? e.message : String(e));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: rows, error: err, loading } = useAsync<ChannelRow[]>(
+    () => listChannels(),
+    []
+  );
 
   if (err) {
     return (
@@ -37,7 +17,7 @@ export default function ChannelsPage() {
     );
   }
 
-  if (!rows) {
+  if (loading || !rows) {
     return (
       <div>
         <h1 className="text-2xl font-bold text-white">Channels</h1>

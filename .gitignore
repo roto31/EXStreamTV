@@ -190,3 +190,6 @@ docs/confluence/_single_mcp_arg.json
 docs/confluence/.mcp_create_payloads/
 docs/confluence/atlassian-mcp-mirror.manifest.jsonl
 docs/confluence/ESTV-GITHUB-WIKI-MIRROR.generated.md
+
+# Node.js
+node_modules/

@@ -1,38 +1,15 @@
-import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ApiError } from "../api/client";
 import { getSchedule, type ScheduleRow } from "../api/schedules";
+import { useAsync } from "../hooks/useAsync";
 
 export default function ScheduleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const numId = id ? Number.parseInt(id, 10) : NaN;
-  const [row, setRow] = useState<ScheduleRow | null>(null);
-  const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!Number.isFinite(numId)) {
-      setErr("Invalid schedule id");
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await getSchedule(numId);
-        if (!cancelled) {
-          setRow(data);
-          setErr(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setRow(null);
-          setErr(e instanceof ApiError ? e.message : String(e));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [numId]);
+  const { data: row, error: err, loading } = useAsync<ScheduleRow>(
+    Number.isFinite(numId) ? () => getSchedule(numId) : null,
+    [numId]
+  );
 
   if (!Number.isFinite(numId)) {
     return <p className="text-amber-400">Invalid schedule id.</p>;
@@ -50,7 +27,7 @@ export default function ScheduleDetailPage() {
     );
   }
 
-  if (!row) {
+  if (loading || !row) {
     return (
       <div>
         <Link to="/schedules" className="text-brand-400 hover:underline">

@@ -26,11 +26,24 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
+from cachetools import TTLCache
+
 from exstreamtv.config import get_config
 from exstreamtv.streaming.error_handler import ErrorHandler as _EH
 
 logger = logging.getLogger(__name__)
 _error_handler = _EH(max_retries=3, backoff_base=1.0)
+
+# Issue 1.4: Cache ffprobe results by URL. Identical URLs return identical
+# codec info, so re-probing on every schedule rotation is pure waste.
+# maxsize=1000 URLs, ttl=3600s (1 hour).
+_probe_cache: TTLCache = TTLCache(maxsize=1000, ttl=3600)
+
+# Issues 9.2/10.1: Cap concurrent VideoToolbox encoder sessions.
+# When the cap is reached, new streams wait rather than silently falling
+# back to software encoding via -allow_sw 1 (which cascades CPU load).
+MAX_VIDEOTOOLBOX_SESSIONS = 8
+_videotoolbox_semaphore = asyncio.Semaphore(MAX_VIDEOTOOLBOX_SESSIONS)
 
 
 def _is_script_field(input_url: str) -> bool:
@@ -135,6 +148,12 @@ class MPEGTSStreamer:
         Returns:
             CodecInfo with detected codecs.
         """
+        # Issue 1.4: Return cached probe result for identical URLs
+        cached = _probe_cache.get(input_url)
+        if cached is not None:
+            logger.debug(f"probe_stream: cache hit for {input_url[:80]}")
+            return cached
+
         try:
             cmd = [
                 self._ffprobe_path,
@@ -145,8 +164,12 @@ class MPEGTSStreamer:
                 input_url,
             ]
             
-            result = await asyncio.create_subprocess_exec(
+            # Issue 1.2: Route ffprobe through central process manager
+            from exstreamtv.streaming.ffmpeg_process_manager import get_ffmpeg_process_manager
+            _fpm = get_ffmpeg_process_manager()
+            result = await _fpm.spawn(
                 *cmd,
+                tag=f"ffprobe:{input_url[:60]}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -200,6 +223,8 @@ class MPEGTSStreamer:
                 f"duration={info.duration:.1f}s, copy_video={info.can_copy_video}, copy_audio={info.can_copy_audio}"
             )
             
+            # Issue 1.4: Store in cache for subsequent calls
+            _probe_cache[input_url] = info
             return info
             
         except Exception as e:
@@ -399,11 +424,11 @@ class MPEGTSStreamer:
                 "-bufsize", "12M",
                 "-profile:v", "high",
                 "-realtime", "1",
-                "-allow_sw", "1",  # Allow software fallback if hardware encoder is busy
+                "-allow_sw", "0",  # Issue 9.2: Do NOT silently fall back to software
                 "-pix_fmt", "yuv420p",
                 "-bsf:v", "dump_extra",
             ])
-            logger.debug(f"Video: Hardware encoding with {hw_encoder} (software fallback enabled)")
+            logger.debug(f"Video: Hardware encoding with {hw_encoder} (no software fallback)")
         else:
             # Software encoding
             preset = "ultrafast" if is_mpeg4 else "veryfast"
@@ -700,8 +725,12 @@ class MPEGTSStreamer:
         ytdlp_proc: asyncio.subprocess.Process | None = None
         pump_task: asyncio.Task[None] | None = None
         if is_script:
-            ytdlp_proc = await asyncio.create_subprocess_exec(
+            # Issue 1.2: Route yt-dlp spawn through central process manager
+            from exstreamtv.streaming.ffmpeg_process_manager import get_ffmpeg_process_manager
+            _fpm = get_ffmpeg_process_manager()
+            ytdlp_proc = await _fpm.spawn(
                 *shlex.split(input_url.strip()),
+                tag=f"ytdlp:{input_url[:60]}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL,
             )
@@ -744,8 +773,13 @@ class MPEGTSStreamer:
         logger.info(f"FFmpeg command: {' '.join(cmd)}")
         logger.debug(f"Starting FFmpeg: {' '.join(cmd[:10])}...")
 
-        process = await asyncio.create_subprocess_exec(
+        # Issue 1.2: Route FFmpeg spawn through central process manager
+        # so all processes are tracked and cleaned up on shutdown.
+        from exstreamtv.streaming.ffmpeg_process_manager import get_ffmpeg_process_manager
+        _fpm = get_ffmpeg_process_manager()
+        process = await _fpm.spawn(
             *cmd,
+            tag=f"stream:{input_url[:60]}",
             stdin=asyncio.subprocess.PIPE if is_script else None,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
