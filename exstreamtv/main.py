@@ -406,7 +406,7 @@ def create_app() -> FastAPI:
     """
     app = FastAPI(
         title="EXStreamTV",
-        description="Unified IPTV streaming platform combining StreamTV and ErsatzTV",
+        description="Unified IPTV streaming platform",
         version=__version__,
         lifespan=lifespan,
         docs_url="/api/docs",
@@ -522,7 +522,7 @@ def create_app() -> FastAPI:
     except ImportError as e:
         logger.warning(f"HDHomeRun router not available: {e}")
     
-    # Migration router for ErsatzTV/StreamTV imports
+    # Migration router for legacy imports
     try:
         from exstreamtv.api import migration_api
         app.include_router(migration_api.router, prefix="/api/migration", tags=["Migration"])
@@ -997,7 +997,7 @@ def create_app() -> FastAPI:
         
         <h2>Features</h2>
         <ul>
-            <li>ErsatzTV-style continuous background streaming</li>
+            <li>Continuous background streaming with anchor-time playout</li>
             <li>HDHomeRun emulation for Plex/Emby/Jellyfin</li>
             <li>M3U playlist support with XMLTV EPG</li>
             <li>FFmpeg transcoding with hardware acceleration</li>
@@ -1271,10 +1271,10 @@ python -m exstreamtv</code></pre>
             )
         return RedirectResponse(url="/api/docs")
     
-    # Migration page - Import from ErsatzTV/StreamTV
+    # Migration page - Import from legacy systems
     @app.get("/migration", response_model=None)
     async def migration_page(request: Request):
-        """Migration page for importing from ErsatzTV and StreamTV."""
+        """Migration page for importing from legacy systems."""
         if templates:
             return templates.TemplateResponse(
                 "migration.html",

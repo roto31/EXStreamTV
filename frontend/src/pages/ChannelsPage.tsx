@@ -1,73 +1,75 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ApiError } from "../api/client";
-import { listChannels, type ChannelRow } from "../api/channels";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Paper from "@mui/material/Paper";
+import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
+import Alert from "@mui/material/Alert";
+import MuiLink from "@mui/material/Link";
+import { useChannels } from "../hooks/useQueryData";
 
 export default function ChannelsPage() {
-  const [rows, setRows] = useState<ChannelRow[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await listChannels();
-        if (!cancelled) {
-          setRows(data);
-          setErr(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setRows(null);
-          setErr(e instanceof ApiError ? e.message : String(e));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (err) {
-    return (
-      <div>
-        <h1 className="text-2xl font-bold text-white">Channels</h1>
-        <p className="mt-4 text-amber-400">{err}</p>
-      </div>
-    );
-  }
-
-  if (!rows) {
-    return (
-      <div>
-        <h1 className="text-2xl font-bold text-white">Channels</h1>
-        <p className="mt-4 text-slate-500">Loading…</p>
-      </div>
-    );
-  }
+  const { data: rows, isLoading, error } = useChannels();
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-white">Channels</h1>
-      <p className="mt-2 text-slate-400">{rows.length} channel(s)</p>
-      <ul className="mt-6 space-y-2">
-        {rows.map((c) => (
-          <li key={c.id}>
-            <Link
-              to={`/channels/${c.id}`}
-              className="block rounded-lg border border-slate-800 bg-brand-900/40 px-4 py-3 transition hover:border-brand-500/50"
-            >
-              <span className="font-medium text-white">
-                {c.name ?? `Channel ${c.id}`}
-              </span>
-              <span className="ml-2 text-slate-500">
-                #{c.number ?? c.id}
-                {c.enabled === false ? " · disabled" : ""}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Box>
+      <Typography variant="h4" fontWeight={700} gutterBottom>
+        Channels
+      </Typography>
+
+      {isLoading ? (
+        <CircularProgress />
+      ) : error ? (
+        <Alert severity="error">
+          {error instanceof Error ? error.message : String(error)}
+        </Alert>
+      ) : (
+        <>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            {rows?.length ?? 0} channel(s)
+          </Typography>
+          <TableContainer component={Paper} sx={{ mt: 2 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>#</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Group</TableCell>
+                  <TableCell>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rows?.map((c) => (
+                  <TableRow key={c.id} hover>
+                    <TableCell sx={{ fontFamily: "monospace" }}>
+                      {c.number ?? c.id}
+                    </TableCell>
+                    <TableCell>
+                      <MuiLink component={Link} to={`/channels/${c.id}`} underline="hover">
+                        {c.name ?? `Channel ${c.id}`}
+                      </MuiLink>
+                    </TableCell>
+                    <TableCell>{c.group ?? "—"}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={c.enabled === false ? "Disabled" : "Active"}
+                        color={c.enabled === false ? "default" : "success"}
+                        size="small"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
+      )}
+    </Box>
   );
 }
