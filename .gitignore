@@ -180,3 +180,6 @@ xcuserdata/
 
 # Confluence publisher dry-run output
 docs/confluence/_dry_run_storage_snippet.xml
+
+# Node.js
+node_modules/
