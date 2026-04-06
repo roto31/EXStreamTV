@@ -56,7 +56,7 @@ export default function WelcomePage() {
           )}
           {activeStep === 3 && (
             <Typography>
-              You&apos;re all set! Access your playlist at{" "}
+              You're all set! Access your playlist at{" "}
               <code>/iptv/playlist.m3u</code>.
             </Typography>
           )}
