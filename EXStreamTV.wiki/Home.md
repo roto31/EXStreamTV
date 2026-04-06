@@ -1,9 +1,9 @@
 # EXStreamTV Documentation
 
-Architecture diagrams: [docs/architecture/DIAGRAMS.md](Architecture-Diagrams) — Mermaid-only, **19** standardized diagrams (includes schedule history memento flow, §19).
+Architecture diagrams: [docs/architecture/DIAGRAMS.md](Architecture-Diagrams) — Mermaid-only, **21** standardized diagrams (includes schedule history memento §19, GoF decision tree §20, useAsyncResource flow §21).
 
 **Version:** 2.6.0  
-**Last Updated:** 2026-04-03
+**Last Updated:** 2026-04-06
 
 Welcome to the EXStreamTV documentation. This guide will help you set up, configure, and use EXStreamTV for your IPTV streaming needs.
 
@@ -21,7 +21,8 @@ Welcome to the EXStreamTV documentation. This guide will help you set up, config
 | [System Design](System-Design) | Architecture overview |
 | [Pattern refactor sources](Pattern-Refactor-Sources) | Refactor inventory + Alembic stamp note |
 | [ADR: ChannelManager DB sessions](ADR-Channel-Manager-Database) | Sync vs async SQLAlchemy boundaries |
-| [UI architecture (Track B)](EXStreamTV-UI-Architecture) | React app in `frontend/` — routes, personas, Tailwind |
+| [UI architecture (Track B)](EXStreamTV-UI-Architecture) | React app in `frontend/` — routes, personas, Tailwind, `useAsyncResource` hook |
+| [Architecture Diagrams](Architecture-Diagrams) | 21 Mermaid diagrams including GoF decision tree (§20) and useAsyncResource flow (§21) |
 | [GitHub Actions CI](https://github.com/roto31/EXStreamTV/actions) | Scoped Ruff, `pytest tests/unit`, `frontend` production build |
 
 ---

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Design-pattern tooling, `useAsyncResource` hook, `aiosqlite`, MCP-Atlassian (job: `copilot/update-documentation-and-changelog`)
+- **`frontend/src/hooks/useAsyncResource.ts`** — Template Method–style hook that encapsulates mount → async load → success/error handling for React page components. Supersedes copy-paste `useEffect + cancelled + try/catch` boilerplate. Supports `enabled` flag (skip loader when `false`) and `errorData` fallback (set data to empty-list default even on error). References: `.cursor/rules/exstreamtv-design-pattern-selection.mdc` §React.
+- **`.cursor/rules/exstreamtv-design-pattern-selection.mdc`** — Pain-point-first GoF design-pattern decision tree rule (Creational / Structural / Behavioral branches) for Python/FastAPI and React UI. Enforced on `exstreamtv/**/*.py` and `frontend/src/**/*.{ts,tsx}`. Anti-patterns section prohibits Singleton grab-bags, order-dependent Decorator stacks, and Adapter business-rule leakage.
+- **`.cursor/skills/exstreamtv-design-pattern-selection/SKILL.md`** — Agent skill matching the rule above; Branch A (Creational), Branch B (Structural), Branch C (Behavioral) decision tables; repo-anchor cross-references to `exstreamtv/patterns/`, `StreamService`, and `frontend/src/api/client.ts`.
+- **`.cursor/mcp.json`** — Updated: `exstreamtv` MCP server now launched via **`uv run --extra dev`** (was bare `python3 -m mcp_server`). Added **`mcp-atlassian`** server (`uvx mcp-atlassian`) for direct Confluence/ESTV space integration with `CONFLUENCE_URL`, `CONFLUENCE_USERNAME`, and `CONFLUENCE_SPACES_FILTER` env vars.
+- **`pyproject.toml`** — Added `aiosqlite>=0.19.0` to runtime dependencies (enables async SQLAlchemy + SQLite I/O without blocking the event loop).
+
 ### Added — Phase 14 (pattern refactor, schedule memento, async I/O)
 - **Alembic 006** — `schedule_history` table; **`POST /api/schedule-history/capture`** and **`POST /api/schedule-history/{id}/revert`** (`exstreamtv/api/schedule_history.py`, `schedule_snapshot_service`).
 - **`exstreamtv/utils/async_subprocess.py`** — thread-pooled / asyncio subprocess helpers for API and streaming-adjacent paths.

@@ -26,6 +26,18 @@
 
 ---
 
+## 2a. Frontend hooks
+
+| Hook | File | Purpose |
+|------|------|---------|
+| `useAsync` | `hooks/useAsync.ts` | Simple async-fetch with cancellation; returns `{ data, error, loading }` |
+| `useAsyncResource` | `hooks/useAsyncResource.ts` | Template Method variant — adds `enabled` guard and `errorData` fallback; preferred for page-level data loading |
+
+**Pattern justification (per `.cursor/rules/exstreamtv-design-pattern-selection.mdc` §C Behavioral):**  
+Pain point: repeated `useEffect + cancelled + try/catch` copied into every page → Template Method extracts the fixed skeleton (mount → load → success/error) and lets callers vary only the `loader` function.
+
+---
+
 ## 3. Dev proxy & ports
 
 - Default EXStreamTV HTTP port: **8411** (`exstreamtv.config`).

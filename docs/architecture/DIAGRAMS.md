@@ -2,7 +2,7 @@
 
 All diagrams use Mermaid. Referenced from Platform Guide, EPG Alignment, Observability, Invariants, Lessons Learned.
 
-**Last Revised:** 2026-04-01
+**Last Revised:** 2026-04-06
 
 ---
 
@@ -441,3 +441,67 @@ flowchart TD
 ```
 
 See [System Design — Schedule history](SYSTEM_DESIGN.md#schedule-history-exstreamtvdatabasemodelsschedule_historypy-migration-006).
+
+---
+
+## 20. GoF Design-Pattern Decision Tree (2026-04 — design-pattern-selection rule)
+
+Three-branch pain-point-first selector enforced by `.cursor/rules/exstreamtv-design-pattern-selection.mdc`.
+
+```mermaid
+flowchart TD
+    Start([Pain point identified]) --> Q1{Root question}
+    Q1 -->|Creating / configuring objects| A[Branch A — Creational]
+    Q1 -->|How pieces connect / boundaries| B[Branch B — Structural]
+    Q1 -->|Algorithms / control flow| C[Branch C — Behavioral]
+
+    A --> A1{How many instances?}
+    A1 -->|One only| A_S[Singleton\nonly true single-resource;\nprefer app.state in FastAPI]
+    A1 -->|Many + complex construction| A_B[Builder\ne.g. FFmpeg argv builders]
+    A1 -->|Many + who picks concrete type| A_F[Factory Method / registry]
+    A1 -->|Many + families of related products| A_AF[Abstract Factory]
+
+    B --> B1{Goal?}
+    B1 -->|Match incompatible interfaces| B_Ad[Adapter\nHTTP ↔ domain; translation only]
+    B1 -->|Simplify large subsystem| B_Fa[Facade\nStreamService, API modules]
+    B1 -->|Add behavior without subclassing| B_De[Decorator\nuse sparingly]
+    B1 -->|Control access / cache / auth| B_Pr[Proxy\nStreamUrlProxy]
+
+    C --> C1{What behavior?}
+    C1 -->|Pass along until handled| C_Ch[Chain of Responsibility\nURLResolver.resolve_or_pass]
+    C1 -->|Encapsulate action + undo| C_Cmd[Command\nStreamCommandQueue]
+    C1 -->|Behavior follows explicit mode| C_St[State\nChannelContext / StreamState]
+    C1 -->|Swap algorithm at runtime| C_Str[Strategy\nscheduling, builder registry]
+    C1 -->|Fixed steps, varying hooks| C_TM[Template Method\nuseAsyncResource loader]
+    C1 -->|Broadcast events| C_Ob[Observer / event bus]
+    C1 -->|Snapshot / restore| C_Me[Memento\nschedule history]
+```
+
+---
+
+## 21. `useAsyncResource` Template Method Hook flow (2026-04 — `frontend/src/hooks/useAsyncResource.ts`)
+
+Encapsulates mount → async load → success/error/cancel lifecycle for React page components.
+
+```mermaid
+sequenceDiagram
+    participant Page as Page Component
+    participant Hook as useAsyncResource
+    participant API as API Client
+
+    Page->>Hook: render (loader fn, deps, options)
+    Hook->>Hook: setLoading(true), setError(null)
+    Hook->>API: await loader()
+    alt Success
+        API-->>Hook: result
+        Hook->>Hook: setData(result), setLoading(false)
+        Hook-->>Page: { data, error: null, loading: false }
+    else Error
+        API-->>Hook: throw Error
+        Hook->>Hook: setData(errorData??), setError(msg), setLoading(false)
+        Hook-->>Page: { data: errorData, error: msg, loading: false }
+    end
+    Note over Hook: On unmount / dep change: cancelled=true → no state update
+    Note over Hook: enabled=false → skip load, clear state immediately
+```
+
