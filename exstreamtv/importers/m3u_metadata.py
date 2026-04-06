@@ -20,9 +20,13 @@ class M3UMetadataEnricher:
 
     def __init__(self):
         self._client = httpx.AsyncClient(timeout=30.0, follow_redirects=True)
-        self._cache: dict[str, dict[str, Any]] = {}
+        # Issue 5.4: Bounded TTL cache replaces the manual dict + expiry tracking.
+        # maxsize=5000 entries, ttl=86400s (24h) matches the original _cache_ttl.
+        from cachetools import TTLCache
+        self._cache: TTLCache = TTLCache(maxsize=5000, ttl=86400)
+        # Keep _cache_expiry for backwards compat but it's now unused with TTLCache
         self._cache_expiry: dict[str, datetime] = {}
-        self._cache_ttl = timedelta(hours=24)  # Cache for 24 hours
+        self._cache_ttl = timedelta(hours=24)  # Retained for any external references
 
     async def _fetch_channels_data(self) -> dict[str, Any] | None:
         """Fetch channels data from iptv-org API"""

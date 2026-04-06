@@ -184,3 +184,13 @@ xcuserdata/
 
 # Confluence publisher dry-run output
 docs/confluence/_dry_run_storage_snippet.xml
+docs/confluence/_dry_run_wiki_tree_storage_snippet.xml
+
+# Confluence / MCP mirror payloads (local experiments; not source of truth)
+docs/confluence/_invoke_*.json
+docs/confluence/_mcp_*/
+docs/confluence/_mcp_*.json
+docs/confluence/_single_mcp_arg.json
+docs/confluence/.mcp_create_payloads/
+docs/confluence/atlassian-mcp-mirror.manifest.jsonl
+docs/confluence/ESTV-GITHUB-WIKI-MIRROR.generated.md

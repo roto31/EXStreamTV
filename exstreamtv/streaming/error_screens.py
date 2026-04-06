@@ -372,8 +372,12 @@ class ErrorScreenGenerator:
         logger.info(f"Generating error screen: {msg.title}")
         logger.debug(f"FFmpeg command: {' '.join(cmd)}")
         
-        process = await asyncio.create_subprocess_exec(
+        # Issue 1.2: Route error screen FFmpeg through central process manager
+        from exstreamtv.streaming.ffmpeg_process_manager import get_ffmpeg_process_manager
+        _fpm = get_ffmpeg_process_manager()
+        process = await _fpm.spawn(
             *cmd,
+            tag="error_screen",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

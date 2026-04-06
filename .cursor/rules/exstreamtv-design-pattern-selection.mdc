@@ -1,0 +1,39 @@
+---
+description: Pain-point-first design pattern selection (GoF decision tree) for Python/FastAPI and React UI
+globs: exstreamtv/**/*.py, frontend/src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Design pattern selection (decision tree)
+
+Before suggesting or adding a **named GoF-style pattern**, classify the pain point using the three root questions:
+
+1. **Creational** — Is the problem **creating** or configuring objects (many parameters, conditional concrete types, unclear defaults, scattered `new`/construction)?
+2. **Structural** — Is the problem **how pieces connect** (leaky boundaries, incompatible interfaces, one huge subsystem API, tree structure, shared immutable data)?
+3. **Behavioral** — Is the problem **algorithms or control flow** (growing `if/elif`, per-case branches, request pipelines, undo, notifications, mode-specific behavior)?
+
+## Required steps for assistants
+
+- **Name the pain point first** (one short sentence). Do not pick a pattern from aesthetics or habit.
+- **Trace the branch** from the tree (e.g. Behavioral → switch algorithms at runtime → Strategy). If you cannot trace it, do not recommend that pattern.
+- **Flag untraceable usage**: if existing code uses a pattern name but the pain point does not match that branch, call that out as misuse or dead naming.
+- **Adapters** (`exstreamtv/api/` clients, HTTP/DTO mappers, `frontend/src/api/client.ts`): **translation only** — no domain rules, scheduling, or business validation. Put rules in services or domain modules.
+- **Builders** (`exstreamtv/patterns/factory/ffmpeg_builders.py` and similar): validate inputs and invariants **before** emitting argv or DTOs; fail fast with clear errors.
+- **Strategy**: each strategy should **replace a branch** of behavior, not wrap another strategy with interdependent state. Prefer a registry or map (e.g. `get_ffmpeg_builder(mode)`) over giant `if/elif` in callers.
+- **State**: use when **modes and transitions** are explicit (e.g. stream lifecycle). Do not duplicate the same concern with parallel booleans (`is_running` + `is_failed` + ad-hoc flags) at the same layer.
+
+## React (this repo: Vite + React; if using Next.js elsewhere, same rules)
+
+- Repeated mount → fetch → error/success UI: use a **Template Method–style** hook (e.g. `useAsyncResource`) instead of copying `useEffect` + cancellation in every page.
+- Do not use **Singleton** for React state; use context, hooks, or server/session-scoped state as appropriate.
+
+## Anti-patterns (reject)
+
+- Singleton for “global convenience” when dependency injection or `app.state` / request scope is enough.
+- Decorator stacks that **depend on wrapper order** for correctness (interdependent wrappers).
+- Applying a pattern **without** a matching pain point (“upgrade for elegance”).
+- Putting **business rules** inside adapters or raw HTTP clients.
+
+## Coexistence
+
+- See `patterns-implemented.mdc` for **where** patterns already live in this repo. This rule governs **selection**, not duplication of `exstreamtv/ffmpeg/constants.py` or safety rules in `exstreamtv-safety.mdc`.

@@ -1,0 +1,129 @@
+---
+description: >-
+  Design-pattern decision tree enforcement — apply the three-branch framework
+  (Creational / Structural / Behavioural) before generating or reviewing any
+  design pattern usage in this React + Python/FastAPI codebase.
+globs: ["exstreamtv/**/*.py", "frontend/src/**/*.{ts,tsx}", "tests/**/*.py"]
+alwaysApply: true
+---
+
+# Design-Pattern Decision Tree — Enforceable Standards
+
+Full methodology: `.cursor/skills/design-pattern-decision-tree/SKILL.md`
+
+## Core Principle
+
+**Name the pain point before selecting a pattern.** Every design pattern
+recommendation MUST trace back to exactly one branch of the decision tree.
+Pattern usage that cannot be grounded in a specific, observable code pain
+point is over-engineering and MUST be flagged.
+
+---
+
+## The Three-Branch Decision Tree
+
+### 1. Is the pain about **creating objects**? (Creational)
+
+Ask:
+- Are constructors complex, with many optional parameters?
+- Is there conditional instantiation (if/elif to pick which class)?
+- Are defaults unclear or scattered?
+
+| Pain Point | Pattern | Decision Path |
+|-----------|---------|---------------|
+| Complex construction with many fields | **Builder** | Creation → many optional params → Builder |
+| Conditional class selection | **Factory Method / Abstract Factory** | Creation → conditional instantiation → Factory |
+| One global instance required | **Singleton** | Creation → single shared instance → Singleton (use sparingly) |
+| Deferred or expensive init | **Lazy Initialization** | Creation → costly setup → Lazy Init |
+| Copying with variation | **Prototype** | Creation → clone with overrides → Prototype |
+
+### 2. Is the pain about **how objects fit together**? (Structural)
+
+Ask:
+- Is there a leaking interface (internal details exposed)?
+- Are subsystem boundaries awkward or overly coupled?
+- Is composition difficult (wrappers, adapters, proxies)?
+
+| Pain Point | Pattern | Decision Path |
+|-----------|---------|---------------|
+| Incompatible interfaces | **Adapter** | Structure → interface mismatch → Adapter |
+| Complex subsystem needs simple entry point | **Facade** | Structure → subsystem complexity → Facade |
+| Adding behaviour without subclassing | **Decorator** | Structure → optional behaviour layers → Decorator |
+| Controlling access or adding indirection | **Proxy** | Structure → access control / caching → Proxy |
+| Part-whole hierarchies (UI trees) | **Composite** | Structure → tree of components → Composite |
+
+### 3. Is the pain about **behaviour that changes**? (Behavioural)
+
+Ask:
+- Are there accumulating if/elif/switch conditionals?
+- Does branching logic vary by case, mode, or type?
+- Are algorithms unstable (swap at runtime)?
+
+| Pain Point | Pattern | Decision Path |
+|-----------|---------|---------------|
+| if/elif cascade selecting algorithm | **Strategy** | Behaviour → branching per algorithm → Strategy |
+| Object changes behaviour based on mode | **State** | Behaviour → mode-driven transitions → State |
+| Chain of fallback handlers | **Chain of Responsibility** | Behaviour → ordered try-then-pass → CoR |
+| Notify many listeners of events | **Observer** | Behaviour → fan-out notifications → Observer |
+| Encapsulate a request as an object | **Command** | Behaviour → deferred/queued operations → Command |
+| Duplicated fetch/render/lifecycle logic | **Template Method / Hook** | Behaviour → identical structure, varying detail → Template Method |
+
+---
+
+## Enforcement Rules
+
+### RULE PAT-01: Pain-First Selection
+Before suggesting any pattern, state the pain point in one sentence.
+Example: "The pain is a 10-branch if/elif in `_detect_source_type`
+that grows with every new media source → Chain of Responsibility."
+
+### RULE PAT-02: Adapter Purity
+Adapters MUST contain only translation logic — no business rules, no
+validation, no side effects. If an Adapter is accumulating logic, it
+has become a Facade or Service and must be refactored.
+
+### RULE PAT-03: Builder Early Validation
+Builder `.build()` calls MUST validate required fields before returning
+the constructed object. Never produce half-initialised objects.
+
+### RULE PAT-04: Strategy Eliminates Branching
+If a Strategy pattern is introduced, the original if/elif/switch MUST
+be removed or reduced to a single dispatch lookup. Strategies that
+still contain conditionals have not been fully applied.
+
+### RULE PAT-05: State for Well-Defined Modes
+Use State only when modes and their transitions are well-defined and
+finite. If transitions are ad-hoc or unbounded, prefer Strategy.
+
+### RULE PAT-06: No Pattern Without Pain
+Never apply a pattern as an "aesthetic upgrade." Singleton for "easy
+access," Decorator with interdependent wrappers, or Factory for a
+single concrete class are all anti-patterns and MUST be flagged.
+
+### RULE PAT-07: Template Method for Hook Extraction (React)
+When multiple React components share identical fetch → error → loading
+→ render structure, extract the common lifecycle into a custom hook
+(the React idiom for Template Method). Do not duplicate the boilerplate.
+
+### RULE PAT-08: Composite for UI Decomposition (React)
+When a React component exceeds ~200 lines and has visually distinct
+sections, decompose into child components (Composite pattern). Pass
+data via props, not by duplicating state management.
+
+---
+
+## Anti-Patterns to Flag
+
+- **Singleton for convenience** — use dependency injection instead
+- **Decorator with interdependent wrappers** — order-sensitive layering is fragile
+- **Observer with unbounded listeners** — always provide unsubscribe
+- **Factory for single class** — direct construction is simpler
+- **Pattern applied without observable pain point** — over-engineering
+
+---
+
+## Cross-References
+
+- Existing patterns inventory: `.cursor/rules/patterns-implemented.mdc`
+- Safety rules: `.cursor/rules/exstreamtv-critical.mdc`
+- Skill reference: `.cursor/skills/design-pattern-decision-tree/SKILL.md`
