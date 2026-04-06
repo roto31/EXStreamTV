@@ -31,10 +31,14 @@ This document tracks the development progress of EXStreamTV, organized by phase 
 
 ### Phase 14 highlights (2026-04)
 
-- Alembic **006** — `schedule_history` table; `**/api/schedule-history`** capture + revert
-- `**exstreamtv/utils/async_subprocess.py**` — async-safe subprocess helpers for API/streaming-adjacent paths
-- `**exstreamtv/patterns/**` — shared application patterns; ADR **ADR-channel-manager-database-sessions.md** for DB session boundaries
-- `**frontend/`** (Track B) — Vite + React + TypeScript + **Tailwind** + **React Router**; **personas**; dashboard, channels (**detail** with playouts / now-playing / timeline), schedules (**detail**), schedule-history; **viewer** read-only for memento; dev proxy → **8411** — see `**docs/EXStreamTV-UI-Architecture.md`**
+- Alembic **006** — `schedule_history` table; **`/api/schedule-history`** capture + revert
+- **`exstreamtv/utils/async_subprocess.py`** — async-safe subprocess helpers for API/streaming-adjacent paths
+- **`exstreamtv/patterns/`** — shared application patterns; ADR **ADR-channel-manager-database-sessions.md** for DB session boundaries
+- **`frontend/`** (Track B) — Vite + React + TypeScript + **Tailwind** + **React Router**; **personas**; dashboard, channels (**detail** with playouts / now-playing / timeline), schedules (**detail**), schedule-history; **viewer** read-only for memento; dev proxy → **8411** — see **`docs/EXStreamTV-UI-Architecture.md`**
+- **`frontend/src/hooks/useAsyncResource.ts`** — Template Method hook; cancellable async load with `enabled` flag and `errorData` fallback; replaces per-component `useEffect+try/catch` boilerplate
+- **`.cursor/rules/exstreamtv-design-pattern-selection.mdc`** + **`.cursor/skills/exstreamtv-design-pattern-selection/SKILL.md`** — GoF decision tree rule and agent skill for pain-point-first pattern selection
+- **`.cursor/mcp.json`** — `exstreamtv` server now `uv run --extra dev`; `mcp-atlassian` server added for Confluence/ESTV integration
+- **`pyproject.toml`** — `aiosqlite>=0.19.0` added (async SQLAlchemy + SQLite)
 
 ---
 
