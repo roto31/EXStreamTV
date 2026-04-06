@@ -1,15 +1,37 @@
 """Hardware acceleration detection and capabilities"""
 
+import asyncio
 import logging
 import platform
 import shutil
 import subprocess
 from pathlib import Path
 
+from cachetools import TTLCache
+
 from ..config import config
 from ..database.models import HardwareAccelerationKind
 
 logger = logging.getLogger(__name__)
+
+# Issue 10.2/6.3: Cache detection results so we only probe once per hour.
+_hw_accel_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+_HW_CACHE_KEY = "hw_accel"
+
+
+async def detect_hardware_acceleration_async() -> list:
+    """Non-blocking wrapper for detect_hardware_acceleration (Issue 6.3/10.2).
+
+    Runs the blocking subprocess.run() calls in a thread pool executor
+    and caches the result for 1 hour.
+    """
+    cached = _hw_accel_cache.get(_HW_CACHE_KEY)
+    if cached is not None:
+        return cached
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, detect_hardware_acceleration)
+    _hw_accel_cache[_HW_CACHE_KEY] = result
+    return result
 
 
 def get_ffmpeg_path() -> str:

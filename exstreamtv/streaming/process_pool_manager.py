@@ -165,6 +165,8 @@ class ProcessPoolManager:
     async def start(self) -> None:
         """Start the process pool manager (e.g. zombie check task)."""
         self._zombie_task = asyncio.create_task(self._zombie_check_loop())
+        # Issue 7.2: Store reference to prevent GC and enable inspection
+        self._zombie_task.add_done_callback(lambda t: logger.debug("Zombie check loop ended"))
         logger.info(
             f"ProcessPoolManager started (max_processes={self._max_processes})"
         )

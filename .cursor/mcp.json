@@ -1,9 +1,27 @@
 {
   "mcpServers": {
     "exstreamtv": {
-      "command": "python3",
-      "args": ["-m", "mcp_server"],
-      "cwd": "/Users/roto1231/Documents/XCode Projects/EXStreamTV"
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/roto1231/XCode Projects/EXStreamTV",
+        "--extra",
+        "dev",
+        "python",
+        "-m",
+        "mcp_server"
+      ]
+    },
+    "mcp-atlassian": {
+      "command": "uvx",
+      "args": ["mcp-atlassian"],
+      "env": {
+        "CONFLUENCE_URL": "https://exstreamtv2.atlassian.net/wiki",
+        "CONFLUENCE_USERNAME": "roto1231@mac.com",
+        "CONFLUENCE_SPACES_FILTER": "ESTV",
+        "TOOLSETS": "default"
+      }
     }
   }
 }

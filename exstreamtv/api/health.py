@@ -21,9 +21,13 @@ async def check_ffmpeg_async() -> dict[str, Any]:
     config = get_config()
     ffmpeg_path = config.ffmpeg.path or "ffmpeg"
     try:
-        proc = await asyncio.create_subprocess_exec(
+        # Issue 1.2: Route health check FFmpeg through central process manager
+        from exstreamtv.streaming.ffmpeg_process_manager import get_ffmpeg_process_manager
+        _fpm = get_ffmpeg_process_manager()
+        proc = await _fpm.spawn(
             ffmpeg_path,
             "-version",
+            tag="health:ffmpeg_version",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -58,9 +62,13 @@ async def check_ffprobe_async() -> dict[str, Any]:
     config = get_config()
     ffprobe_path = config.ffmpeg.ffprobe_path or "ffprobe"
     try:
-        proc = await asyncio.create_subprocess_exec(
+        # Issue 1.2: Route health check ffprobe through central process manager
+        from exstreamtv.streaming.ffmpeg_process_manager import get_ffmpeg_process_manager
+        _fpm = get_ffmpeg_process_manager()
+        proc = await _fpm.spawn(
             ffprobe_path,
             "-version",
+            tag="health:ffprobe_version",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
