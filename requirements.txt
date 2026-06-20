@@ -31,7 +31,7 @@ slowapi>=0.1.8
 passlib[bcrypt]>=1.7.4
 
 # Media Processing
-yt-dlp>=2023.10.0
+yt-dlp>=2026.6.9
 
 # Validation
 jsonschema>=4.19.0
