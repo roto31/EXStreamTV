@@ -167,3 +167,14 @@ xcuserdata/
 !default.mode2v3
 *.perspectivev3
 !default.perspectivev3
+
+# Local sync hygiene (do not publish)
+EXStreamTVApp/.build/
+backups/
+.wiki_push_clone/
+docs/confluence/_mcp_*/
+docs/confluence/_invoke_*.json
+docs/confluence/_dry_run_*
+docs/confluence/.mcp_create_payloads/
+docs/confluence/_single_mcp_arg.json
+docs/confluence/_mcp_next_args.json
